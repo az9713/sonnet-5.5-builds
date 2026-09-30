@@ -1,0 +1,45 @@
+name: deskworlds-windows
+
+on:
+  push:
+    paths: ['deskworlds-windows/**', '.github/workflows/deskworlds-windows.yml']
+  pull_request:
+    paths: ['deskworlds-windows/**', '.github/workflows/deskworlds-windows.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: deskworlds-windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+
+      - name: Scene syntax check and tests (on Windows)
+        run: |
+          npm run check
+          npm test
+
+      - name: Build the wallpaper host
+        run: dotnet publish windows/Deskworlds/Deskworlds.csproj -c Release -r win-x64 --self-contained true -o out --nologo
+
+      - name: Bundle the scenes
+        shell: pwsh
+        run: |
+          robocopy scenes out\scene\scenes /E /XD tests /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { exit 1 }
+          robocopy vendor out\scene\vendor /E /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { exit 1 }
+          robocopy ui out\scene\ui /E /XD tests /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { exit 1 }
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Deskworlds-win-x64
+          path: deskworlds-windows/out
