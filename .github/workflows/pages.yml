@@ -1,7 +1,7 @@
 name: pages
 
 # Publishes the browser build of the four worlds to GitHub Pages.
-# One-time setup in the repo: Settings > Pages > Build and deployment > Source: GitHub Actions.
+# If the deploy step cannot enable Pages itself, set it once: Settings > Pages > Build and deployment > Source: GitHub Actions.
 on:
   push:
     branches: [main, claude/15-builds-recreation-review-5bw4pw]
@@ -35,6 +35,8 @@ jobs:
           touch _site/.nojekyll
 
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true   # try to turn Pages on if the repo setting is still off
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
