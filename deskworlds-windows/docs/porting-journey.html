@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Deskworlds Porting Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column, with wide figures (layer diagram, proportion bars, tables) breaking out of it. */
+:root {
+  --bg: #eef2f1;
+  --surface: #f8fbfa;
+  --ink: #10201c;
+  --muted: #4b5f58;
+  --line: #c7d4cf;
+  --accent: #0a6b5b;
+  --accent-soft: #d5e9e3;
+  --ok: #17643a;
+  --ok-soft: #d6ecdf;
+  --warn: #8a5a00;
+  --warn-soft: #f3e3bd;
+  --code: #e2eae7;
+  --font-display: "Unbounded", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a1310; --surface: #111e19; --ink: #e3eee9; --muted: #94aaa2; --line: #24382f;
+    --accent: #4fd1b0; --accent-soft: #123a30; --ok: #6fd69a; --ok-soft: #12321f;
+    --warn: #e6b955; --warn-soft: #3b2e0e; --code: #0e1b16; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a1310; --surface: #111e19; --ink: #e3eee9; --muted: #94aaa2; --line: #24382f;
+  --accent: #4fd1b0; --accent-soft: #123a30; --ok: #6fd69a; --ok-soft: #12321f;
+  --warn: #e6b955; --warn-soft: #3b2e0e; --code: #0e1b16; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.6 var(--font-body); padding-inline: 1rem; }
+.wrap { max-width: 46rem; margin-inline: auto; padding-block: 2.5rem 4rem; display: flex; flex-direction: column; gap: 2.75rem; }
+.wide { width: 100%; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font: 600 clamp(1.6rem, 5.5vw, 2.35rem)/1.15 var(--font-display); letter-spacing: -0.01em; }
+h2 { font: 600 1.35rem/1.25 var(--font-display); letter-spacing: -0.005em; }
+h3 { font: 700 1.1rem/1.3 var(--font-body); }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 0.18em; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+code, pre { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--code); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+pre { background: var(--code); padding: 0.9rem 1rem; border-radius: 6px; overflow-x: auto; margin: 0; line-height: 1.5; }
+pre code { background: none; padding: 0; overflow-wrap: normal; }
+.eyebrow { font: 600 0.75rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+.lead { font-size: 1.22rem; line-height: 1.55; }
+.muted { color: var(--muted); }
+section { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+header { display: flex; flex-direction: column; gap: 1rem; }
+
+.pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pill { font: 600 0.78rem/1 var(--font-mono); padding: 0.4rem 0.65rem; border-radius: 99px; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 34rem; font-size: 0.95rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--line); }
+th { font: 600 0.72rem/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); background: var(--accent-soft); }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.figure { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; }
+.figure .cap { font-size: 0.9rem; color: var(--muted); }
+
+.bars { display: grid; grid-template-columns: 1fr; gap: 0.85rem; }
+.bar { display: grid; gap: 0.3rem; }
+.bar .row { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 0.95rem; }
+.bar .row b { font-variant-numeric: tabular-nums; }
+.track { height: 0.9rem; background: var(--code); border-radius: 3px; overflow: hidden; }
+.fill { height: 100%; background: var(--accent); }
+.fill.old { background: var(--muted); }
+.fill.new { background: var(--warn); }
+
+.layers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+@media (max-width: 34rem) { .layers { grid-template-columns: 1fr; } }
+.stack { display: flex; flex-direction: column; gap: 0.35rem; }
+.stack h3 { font: 600 0.78rem/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.layer { padding: 0.65rem 0.8rem; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); font-size: 0.92rem; }
+.layer small { display: block; color: var(--muted); font-size: 0.8rem; }
+.layer.ours { background: var(--accent-soft); border-color: var(--accent); }
+
+ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2.25rem; counter-reset: step; }
+ol.steps > li { counter-increment: step; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 0.4rem 1rem; }
+ol.steps > li::before { content: counter(step); font: 600 0.95rem/2.2rem var(--font-mono); width: 2.2rem; height: 2.2rem; border-radius: 50%; text-align: center; background: var(--accent); color: var(--bg); }
+ol.steps > li > div { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
+@media (max-width: 30rem) { ol.steps > li { grid-template-columns: 1fr; } }
+
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 0.8rem 1rem; border-radius: 0 6px 6px 0; }
+.callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+.callout b:first-child { display: block; font: 600 0.72rem/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.15rem; }
+
+details { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0.7rem 1rem; }
+details + details { margin-top: -0.5rem; }
+summary { cursor: pointer; font-weight: 700; }
+details p { margin-top: 0.5rem; }
+dl { margin: 0; display: grid; gap: 0.9rem; }
+dt { font-weight: 700; }
+dd { margin: 0.1rem 0 0; color: var(--muted); }
+footer { font-size: 0.92rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 1.2rem; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+</head>
+<body>
+<main class="wrap">
+
+<header>
+  <div class="eyebrow">Porting notes / macOS to Windows</div>
+  <h1>How a Mac-only desktop wallpaper got a Windows version</h1>
+  <p class="lead">The project is <a href="https://github.com/chaseleantj/deskworlds">chaseleantj/deskworlds</a>: four live 3D worlds (Riverbed, Coral reef, Betta, Plasma globe) that run as a wallpaper on macOS. Porting it looked like a big job. It turned out to be a small one, because almost none of the code is Mac code. This page walks through what was actually ported, in the order it happened, including the parts that went wrong.</p>
+  <div class="pills">
+    <span class="pill ok">Scenes unchanged, byte for byte</span>
+    <span class="pill ok">C# host builds on Windows CI</span>
+    <span class="pill ok">Scene tests pass on Windows CI</span>
+    <span class="pill warn">Desktop attach not yet run on a real laptop</span>
+  </div>
+</header>
+
+<section>
+  <h2>The short version</h2>
+  <p>A wallpaper app has two halves. One half draws the picture. The other half puts a window in the right place on the desktop and tells the picture what the user is doing. In Deskworlds the drawing half is JavaScript and WebGL, which runs in any modern browser, so it needed no porting at all. The second half was written in Swift for macOS. That is the only part that had to be rewritten, and it is the part this page is about.</p>
+  <div class="figure wide" role="img" aria-label="Bar chart of lines of code: scenes 13,804 unchanged, shared scene code 301 unchanged, Swift host 656 replaced, C# host 967 new.">
+    <div class="bars">
+      <div class="bar"><div class="row"><span>Four scenes, JavaScript <span class="muted">(unchanged)</span></span><b>13,804</b></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="bar"><div class="row"><span>Shared scene helpers, JavaScript <span class="muted">(unchanged)</span></span><b>301</b></div><div class="track"><div class="fill" style="width:2.2%"></div></div></div>
+      <div class="bar"><div class="row"><span>macOS host, Swift <span class="muted">(left behind)</span></span><b>656</b></div><div class="track"><div class="fill old" style="width:4.75%"></div></div></div>
+      <div class="bar"><div class="row"><span>Windows host, C# <span class="muted">(new)</span></span><b>967</b></div><div class="track"><div class="fill new" style="width:7%"></div></div></div>
+    </div>
+    <p class="cap">Lines counted with <code>wc -l</code>. Bars share one scale. The C# host is longer than the Swift one mostly because Win32 calls need a declaration for each function, which Swift gets for free from Apple's frameworks.</p>
+  </div>
+</section>
+
+<section>
+  <h2>First question: is this an Xcode project?</h2>
+  <p>No, and that matters for anyone thinking about a port. There is no <code>.xcodeproj</code>, no storyboard and no build settings to untangle. The installer, <code>wallpaper/install.sh</code>, compiles one file with a single command:</p>
+  <pre><code>swiftc -O -target "$(uname -m)-apple-macos13.0" -o Deskworlds Wallpaper.swift \
+  -framework Cocoa -framework WebKit -framework IOKit</code></pre>
+  <p>Xcode is not involved. The installer only needs Apple's command line tools for the <code>swiftc</code> compiler. So there was nothing to convert. The work was to read one 656-line file, list every job it does, and find the Windows way to do each job.</p>
+</section>
+
+<section>
+  <h2>Where the desktop layers sit</h2>
+  <p>The core trick of a desktop wallpaper app is to place its window between two things that already exist: your normal wallpaper picture and your desktop icons. Both systems allow this. They just do it differently.</p>
+  <div class="figure wide">
+    <div class="layers">
+      <div class="stack">
+        <h3>macOS (original)</h3>
+        <div class="layer">Desktop icons<small>Finder draws these</small></div>
+        <div class="layer ours">Deskworlds window<small>window level = <code>desktopWindow</code></small></div>
+        <div class="layer">Your wallpaper picture<small>system draws this</small></div>
+      </div>
+      <div class="stack">
+        <h3>Windows (this port)</h3>
+        <div class="layer">Desktop icons<small>Explorer, inside <code>SHELLDLL_DefView</code></small></div>
+        <div class="layer ours">Deskworlds form<small>child of Explorer's <code>WorkerW</code> / <code>Progman</code></small></div>
+        <div class="layer">Your wallpaper picture<small>Explorer draws this</small></div>
+      </div>
+    </div>
+    <p class="cap">Top is nearest to you. On both systems the app never receives mouse clicks, so icons and right-click menus keep working.</p>
+  </div>
+</section>
+
+<section>
+  <h2>The journey, step by step</h2>
+  <ol class="steps">
+
+    <li><div>
+      <h3>Check that the port is even needed</h3>
+      <p>The README said it plainly: "The desktop app supports macOS only. The browser preview needs a browser with WebGL2." That second sentence is the key. The project already ran in a browser on any operating system, so the scenes were portable by design. I cloned the repo and ran its own checks (<code>npm run check</code> and <code>npm test</code>) on Linux. They passed, which confirmed the scenes do not depend on macOS.</p>
+      <div class="callout"><b>Lesson</b>Before porting anything, find out which parts already run somewhere else. Here, that was about 96% of the code.</div>
+    </div></li>
+
+    <li><div>
+      <h3>Find the seam between the host and the scenes</h3>
+      <p>The two halves talk through a tiny interface. I searched the Swift file for every place it calls into the page and found exactly five function names. The scenes define three of them. The host defines the pointer pair itself, by injecting a script.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Call</th><th>Sent by host when</th><th>What the scene does</th></tr></thead>
+        <tbody>
+          <tr><td><code>sceneRate(fps)</code></td><td>Visibility or power changes</td><td>Sets the frame rate; 0 stops drawing</td></tr>
+          <tr><td><code>scenePower(onBattery)</code></td><td>Plugged in or unplugged</td><td>Switches to a lighter quality profile</td></tr>
+          <tr><td><code>sceneFeed()</code></td><td>Feed clicked in the menu</td><td>Drops food into the scene</td></tr>
+          <tr><td><code>scenePointer(x, y)</code></td><td>The cursor moves</td><td>Creatures react (host-injected shim)</td></tr>
+          <tr><td><code>scenePointerOut()</code></td><td>The cursor leaves</td><td>Creatures stop reacting (host-injected shim)</td></tr>
+        </tbody>
+      </table></div>
+      <p>There is one more piece: a "ready" message the page sends once it has installed those functions, so the host does not talk too early. That interface is the whole contract. Anything that can call five JavaScript functions can host these scenes.</p>
+    </div></li>
+
+    <li><div>
+      <h3>List the host's jobs and find each Windows equivalent</h3>
+      <p>I went through the Swift file top to bottom and wrote down every job. For each one I asked "what does Windows call this?" Most had a direct answer.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Job</th><th>macOS (Swift)</th><th>Windows (C#)</th></tr></thead>
+        <tbody>
+          <tr><td>Show a web page</td><td><code>WKWebView</code></td><td>WebView2 (Microsoft Edge's engine)</td></tr>
+          <tr><td>Serve the scene files</td><td>Custom <code>deskworlds://</code> scheme handler</td><td><code>SetVirtualHostNameToFolderMapping</code></td></tr>
+          <tr><td>Sit behind the icons</td><td>Window level <code>desktopWindow</code></td><td>Parent to <code>WorkerW</code> or <code>Progman</code></td></tr>
+          <tr><td>Know where the cursor is</td><td><code>NSEvent.mouseLocation</code></td><td><code>GetCursorPos</code></td></tr>
+          <tr><td>Know what windows cover the desktop</td><td><code>CGWindowListCopyWindowInfo</code></td><td><code>EnumWindows</code> plus DWM frame bounds</td></tr>
+          <tr><td>Battery and power saving</td><td>IOKit, Low Power Mode</td><td><code>GetSystemPowerStatus</code> (mains, Battery Saver)</td></tr>
+          <tr><td>Sleep, lock, display off</td><td>Workspace notifications</td><td><code>SessionSwitch</code>, <code>PowerModeChanged</code>, display-state notification</td></tr>
+          <tr><td>Menu</td><td>Menu bar item</td><td>Tray <code>NotifyIcon</code></td></tr>
+          <tr><td>Save choices</td><td><code>UserDefaults</code></td><td>JSON file in <code>%APPDATA%</code></td></tr>
+          <tr><td>Start at login</td><td><code>launchctl</code> agent</td><td><code>HKCU\...\Run</code> registry value</td></tr>
+        </tbody>
+      </table></div>
+    </div></li>
+
+    <li><div>
+      <h3>Solve the hard one: get behind the icons</h3>
+      <p>This is the one part with no clean public API. On Windows the desktop is made of windows owned by Explorer. The icons live in one, called <code>SHELLDLL_DefView</code>. The wallpaper picture lives in another, called <code>WorkerW</code>. A well-known trick is to send Explorer's <code>Progman</code> window the undocumented message <code>0x052C</code>, which makes it create a <code>WorkerW</code> you can attach to. Then you make your own window a child of it.</p>
+      <p>The catch, as other wallpaper projects report, is that Windows 11 24H2 rearranged this tree. I could not confirm that here, so the port checks for both layouts:</p>
+      <pre><code>var defView = FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null);
+if (defView != IntPtr.Zero)              // Windows 11 24H2 and later
+    return new Slot(progman, defView);   // sit just below the icons
+
+// earlier builds: the WorkerW that follows the icons' WorkerW
+worker = FindWindowEx(IntPtr.Zero, top, "WorkerW", null);</code></pre>
+      <p>A child window is positioned in its parent's coordinates, and the parent spans all monitors, so a monitor to the left of the main one has a negative origin. The code converts each monitor's rectangle with <code>ScreenToClient</code> before placing the window.</p>
+      <div class="callout warn"><b>Risk</b>This mechanism is undocumented and has changed between Windows releases. It is the most likely thing to need a fix on a real laptop, and it is exactly what I could not test from a Linux sandbox. The <code>--window</code> flag exists so you can tell an attach problem from a scene problem.</div>
+    </div></li>
+
+    <li><div>
+      <h3>Read the workaround comments, they are a map of the traps</h3>
+      <p>The Swift file has a comment explaining that WebKit stops drawing a page whose window it believes is covered, and a background agent's window always looks covered. So the original author switches that detection off and works out what is really covered by hand.</p>
+      <p>Chromium, the engine inside WebView2, has the same behaviour under a different name. A window sitting behind the desktop icons would look permanently hidden and the scene would never start. The fix is one startup flag, <code>--disable-features=CalculateNativeWinOcclusion</code>, plus a few that stop background throttling. I would not have known to look for this without the Swift comment.</p>
+      <div class="callout"><b>Lesson</b>Comments that explain a strange workaround point at platform behaviour that will bite again on the next platform. Grep the source for them first.</div>
+    </div></li>
+
+    <li><div>
+      <h3>Deliver the mouse without receiving the mouse</h3>
+      <p>The wallpaper window must never take clicks, or you could not use your icons. So it never sees the cursor either. Both the original and the port solve this the same way: a timer reads the global cursor position, then calls <code>scenePointer(x, y)</code> in the page.</p>
+      <p>The one Windows-specific pitfall is units. <code>GetCursorPos</code> returns physical screen pixels, but the page thinks in CSS pixels. On a laptop set to 150% scaling those differ by a factor of 1.5. The port sets the process to per-monitor DPI awareness in its manifest and divides by the window's DPI scale, so a creature follows the cursor and not a point 50% off from it.</p>
+    </div></li>
+
+    <li><div>
+      <h3>Serve the files like a web server would</h3>
+      <p>The scenes use ES module imports, and the reef loads its rock meshes with <code>fetch</code>. Both fail from a plain <code>file://</code> address. macOS solves this with a custom URL scheme. WebView2 has a neater tool: map a fake host name to a folder, so the page loads from <code>https://deskworlds.local/scenes/riverscape/wallpaper.html</code> while the bytes come from disk. Nothing touches the network.</p>
+      <p>One more small bridge: the original page announces itself with <code>window.webkit.messageHandlers.ready</code>, which only exists in Apple's WebKit. Rather than edit the scene loader, the host injects a two-line shim before the page runs that forwards the same call to WebView2's <code>chrome.webview.postMessage</code>. The scene code stays identical.</p>
+    </div></li>
+
+    <li><div>
+      <h3>Copy the power policy exactly</h3>
+      <p>The original decides how hard to draw from what is visible: 60 fps when the desktop is clearly showing, 30 on battery, 20 when mostly covered, and stopped when almost fully covered, locked, asleep or in low-power mode. It samples a 16 by 10 grid of points to estimate how much of a monitor is uncovered.</p>
+      <p>I kept every number. Only the questions changed: "which windows are on screen" now comes from <code>EnumWindows</code>, ignoring hidden, minimised, tool and "cloaked" windows (those on other virtual desktops), and "am I on battery" comes from <code>GetSystemPowerStatus</code>. Keeping the behaviour identical made the port easy to check against the source.</p>
+    </div></li>
+
+    <li><div>
+      <h3>Rebuild the plumbing: tray, settings, install</h3>
+      <p>The menu became a tray icon with the same items (World, Feed, Pause, Quit) plus a Start with Windows toggle. Saved choices became a small JSON file. <code>install.sh</code> became <code>install.ps1</code>: it publishes the C# app for the machine's CPU, copies the scenes next to it minus their test folders, adds the sign-in registry value and starts the app. <code>npm run check</code> also had to be rewritten, because it used a Unix shell loop that does not run under Windows' <code>cmd</code>.</p>
+    </div></li>
+
+    <li><div>
+      <h3>Prove it works without a Windows machine</h3>
+      <p>The sandbox where I worked runs Linux, and the .NET SDK there cannot build Windows desktop apps. So the proof came in two layers:</p>
+      <ul>
+        <li><b>Compile check here.</b> I compiled the C# against Microsoft's real WinForms and WebView2 reference assemblies from NuGet. This catches typos, wrong types and missing methods, but runs nothing.</li>
+        <li><b>A real Windows build in CI.</b> A GitHub Actions workflow on <code>windows-latest</code> runs the scene checks and tests, builds the app self-contained, bundles the scenes and uploads the result. Both runs came back green.</li>
+      </ul>
+      <p>That is strong evidence the code builds and the scenes work on Windows. It is not evidence that the wallpaper attaches behind the icons on your screen. Only running it can show that.</p>
+    </div></li>
+
+  </ol>
+</section>
+
+<section>
+  <h2>Scene by scene</h2>
+  <p>Since every scene is unchanged, "porting each scene" comes down to what the host does differently for each one. I checked with <code>diff -r</code>: the <code>scenes</code>, <code>vendor</code> (Three.js) and <code>ui</code> folders are identical to the original.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Scene</th><th class="num">JS lines</th><th>Changed</th><th>What the Windows host handles for it</th></tr></thead>
+    <tbody>
+      <tr><td><b>Riverbed</b></td><td class="num">7,098</td><td>No</td><td>Dark green background while loading. The only scene that asks the page to fill the screen (<code>data-fit="fill"</code>). Feed works.</td></tr>
+      <tr><td><b>Coral reef</b></td><td class="num">2,580</td><td>No</td><td>Loads rock geometry and textures with <code>fetch</code>, so it needs the virtual host, not <code>file://</code>. Dark blue background. Feed works.</td></tr>
+      <tr><td><b>Betta</b></td><td class="num">2,973</td><td>No</td><td>Black background. In a browser you can drag to orbit and scroll to zoom; as a wallpaper the window gets no clicks, so the camera stays put (the scene's own comment says so). Feed works.</td></tr>
+      <tr><td><b>Plasma globe</b></td><td class="num">1,153</td><td>No</td><td>Black background. Nothing to feed, so the tray's Feed item is greyed out. The cursor is the whole interaction, so pointer accuracy matters most here.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">All four pages set <code>data-motion="host"</code>, which is the switch that tells the scene to wait for the host's rate and power messages instead of running itself.</p>
+</section>
+
+<section>
+  <h2>What went wrong along the way</h2>
+  <details open>
+    <summary>Wrong assumptions and blocked tools</summary>
+    <p>The obvious .NET installer download was blocked by the sandbox's network proxy, so I used the operating system's package manager, which first needed a package index refresh after a 404. Even then the Linux .NET SDK has no Windows desktop targets, which forced the reference-assembly trick above. Separately, my first pull request used <code>main</code> as its base branch, but the repo's default branch has a different name, so GitHub rejected it until I looked it up.</p>
+  </details>
+  <details open>
+    <summary>A real bug caught by re-reading</summary>
+    <p>In my first draft the controller started the browser engine's asynchronous setup from its constructor, which runs before the Windows message loop exists. Continuations after an <code>await</code> would then have landed on a background thread, where WebView2, which must be used from the UI thread, does not work. I moved the start into a message posted to the UI thread. The compile check could not have caught this, because the code was valid, just wrong at runtime. This is the class of mistake that only a real run, or a careful read, finds.</p>
+  </details>
+  <details>
+    <summary>A stuck command</summary>
+    <p>I left a stray <code>cat</code> with no input in a shell command. It waited forever and timed out. Nothing was lost, but the workflow file and ignore file had to be written again.</p>
+  </details>
+</section>
+
+<section>
+  <h2>What is proven and what is not</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Claim</th><th>Status</th><th>How I know</th></tr></thead>
+    <tbody>
+      <tr><td>Scenes are unchanged from the original</td><td><span class="pill ok">Verified</span></td><td><code>diff -r</code> against the upstream clone</td></tr>
+      <tr><td>Scene checks and tests pass</td><td><span class="pill ok">Verified</span></td><td>Linux run, and GitHub Actions on <code>windows-latest</code></td></tr>
+      <tr><td>Host compiles and publishes on Windows</td><td><span class="pill ok">Verified</span></td><td>Green CI build with uploaded artifact</td></tr>
+      <tr><td>World appears behind the desktop icons</td><td><span class="pill warn">Not yet run</span></td><td>Needs a real Windows desktop</td></tr>
+      <tr><td>Correct on mixed-scaling multi-monitor setups</td><td><span class="pill warn">Not yet run</span></td><td>Code handles DPI per monitor, untested</td></tr>
+      <tr><td>Frame rate and power use on your GPU</td><td><span class="pill warn">Not yet run</span></td><td>The original never measured battery life either</td></tr>
+    </tbody>
+  </table></div>
+  <p>To find out on your own machine, follow the run instructions in the project README. Start with <code>Deskworlds.exe --window</code>: if the scene draws there, the scenes and web view work, and any remaining problem is the desktop attach step. The log at <code>%LOCALAPPDATA%\Deskworlds\deskworlds.log</code> records what happened.</p>
+</section>
+
+<section>
+  <h2>Terms used above</h2>
+  <dl>
+    <div><dt>WebView2</dt><dd>Microsoft's embeddable version of the Edge browser engine. Windows' counterpart to macOS's WKWebView.</dd></div>
+    <div><dt>Progman and WorkerW</dt><dd>Windows Explorer's own windows that make up the desktop. Progman is the top one; WorkerW windows can hold the wallpaper picture.</dd></div>
+    <div><dt>P/Invoke</dt><dd>How C# calls a Windows system function. Each function is declared once with its exact signature, which is why the C# is longer than the Swift.</dd></div>
+    <div><dt>DPI scaling</dt><dd>Windows can draw at 125%, 150% or more so text is readable on dense screens. Physical pixels are the real ones; CSS pixels are what a web page counts.</dd></div>
+    <div><dt>Self-contained publish</dt><dd>A .NET build that bundles the .NET runtime, so the person running it does not have to install .NET.</dd></div>
+    <div><dt>Cloaked window</dt><dd>A window Windows keeps alive but hides, for example one on another virtual desktop. It must not count as covering your wallpaper.</dd></div>
+  </dl>
+</section>
+
+<footer>
+  Original project: <a href="https://github.com/chaseleantj/deskworlds">chaseleantj/deskworlds</a> (MIT). Windows port and this write-up: <a href="https://github.com/az9713/sonnet-5.5-builds/pull/1">az9713/sonnet-5.5-builds pull request 1</a>. Line counts, file comparisons and CI results in this page come from commands run during the port.
+</footer>
+
+</main>
+</body>
+</html>
