@@ -1,75 +1,120 @@
 # Deskworlds for Windows
 
-A Windows port of [chaseleantj/deskworlds](https://github.com/chaseleantj/deskworlds) (MIT). The four live 3D worlds (Riverbed, Coral reef, Betta, Plasma globe) are the upstream Three.js scenes, unchanged. What is new is a Windows host that draws them as a desktop wallpaper, in place of the upstream macOS Swift agent. The original README is kept as `README.upstream.md`.
+A Windows port of **[chaseleantj/deskworlds](https://github.com/chaseleantj/deskworlds)** (MIT), which puts live 3D worlds on your desktop. The original works as a wallpaper only on macOS. This port adds a Windows host so the same four worlds run on a Windows laptop:
 
-## Run in a browser (no install)
+- **Riverbed**, a planted river where a school of fish competes for food
+- **Coral reef**, with clownfish and cleaner shrimp
+- **Betta**, a single halfmoon betta on black
+- **Plasma globe**, a plasma lamp that reaches for your cursor
 
-Needs Node.js 20 or newer and a browser with WebGL2 (Edge, Chrome, Firefox).
+The scenes are the original author's Three.js code, copied unchanged. Only the part that puts them on the desktop is new. The original README is kept as [`README.upstream.md`](README.upstream.md). To see how the port was done, read the [porting journey](docs/porting-journey.html) (open it in a browser).
 
-```bat
-windows\run-browser.cmd
-```
+Credit and licence: original project by Chase Lean, MIT (see [`LICENSE`](LICENSE)). Three.js 0.180 is bundled under its MIT licence. Rock, wood and sand textures come from Poly Haven under CC0.
 
-or `npm start` and open <http://127.0.0.1:8080>. Opening `index.html` directly will not work; the scenes are ES modules and need HTTP.
+## Get it running on your Windows laptop
 
-## Install as the desktop wallpaper
+There are three ways, from quickest to most complete. Start with A: it needs no build and shows you a scene within a couple of minutes.
 
-Needs Windows 10 1809 or newer (Windows 11 recommended), the .NET 8 SDK (`winget install Microsoft.DotNet.SDK.8`) and the Edge WebView2 Runtime (already present on Windows 11 and current Windows 10). Then, from the project folder:
+You will need Windows 10 (version 1809 or newer) or Windows 11, and a GPU with WebGL2, which any laptop from the last several years has.
 
-```bat
-npm run wallpaper
-```
+### A. See the worlds in your browser (2 minutes)
 
-or `powershell -ExecutionPolicy Bypass -File windows\install.ps1`. It publishes the host for your CPU (x64 or ARM64), installs it to `%LOCALAPPDATA%\Programs\Deskworlds`, adds a sign-in entry and starts it. Add `-NoAutostart` to skip the sign-in entry.
+1. Install Node.js 20 or newer. In a terminal: `winget install OpenJS.NodeJS.LTS`, or download it from <https://nodejs.org>. Open a new terminal afterwards.
+2. Get the code. With Git:
+   ```bat
+   git clone -b claude/youthful-clarke-u54bhy https://github.com/az9713/sonnet-5.5-builds
+   cd sonnet-5.5-builds\deskworlds-windows
+   ```
+   Without Git, open the branch on GitHub, choose **Code > Download ZIP**, unzip it, and open a terminal in the `deskworlds-windows` folder. (Once this branch is merged, drop the `-b ...` part.)
+3. Start it:
+   ```bat
+   windows\run-browser.cmd
+   ```
+   This starts a small local server and opens <http://127.0.0.1:8080> in your browser. `npm start` does the same without opening the browser. If port 8080 is busy, run `set PORT=8081` first.
+4. Click a scene to open it. Move the mouse to make the creatures react; click to drop food. Press **Space** to pause, **F** for fullscreen. Stop the server with Ctrl+C.
 
-Prebuilt: every push runs the `deskworlds-windows` GitHub Actions workflow, which uploads a self-contained `Deskworlds-win-x64` artifact. Unzip it anywhere and run `Deskworlds.exe`; it needs no .NET install, only WebView2.
+Do not double-click `index.html`. The scenes load as modules and need the local server.
 
-Remove it with `npm run unwallpaper`. Your desktop picture is never changed.
+### B. Run it as your desktop wallpaper, prebuilt (about 5 minutes)
 
-## Use it
+This runs the real wallpaper host without installing a compiler.
 
-Click the Deskworlds icon in the taskbar tray (under `^` if hidden):
+1. On GitHub, open the repo's **Actions** tab, choose the **deskworlds-windows** workflow, open the latest run with a green tick, and download the **Deskworlds-win-x64** artifact at the bottom (you need to be signed in to GitHub). Artifacts are kept for 90 days.
+2. Unzip it to a folder you will keep, for example `C:\Users\<you>\Deskworlds`. Keep the `scene` folder next to `Deskworlds.exe`.
+3. Try it in a normal window first:
+   ```bat
+   Deskworlds.exe --window
+   ```
+   Windows SmartScreen may warn that the app is unrecognised, because it is not code-signed. Choose **More info > Run anyway** if you trust it.
+4. If the scene draws in that window, quit it from the tray icon and run `Deskworlds.exe` with no flag. The world now appears behind your desktop icons, on every monitor.
 
-- **World** switches every monitor between the four scenes and is remembered.
-- **Feed** drops food on every monitor (Riverbed, Coral reef, Betta). Desktop clicks do not feed; use the menu.
-- **Pause / Resume** is remembered across restarts. If Windows "Show animations" is off, it starts paused until you choose Resume.
+It needs the Microsoft Edge WebView2 Runtime. Windows 11 and up-to-date Windows 10 already have it. If Deskworlds says it is missing, install it from <https://developer.microsoft.com/microsoft-edge/webview2/>.
+
+### C. Build and install from source (10 minutes)
+
+This is the installer route, the equivalent of the original's `sh wallpaper/install.sh` on a Mac.
+
+1. Install the .NET 8 SDK: `winget install Microsoft.DotNet.SDK.8`. Open a new terminal.
+2. Get the code as in step A2, then from the `deskworlds-windows` folder run:
+   ```bat
+   npm run wallpaper
+   ```
+   or, without Node, `powershell -ExecutionPolicy Bypass -File windows\install.ps1`.
+3. The script builds the app for your CPU (x64 or ARM64), installs it to `%LOCALAPPDATA%\Programs\Deskworlds`, adds a sign-in entry so it starts with Windows, and launches it. Pass `-NoAutostart` to skip the sign-in entry.
+4. To remove it: `npm run unwallpaper`. Your normal desktop picture is never changed.
+
+## Using it
+
+Click the Deskworlds icon in the taskbar tray (click the `^` arrow if it is hidden):
+
+- **World** switches every monitor between the four scenes. The choice is remembered.
+- **Feed** drops food on every monitor (Riverbed, Coral reef, Betta). Clicking the desktop does not feed; use the menu.
+- **Pause / Resume** stops or restarts the animation and is remembered. If Windows animations are turned off, it starts paused.
 - **Start with Windows** toggles the sign-in entry.
 - **Quit** closes it.
 
-Icons, right-click menus and dragging on the desktop keep working: the scene sits behind the icons and never takes mouse input. The host reads the global cursor position and passes it to the page so the creatures still react.
+Desktop icons, right-click menus and dragging keep working, because the world sits behind the icons and never takes mouse input. The app reads the cursor position so the creatures still notice you.
 
-Frame rate follows the same policy as the macOS build:
+To save power it draws less when it can. On mains power it runs at up to 60 fps at your full screen resolution. On battery it runs at up to 30 fps at lower resolution. It drops to 20 fps when windows cover most of the desktop, and stops when the desktop is almost fully covered, on Battery Saver, when the session is locked, and when the display is off. Each monitor runs its own scene, so more monitors use more power.
 
-| Desktop state | Frame rate |
+Nothing leaves your computer. There is no account, analytics or network access after setup.
+
+## If something goes wrong
+
+| Symptom | Try |
 | --- | --- |
-| Clearly visible, on mains power | Up to 60 fps, native resolution |
-| Clearly visible, on battery | Up to 30 fps, Balanced profile |
-| Mostly covered by windows | Up to 20 fps |
-| Almost entirely covered | Stopped |
-| Battery Saver, locked or disconnected session, sleep, display off | Stopped |
+| Browser shows a blank page or module errors | You opened the file directly. Use `windows\run-browser.cmd` or `npm start`. |
+| `node` or `npm` is not recognised | Open a new terminal after installing Node.js, or run `winget install OpenJS.NodeJS.LTS`. |
+| Scene shows but stays black | Update your graphics driver. Check <https://get.webgl.org/webgl2/> in the same browser. |
+| Message about WebView2 | Install the WebView2 Runtime (link above). |
+| Wallpaper appears as a normal window, or not at all | Run with `--window` to confirm the scene itself works, then read `%LOCALAPPDATA%\Deskworlds\deskworlds.log` and open an issue with your Windows version (Win + R, `winver`). |
+| Wallpaper is frozen | Open the tray menu; the top line says why (paused, Battery Saver, covered, locked). |
+| `npm run wallpaper` says the .NET SDK is missing | Install it (step C1) and open a new terminal. |
 
-Each monitor gets its own world and its own WebView2, so more monitors cost more power. Nothing leaves your machine: the scenes are served from a local virtual host, the browser profile is InPrivate, and there is no telemetry.
+Command-line options for `Deskworlds.exe`: `--window` shows a normal window instead of drawing behind the icons, and `--world plasmascape` (or `riverscape`, `reefscape`, `bettascape`) picks a scene for that run. Set `DESKWORLDS_DEVTOOLS=1` to enable F12. The log is `%LOCALAPPDATA%\Deskworlds\deskworlds.log`.
 
-## How the port works
+## What is verified and what is not
 
-| macOS (upstream) | Windows |
+- The scene syntax check and the full scene test suite pass on Linux (Node 22) and in GitHub Actions on `windows-latest`.
+- The C# host builds in GitHub Actions on `windows-latest` and produces the `Deskworlds-win-x64` artifact.
+- **Not yet confirmed on a physical Windows laptop:** that the world attaches behind the desktop icons, behaviour on monitors with different display scaling, and frame rate on your GPU. The attachment method relies on undocumented Explorer behaviour that has differed between Windows builds. Path A always works; use `--window` in path B to separate a scene problem from an attachment problem.
+
+## How the port is built
+
+The macOS app is a single Swift file (656 lines) that hosts a web view. The scenes are about 13,800 lines of JavaScript that run unchanged in any WebGL2 browser. So the port replaces only the host:
+
+| macOS (original) | Windows (this port) |
 | --- | --- |
-| `NSWindow` at `desktopWindow` level | Borderless form parented to Explorer's `WorkerW`/`Progman` (`0x052C` trick, both the pre-24H2 and 24H2 layouts) |
-| `WKWebView` + `deskworlds://` scheme handler | WebView2 + `SetVirtualHostNameToFolderMapping("deskworlds.local", ...)` |
-| `webkit.messageHandlers.ready` | Shim mapping it onto `chrome.webview.postMessage` (scene code is untouched) |
-| `NSEvent.mouseLocation` polled | `GetCursorPos` polled, converted to CSS pixels via the monitor's DPI |
-| `CGWindowListCopyWindowInfo` coverage | `EnumWindows` + DWM extended frame bounds, cloaked/tool windows ignored |
-| IOKit battery, Low Power Mode | `GetSystemPowerStatus` (AC line, Battery Saver) |
-| Screen sleep/lock notifications | `PBT_POWERSETTINGCHANGE` display state, `SessionSwitch`, `PowerModeChanged` |
+| Borderless `NSWindow` at desktop level | Borderless form parented to Explorer's `WorkerW` / `Progman` window |
+| `WKWebView` and a `deskworlds://` scheme handler | WebView2 with a virtual host mapping to the `scene` folder |
+| `webkit.messageHandlers.ready` | A small injected shim onto `chrome.webview.postMessage` |
+| `NSEvent.mouseLocation` polled | `GetCursorPos` polled, converted using the monitor's DPI |
+| `CGWindowListCopyWindowInfo` for coverage | `EnumWindows` with DWM frame bounds |
+| IOKit battery and Low Power Mode | `GetSystemPowerStatus` (mains, Battery Saver) |
+| Sleep and lock notifications | Display-state power notification, `SessionSwitch`, `PowerModeChanged` |
 | Menu bar item | Tray `NotifyIcon` |
-| `launchctl` login item | `HKCU\...\Run` entry |
+| `launchctl` login item | `HKCU\...\Run` registry entry |
 
-Also fixed for Windows: `npm run check` used a POSIX shell loop (now `tools/check.mjs`), the installer scripts were `sh`, and `tools/bake-live-rock.py` read UTF-8 with the locale codepage.
+Other Windows fixes: `npm run check` used a POSIX shell loop and is now `tools/check.mjs`; the installer is PowerShell; `tools/bake-live-rock.py` reads its input as UTF-8. Rebuilding the reef's baked meshes (`tools/bake-*.py`) needs Python with numpy, scipy, scikit-image and Pillow, and is only needed if you change the reef layout.
 
-Debug options: `Deskworlds.exe --window` shows a normal window instead of attaching to the desktop, `--world plasmascape` forces a scene for that run, and `DESKWORLDS_DEVTOOLS=1` enables F12. The log is `%LOCALAPPDATA%\Deskworlds\deskworlds.log`.
-
-## Status
-
-Verified on Linux: the scene syntax check and the full scene test suite pass, and the host C# compiles against the WinForms and WebView2 reference assemblies. **Not yet run on a Windows machine**: desktop attachment, DPI handling on mixed-DPI monitors, and GPU performance are untested until someone runs the CI artifact. The undocumented `WorkerW` mechanism has broken between Windows builds before; if the scene appears as a normal window or not at all, check the log and open an issue with your Windows build number.
-
-Rebuilding the reef's baked meshes (`tools/bake-*.py`) needs Python with numpy, scipy, scikit-image and Pillow, and is only needed if you change the reef layout; the outputs are committed.
+Source layout: `windows/Deskworlds/` (C# host), `windows/install.ps1`, `windows/uninstall.ps1`, `windows/run-browser.cmd`, `scenes/`, `vendor/`, `ui/`.
