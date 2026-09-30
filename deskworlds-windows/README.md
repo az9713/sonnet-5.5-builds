@@ -11,6 +11,19 @@ The scenes are the original author's Three.js code, copied unchanged. Only the p
 
 Credit and licence: original project by Chase Lean, MIT (see [`LICENSE`](LICENSE)). Three.js 0.180 is bundled under its MIT licence. Rock, wood and sand textures come from Poly Haven under CC0.
 
+## The four worlds
+
+Each world is a live 3D scene, rendered in real time with Three.js and WebGL2, that reacts to your cursor. **[Try them live in your browser](https://az9713.github.io/sonnet-5.5-builds/)**, no install needed.
+
+| | |
+| --- | --- |
+| [![Riverbed](docs/images/riverscape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/riverscape/) | [![Coral reef](docs/images/reefscape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/reefscape/) |
+| **[Riverbed](https://az9713.github.io/sonnet-5.5-builds/scenes/riverscape/)**: a planted river where a school of neon fish competes for food among rivergrass and driftwood. Click to drop food. | **[Coral reef](https://az9713.github.io/sonnet-5.5-builds/scenes/reefscape/)**: clownfish, anemones, branching corals and cleaner shrimp under shafts of sunlight. Click to feed. |
+| [![Betta](docs/images/bettascape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/bettascape/) | [![Plasma globe](docs/images/plasmascape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/plasmascape/) |
+| **[Betta](https://az9713.github.io/sonnet-5.5-builds/scenes/bettascape/)**: a single halfmoon betta with long flowing fins on black. Drag to look around, scroll to zoom, click to feed. | **[Plasma globe](https://az9713.github.io/sonnet-5.5-builds/scenes/plasmascape/)**: a plasma lamp glowing in a dark room. Move the cursor toward the glass and the discharge reaches for it. |
+
+Images are the original author's screenshots from [chaseleantj/deskworlds](https://github.com/chaseleantj/deskworlds). The live pages run the same scene code as the Windows wallpaper. In the browser, Space pauses, F goes fullscreen, and there is a Quality menu (Eco 20 fps, Balanced 30 fps, Detail 60 fps).
+
 ## Get it running on your Windows laptop
 
 There are three ways, from quickest to most complete. Start with A: it needs no build and shows you a scene within a couple of minutes.
