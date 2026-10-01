@@ -85,9 +85,9 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   const ws = [];
   const specs = [
     // the near whale: close to the camera and broadside to it, so its arched back and bending body fill a third of the frame
-    { x: -4, y: -1.15, z: -40, yaw: 0.1, scale: 1.3, mode: 'travel', travelFor: 1.2, breaths: 4, hero: true, zNear: -33, zFar: -46, view: 0.4 },
+    { x: -4, y: -0.7, z: -40, yaw: 0.1, scale: 1.3, mode: 'travel', travelFor: 1.2, breaths: 4, hero: true, zNear: -33, zFar: -46, view: 0.4 },
     { x: 34, y: -6.5, z: -100, yaw: Math.PI / 2 - 0.3, scale: 1.08, mode: 'submerged', breaths: 4, zNear: -64, zFar: -120, view: 0.62 },
-    { x: 52, y: -1.15, z: -74, yaw: Math.PI / 2 + 0.7, scale: 1.18, mode: 'travel', travelFor: 8, breaths: 2, zNear: -62, zFar: -112, view: 0.62 },
+    { x: 52, y: -0.65, z: -74, yaw: Math.PI / 2 + 0.7, scale: 1.18, mode: 'travel', travelFor: 8, breaths: 2, zNear: -62, zFar: -112, view: 0.62 },
   ];
   for (let i = 0; i < whales; i++) {
     const s = specs[i % specs.length];
@@ -98,6 +98,12 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   for (const w of ws) for (let k = 0; k < 4; k++) w.rig.step(FIXED_STEP, { x: w.x, y: w.y, z: w.z, yaw: w.yaw, pitch: 0, roll: 0, speed: w.speed, beat: 0.3 });
 
   function pickWaypoint(w) {
+    if (w.hero) {   // the near whale crosses the frame, flank to the camera, and turns at the far side
+      const side = w.x > 0 ? -1 : 1;
+      w.goalX = side * rand(11, 15);
+      w.goalZ = w.z > -41.5 ? -rand(44, 47) : -rand(38, 40);   // swing out and back so each U-turn bends away from the camera
+      return;
+    }
     let best = null, bestScore = -1e9;
     for (let k = 0; k < 10; k++) {
       const gz = w.zNear + (w.zFar - w.zNear) * Math.pow(random(), 1.2), reach = Math.min(BOUNDS.maxX - 20, w.view * -gz);
@@ -194,13 +200,14 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   const tmp = [0, 0, 0];
   function think(w, dt) {
     w.modeT += dt;
-    let speedT = 1.7, depthT = -1.15, beat = 0.35, archT = 0, rollT = 0, gapeT = 0, turn = 0.14;
+    const sc0 = w.scale;   // the whale rides low: the waterline cuts the body above its middle, only the back breaks the surface
+    let speedT = 1.7, depthT = -0.52 * sc0, beat = 0.35, archT = 0, rollT = 0, gapeT = 0, turn = 0.14;
     const nz = Math.sin(time * 0.17 + w.id * 2.3) * 0.5 + Math.sin(time * 0.071 + w.id) * 0.5;
     switch (w.mode) {
       case 'travel': {
         const d = headToward(w, w.goalX, w.goalZ);
-        speedT = 1.5 + 0.5 * nz; depthT = -1.2 + 0.2 * nz; beat = (w.hero ? 0.5 : 0.3) + 0.1 * nz;
-        if (d < 14) pickWaypoint(w);
+        speedT = 1.5 + 0.5 * nz; depthT = (-0.55 + 0.08 * nz) * sc0; archT = 0.22; beat = (w.hero ? 0.5 : 0.3) + 0.1 * nz;
+        if (d < (w.hero ? 4 : 14)) pickWaypoint(w);
         if (w.modeT > w.travelFor) setMode(w, 'breath');
         break;
       }
@@ -209,7 +216,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
         // the head comes up and the whale blows; the back arches and rolls; then it settles
         speedT = 1.2; beat = 0.2;
         const lift = sstep(0.0, 1.0, t) * (1 - sstep(2.4, 3.4, t));
-        depthT = -1.2 + 0.7 * lift + 0.15 * sstep(2.6, 4.2, t) * (1 - sstep(5.0, 6.5, t));
+        depthT = (-0.55 + 0.42 * lift) * sc0 + 0.1 * sc0 * sstep(2.6, 4.2, t) * (1 - sstep(5.0, 6.5, t));
         archT = 0.9 * sstep(1.8, 3.6, t) * (1 - sstep(5.6, 7.4, t));
         rollT = 0.95 * Math.sin(clamp((t - 1.6) / 5.6, 0, 1) * Math.PI) * (w.id % 2 ? -1 : 1);
         headToward(w, w.goalX, w.goalZ);
@@ -244,8 +251,8 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       }
       case 'ascend': {
         headToward(w, w.ascendX, w.ascendZ, 1.4);
-        speedT = 2.0; beat = 0.5; depthT = -1.1; w.pitchBias = 0.0;
-        if (w.y > -1.7) setMode(w, 'travel');
+        speedT = 2.0; beat = 0.5; depthT = -0.55 * sc0; w.pitchBias = 0.0;
+        if (w.y > -1.7 * sc0) setMode(w, 'travel');
         break;
       }
       case 'curious': {
@@ -256,7 +263,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
         const gap = Math.hypot(tx - w.x, tz - w.z);
         if (d > CURSOR.standoff + 3) headToward(w, tx, tz, 1.2);
         else { w.goalYaw = Math.atan2(-(cursor.z - w.z), cursor.x - w.x); }
-        speedT = clamp(gap * 0.16, 0.0, 2.0); depthT = -1.25; beat = 0.18 + 0.1 * nz; turn = 0.16;
+        speedT = clamp(gap * 0.16, 0.0, 2.0); depthT = -0.58 * sc0; beat = 0.18 + 0.1 * nz; turn = 0.16;
         if (gone || w.modeT > 60 || time - cursor.movedAt > 30 || d > 190) setMode(w, 'travel');
         break;
       }
@@ -305,7 +312,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     w.z += -cp * Math.sin(w.yaw) * w.speed * dt;
     w.y += Math.sin(w.pitch) * w.speed * dt;
     // buoyancy keeps a surface whale from rising out of the water on its own
-    if (w.mode !== 'ascend' && w.mode !== 'breath' && w.y > -0.7) w.y -= (w.y + 0.7) * 0.8 * dt;
+    if (w.mode !== 'ascend' && w.mode !== 'breath' && w.y > -0.45) w.y -= (w.y + 0.45) * 0.8 * dt;
   }
 
   // --- the bubble net --------------------------------------------------------------------------

@@ -174,8 +174,8 @@ export function createRig({ scale = 1, phase = 0 } = {}) {
 
   // Position of the blowhole (on the top of the head), for the spout and the surfaced test.
   rig.blowhole = function blowhole(out) {
-    const s = 2.4 * scale, f = s / JD, i = Math.min(NJ - 2, Math.floor(f)), a = f - i;
-    const top = topAt(2.4 / BODY_LEN) * scale;
+    const s = 3.0 * scale, f = s / JD, i = Math.min(NJ - 2, Math.floor(f)), a = f - i;
+    const top = topAt(3.0 / BODY_LEN) * scale;
     for (let k = 0; k < 3; k++) {
       const p = P[i * 3 + k] * (1 - a) + P[(i + 1) * 3 + k] * a, u = U[i * 3 + k] * (1 - a) + U[(i + 1) * 3 + k] * a;
       out[k] = p + u * top;

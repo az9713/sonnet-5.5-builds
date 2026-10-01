@@ -12,7 +12,12 @@ import { BODY_LEN, FLIPPER_LEN, FLUKE_HALF, radial, halfWidth, topAt, bottomAt, 
     if (w > maxW) { maxW = w; at = t; }
   }
   assert.ok(at > 0.25 && at < 0.42, `girth peaks about a third of the way back (t=${at.toFixed(2)})`);
-  assert.ok(maxW * 2 / BODY_LEN > 0.2 && maxW * 2 / BODY_LEN < 0.32, `body ${(maxW * 2).toFixed(2)} m wide on ${BODY_LEN} m`);
+  assert.ok(maxW * 2 / BODY_LEN > 0.14 && maxW * 2 / BODY_LEN < 0.24, `body ${(maxW * 2).toFixed(2)} m wide on ${BODY_LEN} m`);
+  // slender in side view: length is 5 to 6.5 times the depth at the girth
+  let maxDepth = 0; for (let t = 0.1; t <= 0.6; t += 0.01) maxDepth = Math.max(maxDepth, topAt(t) - bottomAt(t));
+  assert.ok(BODY_LEN / maxDepth > 5 && BODY_LEN / maxDepth < 6.8, `length / depth = ${(BODY_LEN / maxDepth).toFixed(2)}`);
+  // the stock behind the girth tapers over the rear third
+  assert.ok(radial(0.67) < 0.5 * radial(0.38) && radial(0.85) < 0.25, 'narrow tail stock');
   assert.ok(halfWidth(1) < 0.3 * maxW, 'the peduncle is slender');
   assert.ok(halfWidth(0) < 1e-9, 'the nose is closed');
   // smooth: no jumps along the body

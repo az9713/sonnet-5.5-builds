@@ -1,6 +1,7 @@
 import { AURORA_GLSL, ALT_MIN, ALT_MAX, EARTH_R } from './aurora-model.js';
 import { simShader, SIM } from './wave-sim.js';
 import { NJ } from './rig.js';
+import { BODY_LEN, FLIPPER_LEN } from './whale-shape.js';
 export { simShader };
 
 // Every shader in the scene. Linear HDR throughout; the output pass tone-maps once.
@@ -709,7 +710,7 @@ vec3 flipperOff(float u, float v, float side, float sg){
   float kb = 0.05*pow(abs(sin(u*PI*8.0)), 0.7)*smoothstep(0.05, 0.2, u)*(1.0 - smoothstep(0.85, 1.0, u));   // the knobbly leading edge
   float fwdPos = 0.28*c + kb - v*c;
   float th = side*0.11*(1.0 - 0.55*u)*pow(sin(PI*clamp(v, 0.0, 1.0)), 0.7);
-  vec3 off = vec3(0.0, -0.55, sg*0.95) + dirA*(u*${(4.2).toFixed(2)}) + ch*fwdPos + n0*th;
+  vec3 off = vec3(0.0, -0.55, sg*0.95) + dirA*(u*${FLIPPER_LEN.toFixed(2)}) + ch*fwdPos + n0*th;
   int fin = sg > 0.0 ? 2 : 1;
   vec3 lag = lagFor(fin, u);
   float w = pow(u, 1.4);
@@ -750,7 +751,7 @@ vec3 flukeOff(float u, float v, float side){
   return off*uScale;
 }
 void flukePoint(float u, float v, float side, out vec3 pos, out vec3 N){
-  vec3 P, T, U; spineFrame(${(12.6).toFixed(2)}*uScale, P, T, U); vec3 S = cross(T, U);
+  vec3 P, T, U; spineFrame(${BODY_LEN.toFixed(2)}*uScale, P, T, U); vec3 S = cross(T, U);
   vec3 off = flukeOff(u, v, side);
   pos = P + T*off.x + U*off.y + S*off.z;
   float e = 0.012;
@@ -773,7 +774,7 @@ void main(){
     vWet = wetAt(position.x*uScale);
   } else if (part < 1.5){
     flukePoint(position.x, position.y, position.z, pos, N);
-    vWet = wetAt(${(12.6).toFixed(2)}*uScale);
+    vWet = wetAt(${BODY_LEN.toFixed(2)}*uScale);
   } else {
     float sg = part < 2.5 ? -1.0 : 1.0;
     flipperPoint(position.x, position.y, position.z, sg, pos, N);
@@ -827,7 +828,7 @@ void main(){
   float white = 0.0, bump = 0.0, scar = 0.0, barn = 0.0, rough = 0.0;
   vec3 R3 = vRest;
   if (vPart < 0.5){
-    float t = vRest.x/12.6;
+    float t = vRest.x/${BODY_LEN.toFixed(2)};
     float jag = tfbm3(vec2(vRest.x*0.45 + uSeed*7.0, vRest.z*1.3)) - 0.5;
     float jag2 = tfbm3(vec2(vRest.x*1.1 + uSeed*5.0, vRest.z*2.4)) - 0.5;
     float bellyM = smoothstep(-0.5, -0.85, vRestN.y + 0.4*jag)*smoothstep(0.03, 0.12, t)*(1.0 - smoothstep(0.18, 0.40, t + 0.45*jag2));
@@ -859,7 +860,7 @@ void main(){
     albedo *= 0.75 + 0.8*tfbm3(vRest.xz*1.7 + vRest.y);
     // the mouth line and the open mouth
     float mline = vRest.y + 0.40 - 0.10*vRest.x;           // the jaw line climbs toward the eye
-    float mouth = smoothstep(0.09, 0.0, abs(mline))*(1.0 - smoothstep(3.0, 4.8, vRest.x))*smoothstep(0.05, 0.3, vRest.x);
+    float mouth = smoothstep(0.09, 0.0, abs(mline))*(1.0 - smoothstep(3.4, 5.4, vRest.x))*smoothstep(0.05, 0.3, vRest.x);
     albedo *= 1.0 - 0.9*mouth;
     bump -= mouth*1.2;
     float open = uGape*smoothstep(0.35, -0.2, vRest.y + 0.2)*(1.0 - smoothstep(3.0, 4.6, vRest.x))*step(0.0, -vRestN.y + 0.55);
