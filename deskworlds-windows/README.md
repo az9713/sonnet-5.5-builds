@@ -1,19 +1,23 @@
 # Deskworlds for Windows
 
-A Windows port of **[chaseleantj/deskworlds](https://github.com/chaseleantj/deskworlds)** (MIT), which puts live 3D worlds on your desktop. The original works as a wallpaper only on macOS. This port adds a Windows host so the same four worlds run on a Windows laptop:
+A Windows port of **[chaseleantj/deskworlds](https://github.com/chaseleantj/deskworlds)** (MIT), which puts live 3D worlds on your desktop. The original works as a wallpaper only on macOS. This port adds a Windows host so the same four worlds run on a Windows laptop, and adds four new worlds of its own, so there are eight in all:
 
 - **Riverbed**, a planted river where a school of fish competes for food
 - **Coral reef**, with clownfish and cleaner shrimp
 - **Betta**, a single halfmoon betta on black
 - **Plasma globe**, a plasma lamp that reaches for your cursor
+- **Slime mould**, a Physarum network growing on an agar plate (new)
+- **Pelagic**, jellyfish and comb jellies with bioluminescent plankton (new)
+- **Aurora fjord**, aurora over a still fjord with humpback whales (new)
+- **Cosmic web**, galaxy filaments flowing into a neural net and a mycelium (new)
 
-The scenes are the original author's Three.js code, copied unchanged. Only the part that puts them on the desktop is new. The original README is kept as [`README.upstream.md`](README.upstream.md). To see how the port was done, read the [porting journey](docs/porting-journey.html) (open it in a browser). To see how the worlds themselves are built (shared rendering layers, then the technique behind each scene), read [how the worlds work](docs/how-the-worlds-work.html).
+The four original scenes are the author's Three.js code, copied unchanged. The part that puts them on the desktop is new, and so are the four extra worlds (each in its own `scenes/` folder, with no-GPU node tests). The original README is kept as [`README.upstream.md`](README.upstream.md). To see how the port was done, read the [porting journey](docs/porting-journey.html) (open it in a browser). To see how the worlds themselves are built (shared rendering layers, then the technique behind each scene), read [how the worlds work](docs/how-the-worlds-work.html).
 
 Credit and licence: original project by Chase Lean, MIT (see [`LICENSE`](LICENSE)). Three.js 0.180 is bundled under its MIT licence. Rock, wood and sand textures come from Poly Haven under CC0.
 
-## The four worlds
+## The eight worlds
 
-Each world is a live 3D scene, rendered in real time with Three.js and WebGL2, that reacts to your cursor. **[Try them live in your browser](https://az9713.github.io/sonnet-5.5-builds/)**, no install needed.
+Each world is a live 3D scene, rendered in real time with Three.js and WebGL2, that reacts to your cursor. The top four are the original author's; the bottom four are new in this port. **[Try them live in your browser](https://az9713.github.io/sonnet-5.5-builds/)**, no install needed.
 
 | | |
 | --- | --- |
@@ -21,12 +25,16 @@ Each world is a live 3D scene, rendered in real time with Three.js and WebGL2, t
 | **[Riverbed](https://az9713.github.io/sonnet-5.5-builds/scenes/riverscape/)**: a planted river where a school of neon fish competes for food among rivergrass and driftwood. Click to drop food. | **[Coral reef](https://az9713.github.io/sonnet-5.5-builds/scenes/reefscape/)**: clownfish, anemones, branching corals and cleaner shrimp under shafts of sunlight. Click to feed. |
 | [![Betta](docs/images/bettascape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/bettascape/) | [![Plasma globe](docs/images/plasmascape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/plasmascape/) |
 | **[Betta](https://az9713.github.io/sonnet-5.5-builds/scenes/bettascape/)**: a single halfmoon betta with long flowing fins on black. Drag to look around, scroll to zoom, click to feed. | **[Plasma globe](https://az9713.github.io/sonnet-5.5-builds/scenes/plasmascape/)**: a plasma lamp glowing in a dark room. Move the cursor toward the glass and the discharge reaches for it. |
+| [![Slime mould](docs/images/slimescape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/slimescape/) | [![Pelagic](docs/images/pelagicscape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/pelagicscape/) |
+| **[Slime mould](https://az9713.github.io/sonnet-5.5-builds/scenes/slimescape/)**: a slime mould (Physarum) growing a transport network on a dark agar plate, with oat flakes, slugs and springtails. Move the cursor to shine a lamp: the slime shrinks from the light and slugs crawl toward it. Click to drop an oat flake. | **[Pelagic](https://az9713.github.io/sonnet-5.5-builds/scenes/pelagicscape/)**: jellyfish and comb jellies drifting in dark deep water. Move the cursor through the water and bioluminescent plankton flash blue in its wake. |
+| [![Aurora fjord](docs/images/aurorascape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/aurorascape/) | [![Cosmic web](docs/images/cosmoscape-wide.png)](https://az9713.github.io/sonnet-5.5-builds/scenes/cosmoscape/) |
+| **[Aurora fjord](https://az9713.github.io/sonnet-5.5-builds/scenes/aurorascape/)**: a polar night over a still Arctic fjord. The aurora ripples overhead and in the black water while humpback whales surface, blow and dive. Move the cursor to make ripples; a curious whale may drift over. | **[Cosmic web](https://az9713.github.io/sonnet-5.5-builds/scenes/cosmoscape/)**: the cosmic web of galaxies drifting past in slow time-lapse, flowing into a neural network and then a mycelium. Your cursor is a point mass that bends light and pulls matter. |
 
-Images are the original author's screenshots from [chaseleantj/deskworlds](https://github.com/chaseleantj/deskworlds). The live pages run the same scene code as the Windows wallpaper. In the browser, Space pauses, F goes fullscreen, and there is a Quality menu (Eco 20 fps, Balanced 30 fps, Detail 60 fps).
+Images of the first four are the original author's screenshots from [chaseleantj/deskworlds](https://github.com/chaseleantj/deskworlds). The four newer worlds were written for this port, and their images are frames I rendered with a software WebGL renderer, so they are slower and a little softer than what a GPU shows. The live pages run the same scene code as the Windows wallpaper. In the browser, Space pauses, F goes fullscreen, and there is a Quality menu (Eco 20 fps, Balanced 30 fps, Detail 60 fps).
 
 ## How the worlds work
 
-**[Read the live page](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)**: the rendering and simulation layers all four worlds share, then the specific technique behind each one (Riverbed, Coral reef, Betta, Plasma globe), with charts and the real numbers from the code.
+**[Read the live page](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)**: the rendering and simulation layers the original four worlds share, then the specific technique behind each one (Riverbed, Coral reef, Betta, Plasma globe), with charts and the real numbers from the code. The page does not cover the four newer worlds yet.
 
 [![Preview of the "How the worlds work" page. Click to open the live page.](docs/images/how-the-worlds-work-preview.jpg)](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)
 
@@ -43,10 +51,10 @@ You will need Windows 10 (version 1809 or newer) or Windows 11, and a GPU with W
 1. Install Node.js 20 or newer. In a terminal: `winget install OpenJS.NodeJS.LTS`, or download it from <https://nodejs.org>. Open a new terminal afterwards.
 2. Get the code. With Git:
    ```bat
-   git clone -b claude/youthful-clarke-u54bhy https://github.com/az9713/sonnet-5.5-builds
+   git clone https://github.com/az9713/sonnet-5.5-builds
    cd sonnet-5.5-builds\deskworlds-windows
    ```
-   Without Git, open the branch on GitHub, choose **Code > Download ZIP**, unzip it, and open a terminal in the `deskworlds-windows` folder. (Once this branch is merged, drop the `-b ...` part.)
+   Without Git, open the repo on GitHub, choose **Code > Download ZIP**, unzip it, and open a terminal in the `deskworlds-windows` folder.
 3. Start it:
    ```bat
    windows\run-browser.cmd
@@ -88,15 +96,15 @@ This is the installer route, the equivalent of the original's `sh wallpaper/inst
 
 Click the Deskworlds icon in the taskbar tray (click the `^` arrow if it is hidden):
 
-- **World** switches every monitor between the four scenes. The choice is remembered.
-- **Feed** drops food on every monitor (Riverbed, Coral reef, Betta). Clicking the desktop does not feed; use the menu.
+- **World** switches every monitor between the eight scenes. The choice is remembered.
+- **Feed** drops food on every monitor (Riverbed, Coral reef, Betta, Slime mould). Clicking the desktop does not feed; use the menu.
 - **Pause / Resume** stops or restarts the animation and is remembered. If Windows animations are turned off, it starts paused.
 - **Start with Windows** toggles the sign-in entry.
 - **Quit** closes it.
 
 Desktop icons, right-click menus and dragging keep working, because the world sits behind the icons and never takes mouse input. The app reads the cursor position so the creatures still notice you.
 
-To save power it draws less when it can. On mains power it runs at up to 60 fps at your full screen resolution. On battery it runs at up to 30 fps at lower resolution. It drops to 20 fps when windows cover most of the desktop, and stops when the desktop is almost fully covered, on Battery Saver, when the session is locked, and when the display is off. Each monitor runs its own scene, so more monitors use more power.
+To save power it draws less when it can. On mains power it runs at up to 60 fps at your full screen resolution. On battery it runs at up to 30 fps at lower resolution, and the busiest worlds also switch to a cheaper quality tier (fewer particles, smaller simulation grids). It drops to 20 fps when windows cover most of the desktop, and stops when the desktop is almost fully covered, on Battery Saver, when the session is locked, and when the display is off. Each monitor runs its own scene, so more monitors use more power.
 
 Nothing leaves your computer. There is no account, analytics or network access after setup.
 
@@ -112,17 +120,18 @@ Nothing leaves your computer. There is no account, analytics or network access a
 | Wallpaper is frozen | Open the tray menu; the top line says why (paused, Battery Saver, covered, locked). |
 | `npm run wallpaper` says the .NET SDK is missing | Install it (step C1) and open a new terminal. |
 
-Command-line options for `Deskworlds.exe`: `--window` shows a normal window instead of drawing behind the icons, and `--world plasmascape` (or `riverscape`, `reefscape`, `bettascape`) picks a scene for that run. Set `DESKWORLDS_DEVTOOLS=1` to enable F12. The log is `%LOCALAPPDATA%\Deskworlds\deskworlds.log`.
+Command-line options for `Deskworlds.exe`: `--window` shows a normal window instead of drawing behind the icons, and `--world plasmascape` (or `riverscape`, `reefscape`, `bettascape`, `slimescape`, `pelagicscape`, `aurorascape`, `cosmoscape`) picks a scene for that run. Set `DESKWORLDS_DEVTOOLS=1` to enable F12. The log is `%LOCALAPPDATA%\Deskworlds\deskworlds.log`.
 
 ## What is verified and what is not
 
-- The scene syntax check and the full scene test suite pass on Linux (Node 22) and in GitHub Actions on `windows-latest`.
+- The scene syntax check and the full scene test suite (25 test files, including the four new worlds) pass on Linux (Node 22) and in GitHub Actions on `windows-latest`.
+- The four new worlds were looked at only through software-rendered frames (headless Chromium with SwiftShader) and Playwright checks of the host hooks, including the battery switch. **Frame rates on a real GPU have not been measured.** The aurora fjord whales are the weakest part of the new set.
 - The C# host builds in GitHub Actions on `windows-latest` and produces the `Deskworlds-win-x64` artifact.
 - **Not yet confirmed on a physical Windows laptop:** that the world attaches behind the desktop icons, behaviour on monitors with different display scaling, and frame rate on your GPU. The attachment method relies on undocumented Explorer behaviour that has differed between Windows builds. Path A always works; use `--window` in path B to separate a scene problem from an attachment problem.
 
 ## How the port is built
 
-The macOS app is a single Swift file (656 lines) that hosts a web view. The scenes are about 13,800 lines of JavaScript that run unchanged in any WebGL2 browser. So the port replaces only the host:
+The macOS app is a single Swift file (656 lines) that hosts a web view. The original scenes are about 13,800 lines of JavaScript that run unchanged in any WebGL2 browser. So the port replaces only the host (the four new worlds use the same scene contract, so the host treats them like the others):
 
 | macOS (original) | Windows (this port) |
 | --- | --- |
