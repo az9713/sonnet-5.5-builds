@@ -36,7 +36,7 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
     // The blow: a spout lasts about half a second. A narrow fast core of mist climbs three to five
     // metres, then billows and wafts away on the wind.
     spout(px, py, pz, power = 1, heightScale = 1) {
-      emitters.push({ x: px, y: py, z: pz, left: Math.round(34 + 12 * power), total: Math.round(34 + 12 * power), power, height: heightScale });
+      emitters.push({ x: px, y: py, z: pz, left: Math.round(70 + 20 * power), total: Math.round(70 + 20 * power), power, height: heightScale });
       for (let j = 0; j < 14; j++) {   // droplets thrown out of the spout
         const i = add(DROP), a = random() * TAU, sp = rand(0.4, 2.2);
         x[i] = px; y[i] = py + 0.1; z[i] = pz; vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = rand(2.5, 6.5);
@@ -75,16 +75,16 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
       time += dt;
       for (let e = emitters.length - 1; e >= 0; e--) {
         const em = emitters[e];
-        const per = em.total / 30;   // spawn over 30 steps
+        const per = em.total / 36;   // spawn over 30 steps
         let n = Math.min(em.left, Math.floor(per) + (random() < per % 1 ? 1 : 0));
         while (n-- > 0) {
           const i = add(MIST), u = 1 - em.left / em.total;
           em.left--;
           x[i] = em.x + rand(-0.1, 0.1); y[i] = em.y + rand(0, 0.2); z[i] = em.z + rand(-0.1, 0.1);
           const up = (7.2 + 3.6 * random()) * em.height * (0.6 + 0.4 * em.power);
-          const a = random() * TAU, sp = rand(0.05, 0.6) * (0.4 + u);
+          const a = random() * TAU, sp = rand(0.05, 0.9) * (0.4 + 1.2 * u);
           vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = up * (1 - 0.35 * u);
-          s0[i] = rand(0.22, 0.4); s1[i] = rand(1.1, 2.2) * (0.8 + 0.4 * em.power); life[i] = rand(2.6, 5.4); peak[i] = rand(0.2, 0.42);
+          s0[i] = rand(0.14, 0.3); s1[i] = rand(0.7, 1.7) * (0.8 + 0.4 * em.power); life[i] = rand(2.4, 5.6); peak[i] = rand(0.1, 0.26);
         }
         if (em.left <= 0) emitters.splice(e, 1);
       }

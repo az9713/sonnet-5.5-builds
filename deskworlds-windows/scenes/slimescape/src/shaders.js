@@ -97,7 +97,7 @@ uniform vec2 uTexel;
 uniform vec2 uWorld;
 uniform vec4 uDiffuse;        // blend toward blur, decay, extra decay in light, memory rate
 uniform vec4 uCursor;         // x, y, radius, strength
-uniform vec4 uFoods[12];      // x, y, amplitude, sigma
+uniform vec4 uFoods[14];      // x, y, amplitude, sigma (flakes, then unseen scents)
 uniform int uFoodCount;
 varying vec2 vUv;
 void main() {
@@ -114,7 +114,7 @@ void main() {
   float r = min(mix(c.r, s.r, uDiffuse.x) * (uDiffuse.y - uDiffuse.z * min(lit, 1.0)), 6000.0);
   float b = mix(s.b, s.r, uDiffuse.w);
   float food = 0.0;
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < 14; i++) {
     if (i >= uFoodCount) break;
     vec4 f = uFoods[i];
     vec2 d = Q - f.xy;
@@ -484,7 +484,7 @@ float sdEll(vec2 p, vec2 r) { float k0 = length(p / r), k1 = length(p / (r * r))
 float smin(float a, float b, float k) { float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
 void main() {
   vec3 Lk = normalize(KEY);
-  vec2 d = vL * 0.045;
+  vec2 d = vL * 0.045 / 1.45;                      // the springtail is drawn 1.45x its nominal size
   float z = vA.z;
   float lift = 1.0 + z * 5.0;                     // nearer the lens while airborne
   vec2 p = rot(d, vA.w);
@@ -511,8 +511,8 @@ void main() {
   float a = max(bodyA, max(furA, antA));
   // shading: slate-purple body with a wet highlight
   vec2 n2 = normalize(p + 1e-5);
-  float hi = exp(-900.0 * dot(p - vec2(0.0025, 0.0018), p - vec2(0.0025, 0.0018) ));
-  vec3 col = vec3(0.060, 0.050, 0.075) * (0.6 + 0.5 * clamp(0.5 + 0.5 * dot(n2, vec2(-0.5, 0.6)), 0.0, 1.0)) + vec3(0.9, 0.85, 0.75) * hi * 0.6 + vec3(0.1, 0.12, 0.16) * pow(clamp(-body / 0.003, 0.0, 1.0), 0.3) * 0.15;
+  float hi = exp(-160000.0 * dot(p - vec2(0.0022, 0.0018), p - vec2(0.0022, 0.0018)));
+  vec3 col = vec3(0.060, 0.050, 0.075) * (0.6 + 0.5 * clamp(0.5 + 0.5 * dot(n2, vec2(-0.5, 0.6)), 0.0, 1.0)) + vec3(0.9, 0.85, 0.75) * hi * 0.45 + vec3(0.06, 0.08, 0.12) * (1.0 - clamp(-body / 0.002, 0.0, 1.0)) * 0.25;
   // contact shadow: offset away from the key, sharper on the plate and wider and fainter in the air
   vec2 sp = rot(d + vec2(0.0035, -0.0042) * (1.0 + z * 18.0), vA.w);
   float sh = sdEll(sp, vec2(0.0125, 0.0058) * (1.0 + z * 6.0));

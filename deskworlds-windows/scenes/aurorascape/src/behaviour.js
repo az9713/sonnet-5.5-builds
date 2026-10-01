@@ -18,11 +18,11 @@ const wrapPi = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 export const CAMERA = { x: 0, y: 3.2, z: 0 };
 // The fjord, in metres, shared with the land and water shaders (keep in step with
 // FJORD_GLSL in shaders.js): centre line and half width of the water.
-export const fjordCenter = (z) => 26 * Math.sin(z * 0.0016 + 0.4) - 6;
+export const fjordCenter = (z) => 26 * Math.sin(z * 0.0016 + 0.4) - 6 + 520 * sstep(400, 5200, -z) ** 1.2;
 export const fjordHalfWidth = (z) => (240 + 30 * Math.sin(z * 0.0049 + 1.1)) * (1 + 0.9 * sstep(900, 3200, -z));
-export const BOUNDS = { minX: -128, maxX: 128, minZ: -196, maxZ: -40, shoreMargin: 42 };
+export const BOUNDS = { minX: -128, maxX: 128, minZ: -150, maxZ: -38, shoreMargin: 42 };
 export const SHORE_MARGIN = BOUNDS.shoreMargin;
-const VIEW = 0.66;      // whales keep to the wedge the camera sees: |x| < VIEW * distance
+const VIEW = 0.62;      // whales keep to the wedge the camera sees: |x| < VIEW * distance
 export const inFjord = (x, z, margin = 0) => Math.abs(x - fjordCenter(z)) < fjordHalfWidth(z) - margin;
 
 // Cursor speed is in screen widths per second: below SLOW it is a patient hand, above FAST a swat.
@@ -34,7 +34,7 @@ export const TRANSITIONS = {
   breath: ['travel', 'dive', 'curious', 'flee'],
   dive: ['submerged', 'flee'],
   submerged: ['ascend', 'curious', 'flee', 'netApproach'],
-  ascend: ['travel', 'curious', 'flee'],
+  ascend: ['travel', 'curious', 'flee', 'netApproach'],
   curious: ['travel', 'flee'],
   flee: ['submerged'],
   netApproach: ['spiral'],
@@ -81,15 +81,15 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
 
   const ws = [];
   const specs = [
-    { x: -34, y: -1.15, z: -88, yaw: Math.PI / 2 + 0.25, scale: 1.0, mode: 'travel', travelFor: 1.5, breaths: 3 },
-    { x: 34, y: -6.5, z: -118, yaw: Math.PI / 2 - 0.3, scale: 0.9, mode: 'submerged', breaths: 4 },
-    { x: 58, y: -1.15, z: -62, yaw: Math.PI / 2 + 0.7, scale: 1.08, mode: 'travel', travelFor: 9, breaths: 2 },
+    { x: -30, y: -1.15, z: -78, yaw: Math.PI / 2 + 0.25, scale: 1.12, mode: 'travel', travelFor: 1.5, breaths: 3 },
+    { x: 32, y: -6.5, z: -104, yaw: Math.PI / 2 - 0.3, scale: 1.02, mode: 'submerged', breaths: 4 },
+    { x: 50, y: -1.15, z: -58, yaw: Math.PI / 2 + 0.7, scale: 1.2, mode: 'travel', travelFor: 9, breaths: 2 },
   ];
   for (let i = 0; i < whales; i++) {
     const s = specs[i % specs.length];
     ws.push(makeWhale(i, { ...s, x: s.x + rand(-6, 6), z: s.z + rand(-8, 8), yaw: s.yaw + rand(-0.2, 0.2) }));
   }
-  ws[1].submergedFor = rand(5, 9);
+  if (ws[1]) ws[1].submergedFor = rand(5, 9);
   // settle each rig into its starting pose so the first steps carry no jump
   for (const w of ws) for (let k = 0; k < 4; k++) w.rig.step(FIXED_STEP, { x: w.x, y: w.y, z: w.z, yaw: w.yaw, pitch: 0, roll: 0, speed: w.speed, beat: 0.3 });
 
@@ -104,6 +104,8 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       for (const o of ws) if (o !== w) score += Math.min(Math.hypot(gx - o.x, gz - o.z), 45) * 0.35;
       const dyaw = Math.abs(wrapPi(Math.atan2(-(gz - w.z), gx - w.x) - w.yaw));
       score -= dyaw * 5;
+      // a recently frightened whale picks somewhere well away from the cursor
+      if (cursor.active && time - cursor.fast < 40) score += Math.min(Math.hypot(gx - cursor.x, gz - cursor.z), 90) * 0.6;
       if (score > bestScore) { bestScore = score; best = [gx, gz]; }
     }
     if (!best) best = [fjordCenter(-110), -110];
@@ -111,15 +113,15 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   }
 
   function setMode(w, mode) {
-    if (!TRANSITIONS[w.mode].includes(mode)) { stats.invalid++; return false; }
+    if (!TRANSITIONS[w.mode].includes(mode)) { stats.invalid++; emit('invalid', w.id, { from: w.mode, to: mode }); return false; }
     const from = w.mode;
     w.mode = mode; w.modeT = 0; w.blown = false;
     emit('mode', w.id, { from, to: mode });
     switch (mode) {
-      case 'travel': pickWaypoint(w); w.travelFor = from === 'ascend' ? rand(1.5, 3.5) : rand(6, 11); break;
+      case 'travel': pickWaypoint(w); w.travelFor = from === 'ascend' ? rand(1.5, 3.5) : rand(5, 10); if (from === 'ascend') w.breathsLeft = 3 + Math.floor(random() * 3); break;
       case 'breath': w.blowAt = rand(1.1, 1.7); break;
       case 'dive': stats.dives++; break;
-      case 'submerged': w.submergedFor = from === 'flee' ? rand(9, 14) : rand(11, 22); w.depth = -rand(6, 9.5); pickWaypoint(w); break;
+      case 'submerged': w.fromFlee = from === 'flee'; w.submergedFor = from === 'flee' ? rand(9, 14) : rand(11, 22); w.depth = -rand(6, 9.5); pickWaypoint(w); break;
       case 'ascend': {
         // surface somewhere ahead, inside the frame
         for (let k = 0; k < 12; k++) {
@@ -231,6 +233,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       case 'submerged': {
         const d = headToward(w, w.goalX, w.goalZ, 1.6);
         speedT = 2.4; beat = 0.5; depthT = w.depth + 1.2 * nz;
+        if (w.fromFlee && w.modeT < 8) turn = 0.5; else w.fromFlee = false;
         if (d < 12) pickWaypoint(w);
         if (w.modeT > w.submergedFor) setMode(w, 'ascend');
         break;
@@ -258,7 +261,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
         w.goalYaw = Math.atan2(-dz, dx);
         const a = avoidance(w);
         if (Math.abs(a[0]) + Math.abs(a[1]) > 0.2) { let ux = dx, uz = dz; const l = Math.hypot(ux, uz) || 1; ux = ux / l + a[0] * 1.5; uz = uz / l + a[1] * 1.5; w.goalYaw = Math.atan2(-uz, ux); }
-        speedT = 3.2; beat = 0.9; depthT = -9; turn = 0.25; archT = 0.7 * sstep(0, 1, w.modeT);
+        speedT = 3.4; beat = 0.9; depthT = -9; turn = 0.8; archT = 0.7 * sstep(0, 1, w.modeT);
         w.pitchBias = -0.35;
         if (w.modeT > 2.6 || w.y < -4.5) setMode(w, 'submerged');
         break;
@@ -316,7 +319,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     net.who = best.id; net.state = 'active';
     // the ring is centred well inside the fjord and in view
     for (let k = 0; k < 14; k++) {
-      net.cx = rand(-42, 42); net.cz = rand(-150, -84);
+      net.cx = rand(-38, 38); net.cz = rand(-118, -78);
       if (inFjord(net.cx, net.cz, SHORE_MARGIN + 30) && Math.hypot(net.cx - best.x, net.cz - best.z) > 24) break;
     }
     net.theta0 = Math.atan2(best.z - net.cz, best.x - net.cx); net.dir = random() < 0.5 ? 1 : -1;

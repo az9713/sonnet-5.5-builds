@@ -21,7 +21,8 @@ const BLOOM = { weights: [0.55, 0.45, 0.28, 0.14, 0.07], gain: 0.5, halo: new V3
 const LOOK_DEFAULT = {
   size: 0.55,          // kernel sigma of a web particle, in local spacings
   eps: 0.14, soft: 0.08,
-  structSigma: 0.0021, structGain: 0.1,   // kernel sigma of a neural / mycelial point, box units
+  structSigma: 0.0021, structGain: 0.1,   // kernel sigma of a neural point, box units, and its gain
+  mycSigma: 0.0022, mycGain: 0.07,        // the same for a mycelial point: finer threads
   dustSize: 0.03,
   gain: 6.5, dustGain: 0.4, galaxyGain: 0.8,
   minSigma: 0.65, aperture: 0.016,   // circle of confusion at unit relative defocus, as a share of the frame height
@@ -51,7 +52,7 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
     uRes: { value: new THREE.Vector2(1, 1) }, uCam: { value: new V3() }, uD: { value: 1 },
     uFrom: { value: 0 }, uTo: { value: 0 }, uM: { value: 0 }, uSpread: { value: LOOK.spread }, uSwirlAmp: { value: LOOK.swirl }, uStreak: { value: LOOK.streak }, uTime: { value: 0 },
     uCenter: { value: new V3() }, uRay: { value: new V3(0, 0, -1) }, uPull: { value: new V3(0, 0.16, 0.2) }, uFocus: { value: new THREE.Vector2(0.2, 20) },
-    uH: { value: 1 / data.lattice }, uSize: { value: LOOK.size }, uEps: { value: LOOK.eps }, uStructSigma: { value: LOOK.structSigma }, uStructGain: { value: LOOK.structGain }, uWebGain: { value: 1 },
+    uH: { value: 1 / data.lattice }, uSize: { value: LOOK.size }, uEps: { value: LOOK.eps }, uStructSigma: { value: new THREE.Vector2(LOOK.structSigma, LOOK.mycSigma) }, uStructGain: { value: new THREE.Vector2(LOOK.structGain, LOOK.mycGain) }, uWebGain: { value: 1 },
     uGain: { value: LOOK.gain * 110592 / data.count }, uCap: { value: 40 }, uMinSigma: { value: LOOK.minSigma }, uSoft: { value: LOOK.soft },
     uLens: { value: new THREE.Vector4(0, 0, 0, 1) }, uLensDepth: { value: 0.16 },
     uDustPass: { value: 0 }, uDustSize: { value: LOOK.dustSize }, uDustGain: { value: LOOK.dustGain },
@@ -131,7 +132,8 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
     right.fromArray(pose.right); upv.fromArray(pose.up); back.fromArray(pose.fwd).negate();
     camera.matrixWorld.makeBasis(right, upv, back);
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
-    shared.uCam.value.fromArray(pose.pos);
+    // The world is periodic, so only the camera's place inside one box matters; wrapping keeps float32 precise after days of drift.
+    shared.uCam.value.set(pose.pos[0] - Math.floor(pose.pos[0]), pose.pos[1] - Math.floor(pose.pos[1]), pose.pos[2] - Math.floor(pose.pos[2]));
     shared.uD.value = cycle.growth;
     // The young web has little contrast, so its light is lifted (a stand-in for the eye adapting) as it sharpens.
     const age = Math.min(1, Math.max(0, (cycle.growth - GROWTH.early) / (GROWTH.late - GROWTH.early)));
@@ -143,7 +145,7 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
     shared.uFocus.value.set(pose.focus, LOOK.aperture * screenH);
     shared.uLensDepth.value = pose.focus * 0.85;
     shared.uCap.value = Math.max(12, Math.min(maxPoint, tier.cap * screenH / 900));
-    shared.uStructSigma.value = LOOK.structSigma * tier.size;
+    shared.uStructSigma.value.set(LOOK.structSigma * tier.size, LOOK.mycSigma * tier.size);
     // Cursor: lens centre in target pixels, ray in view space.
     const s = lens * lens * (3 - 2 * lens);
     const E = LOOK.lensE * screenH * s;

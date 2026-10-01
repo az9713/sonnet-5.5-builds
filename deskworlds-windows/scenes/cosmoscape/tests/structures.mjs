@@ -26,7 +26,7 @@ for (const [name, make] of [['neural', generateNeural], ['mycelium', generateMyc
   for (let axis = 0; axis < 3; axis++) {
     const hist = new Array(4).fill(0);
     for (let i = 0; i < COUNT; i++) hist[Math.floor(a.pos[3 * i + axis] * 4)]++;
-    assert.ok(hist.every(h => h > COUNT * 0.12), `${name}: every quarter of axis ${axis} is populated (${hist.join(',')})`);
+    assert.ok(hist.every(h => h > COUNT * 0.08), `${name}: every quarter of axis ${axis} is populated (${hist.join(',')})`);
   }
 }
 

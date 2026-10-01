@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createFood, FLAKE } from '../src/food.js';
+import { createFood, FLAKE, SCENT } from '../src/food.js';
 import { randomGenerator } from '../../shared/random.js';
 
 const bounds = { minX: 0.2, maxX: 1.6, minY: 0.12, maxY: 0.88 };
@@ -67,5 +67,28 @@ for (let seed = 1; seed <= 20; seed++) {
   const a = createFood(randomGenerator(5)), b = createFood(randomGenerator(5));
   a.feedRandom(bounds); b.feedRandom(bounds);
   assert.deepEqual(a.flakes, b.flakes);
+}
+// Unseen scent sources: they come and go on their own, are bounded, never negative, and feed the simulation next to the flakes.
+{
+  const food = createFood(randomGenerator(6));
+  let seen = 0, maxAmp = 0, maxLive = 0;
+  const out = new Float32Array((FLAKE.max + SCENT.max) * 4);
+  for (let i = 0; i < 60 * 240; i++) {
+    food.step(DT);
+    maxLive = Math.max(maxLive, food.scents.length);
+    for (const c of food.scents) {
+      const a = food.scentAmount(c);
+      assert.ok(a >= 0 && a <= SCENT.peak + 1e-9, 'amplitude within range');
+      assert.ok(c.x >= SCENT.margin && c.x <= 16 / 9 - SCENT.margin && c.y >= SCENT.margin && c.y <= 1 - SCENT.margin);
+      maxAmp = Math.max(maxAmp, a);
+    }
+    if (i % 600 === 0 && food.scents.length) seen++;
+  }
+  assert.ok(seen >= 2 && maxAmp > SCENT.peak * 0.95 && maxLive <= SCENT.max, `Scent sources appear and fade (${seen} sightings, peak ${maxAmp.toFixed(2)})`);
+  food.drop(1, 0.5);
+  for (let i = 0; i < 120; i++) food.step(DT);
+  const n = food.packSources(out);
+  assert.ok(n >= 1 && n <= FLAKE.max + SCENT.max);
+  for (let i = 0; i < n * 4; i++) assert.ok(Number.isFinite(out[i]));
 }
 console.log('ok food: 3-5 flakes per feed, ramp in, dissolve to exactly zero in 40-60 s, never negative, capped, deterministic');

@@ -37,7 +37,8 @@ async function start() {
   // asks for them until the web has run its first 80 s.
   const data = buildWeb(quality === 'eco' ? 'eco' : 'balanced', seed, timings);
   timings.firstFrame = performance.now() - startedAt;
-  const sim = createSim();
+  // A visit starts a little way into the web's growth, where it is already structured; a capture starts at the very beginning.
+  const sim = createSim({ cycleOffset: capture ? 0 : 14 });
   const camParams = cameraParams(seed);
   const pose = cameraPose(0, camParams), startPose = cameraPose(0, camParams);
   const { renderer, camera, render: draw, resize: sizeTargets, setTier, targetsChanged, dispose, info } = createRenderer(canvas, data, activeQuality(quality, onBattery), lookOverrides());
@@ -64,7 +65,7 @@ async function start() {
     frame.cycle = cyc; frame.time = st.time;
     cameraPose(st.time, camParams, pose);
     // The transition front starts a little ahead of where the camera was looking when the morph began.
-    const segment = SEGMENTS[cyc.index].dur, begin = st.time - cyc.u * segment;
+    const segment = SEGMENTS[cyc.index].dur, begin = st.time - cyc.u * segment;   // the clock time when this segment began
     cameraPose(begin, camParams, startPose);
     for (let i = 0; i < 3; i++) frame.frontCenter[i] = startPose.pos[i] + startPose.fwd[i] * 0.22;
     frame.lens = st.lens; frame.pull = st.pull; frame.cursorX = st.x; frame.cursorY = st.y;

@@ -49,7 +49,8 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
   let cfg = SIM_QUALITY[quality] || SIM_QUALITY.balanced, qualityName = quality;
   let sim = null;
   const cursorSim = new V4(0, 0, tune.photoRadius, 0), cursorView = new V4(0, 0, 0, tune.cursorRadius);
-  const foodA = new Float32Array(FLAKE.max * 4), foodB = new Float32Array(FLAKE.max * 4), foodU = new Float32Array(FLAKE.max * 4);
+  const SOURCES = FLAKE.max + 2;
+  const foodA = new Float32Array(FLAKE.max * 4), foodB = new Float32Array(FLAKE.max * 4), foodU = new Float32Array(SOURCES * 4);
   let foodCount = 0;
   let frame = 0, simSteps = 0;
 
@@ -132,9 +133,7 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
     const s = sim;
     const c = w.cursor;
     cursorSim.set(c.x, c.y, tune.photoRadius, c.presence > 0.02 ? c.presence : 0);
-    foodCount = w.food.pack(foodA, foodB);
-    for (let i = 0; i < foodCount; i++) { foodU[i * 4] = foodA[i * 4]; foodU[i * 4 + 1] = foodA[i * 4 + 1]; foodU[i * 4 + 2] = foodB[i * 4 + 3]; foodU[i * 4 + 3] = FLAKE.attractRadius * (0.8 + 0.5 * foodB[i * 4 + 2]); }
-    s.diffuseMat.uniforms.uFoodCount.value = foodCount;
+    s.diffuseMat.uniforms.uFoodCount.value = w.food.packSources(foodU);
     const cur = s.trail[s.ping], nxt = s.trail[1 - s.ping], ac = s.agents[s.apping], an = s.agents[1 - s.apping];
     // 1. agents sense the map, turn, move
     s.agentMat.uniforms.uAgents.value = ac.texture; s.agentMat.uniforms.uTrail.value = cur.texture; s.agentMat.uniforms.uFrame.value = frame++ & 0xffffff;

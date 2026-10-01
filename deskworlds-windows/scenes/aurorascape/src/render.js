@@ -24,7 +24,7 @@ export const tierName = (q) => (Object.hasOwn(TIERS, q) ? q : 'balanced');
 
 const EXPOSURE = 1.0;
 const PITCH = 0.07;         // rad the camera looks above the horizon
-const HFOV = 84 * Math.PI / 180;
+const HFOV = 78 * Math.PI / 180;
 
 function noiseTexture() {
   const n = 256, data = new Uint8Array(n * n * 4);

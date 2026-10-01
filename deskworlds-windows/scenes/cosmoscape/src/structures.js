@@ -204,7 +204,7 @@ export function generateNeural(count, seed = 1, options = {}) {
 // ---------------------------------------------------------------------------------------------------------
 // Mycelium
 // ---------------------------------------------------------------------------------------------------------
-export const MYCELIUM = { colonies: 44, step: 0.013, branch: 0.1, anastomosis: 0.7, reach: 0.05 };
+export const MYCELIUM = { colonies: 24, wanderers: 200, step: 0.013, branch: 0.13, anastomosis: 0.7, reach: 0.05 };
 
 export function generateMycelium(count, seed = 1, options = {}) {
   const P = { ...MYCELIUM, ...options };
@@ -227,12 +227,17 @@ export function generateMycelium(count, seed = 1, options = {}) {
     list.push(idx);
   };
   let nextId = 0;
-  for (let c = 0; c < P.colonies; c++) {
+  // The point budget fixes how much thread can look continuous: colonies scale with the count.
+  const colonies = Math.max(12, Math.round(P.colonies * Math.min(1, count / 262144)));
+  for (let c = 0; c < colonies; c++) {
     const centre = [rng(), rng(), rng()];
     b.spot(centre[0], centre[1], centre[2], 0.006, 3, 0.95, 0);
     const primaries = 9 + Math.floor(rng() * 5);
-    for (let i = 0; i < primaries; i++) queue.push({ id: nextId++, parent: -1, p: centre.slice(), d: unit(b), r: 0.0014 + 0.0004 * rng(), len: 0.2 + 0.2 * rng(), s: 0, depth: 0 });
+    for (let i = 0; i < primaries; i++) queue.push({ id: nextId++, parent: -1, p: centre.slice(), d: unit(b), r: 0.0014 + 0.0004 * rng(), len: 0.14 + 0.18 * rng(), s: 0, depth: 0 });
   }
+  // Wanderers: free hyphae that cross the box, so the mat fills space and not only the neighbourhoods of the cores.
+  const wanderers = Math.max(30, Math.round(P.wanderers * Math.min(1, count / 262144)));
+  for (let i = 0; i < wanderers; i++) queue.push({ id: nextId++, parent: -1, p: [rng(), rng(), rng()], d: unit(b), r: 0.0009 + 0.0005 * rng(), len: 0.25 + 0.3 * rng(), s: 0, depth: 1 });
   while (queue.length) {
     const h = queue.pop();
     let { p, d, r, s } = h;
@@ -240,7 +245,7 @@ export function generateMycelium(count, seed = 1, options = {}) {
     for (let k = 0; k < steps; k++) {
       // Persistent random walk bent by a slow swirl: hyphae curve like they follow a nutrient field.
       if (k % 3 === 0) swirl(tmp, p[0], p[1], p[2], 0);
-      d = norm([d[0] + b.gauss() * 0.2 + tmp[0] * 0.16, d[1] + b.gauss() * 0.2 + tmp[1] * 0.16, d[2] + b.gauss() * 0.2 + tmp[2] * 0.16]);
+      d = norm([d[0] + b.gauss() * 0.3 + tmp[0] * 0.3, d[1] + b.gauss() * 0.3 + tmp[1] * 0.3, d[2] + b.gauss() * 0.3 + tmp[2] * 0.3]);
       const q = [p[0] + d[0] * P.step, p[1] + d[1] * P.step, p[2] + d[2] * P.step];
       const rb = Math.max(0.00035, r * (1 - 0.35 / steps));
       addHyphaTube(h.id, p, q, r, rb, s, k >= steps - 3);

@@ -22,7 +22,7 @@ float luma(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
 // The fjord, in metres. Keep in step with behaviour.js (fjordCenter, fjordHalfWidth).
 export const FJORD_GLSL = /* glsl */`
-float fjC(float z){ return 26.0*sin(z*0.0016 + 0.4) - 6.0; }
+float fjC(float z){ return 26.0*sin(z*0.0016 + 0.4) - 6.0 + 520.0*pow(smoothstep(400.0, 5200.0, -z), 1.2); }
 float fjW(float z){ return (240.0 + 30.0*sin(z*0.0049 + 1.1))*(1.0 + 0.9*smoothstep(900.0, 3200.0, -z)); }
 #define HEAD_Z -6400.0
 `;
@@ -256,17 +256,19 @@ float crestHead(float x){
 vec3 skyLight(vec3 n){
   vec3 Lc = normalize(vec3(0.1, 0.65, -0.75));
   float up = 0.5 + 0.5*n.y;
-  return uAmb*0.22*(0.9 + 1.6*up) + uAmb*0.35*vec3(0.8, 1.0, 0.9)*max(dot(n, Lc), 0.0)*3.2;
+  return uAmb*0.17*(0.9 + 1.6*up) + uAmb*0.30*vec3(0.8, 1.0, 0.9)*max(dot(n, Lc), 0.0)*3.2;
 }
-vec3 rockShade(vec3 p, vec3 n, float t){
-  float ne = tfbm3(p.xz*0.04 + p.y*0.03);
-  float ne2 = tn(p.xz*0.35 + p.y*0.2);
-  float line = 160.0 + 520.0*tfbm3(p.xz*0.004 + p.y*0.0008);
-  float snow = smoothstep(line, line + 240.0, p.y + 70.0*(ne - 0.5))*smoothstep(-0.25, 0.4, n.y + 0.5*(ne - 0.5));
-  vec3 rock = vec3(0.034, 0.036, 0.042)*(0.55 + 0.9*ne)*(0.8 + 0.4*ne2);
-  vec3 snowc = vec3(0.70, 0.78, 0.86)*(0.78 + 0.3*ne2);
+vec3 rockShade(vec3 p, vec3 n, float t, vec2 w){
+  float ne = tfbm3(w*0.05);
+  float ne2 = tn(w*0.4);
+  float pch = tfbm(w*0.007 + 3.0);
+  // snow settles on ledges and in gullies, and covers the high ground
+  float snow = smoothstep(0.60, 0.72, pch + 0.0016*p.y + 0.30*n.y + 0.2*(ne - 0.5));
+  vec3 rock = vec3(0.030, 0.032, 0.038)*(0.55 + 0.9*ne)*(0.8 + 0.4*ne2);
+  vec3 snowc = vec3(0.60, 0.70, 0.80)*(0.7 + 0.45*ne2);
   vec3 alb = mix(rock, snowc, snow);
-  return alb*skyLight(n);
+  vec3 L = skyLight(n);
+  return alb*L*(1.0 + 0.5*snow);
 }
 vec3 hazeColor(){ return uAmb*0.16 + vec3(0.0016, 0.0030, 0.0050); }
 
@@ -330,7 +332,8 @@ void main(){
     if (p.y < crestHead(p.x) && p.y > -2.0){
       tHit = tHead; hp = p; wall = false;
       float nx = tfbm3(p.xy*0.01) - 0.5, ny = tfbm3(p.xy*0.013 + 8.0) - 0.5;
-      hn = normalize(vec3(nx*1.6, 0.35 + ny*0.8, 1.0));
+      float cr = crestHead(p.x);
+      hn = normalize(vec3(nx*1.6, 0.2 + ny*0.8 + 1.4*smoothstep(0.45, 0.0, (cr - p.y)/cr), 1.0));
     }
   }
   bool water = false;
@@ -342,11 +345,11 @@ void main(){
   float alpha = 1.0;
   if (water) alpha = 0.0;
   else if (tHit > 0.0){
-    vec3 land = rockShade(hp, hn, tHit);
+    vec3 land = rockShade(hp, hn, tHit, wall ? vec2(hp.z*0.8 + hp.x*0.2, hp.y) : vec2(hp.x, hp.y));
     // aerial perspective and the low fog that sits on the water along the shore
-    float haze = 1.0 - exp(-tHit/7000.0);
+    float haze = 1.0 - exp(-tHit/16000.0);
     float fogn = 0.6 + 0.8*tfbm3(hp.xz*0.0035 + vec2(uTime*0.004, 0.0));
-    float lowFog = exp(-max(hp.y, 0.0)/38.0)*(1.0 - exp(-tHit/520.0))*fogn*0.62;
+    float lowFog = exp(-max(hp.y, 0.0)/20.0)*(1.0 - exp(-tHit/520.0))*fogn*0.5;
     land = mix(land, hazeColor(), clamp(haze, 0.0, 0.85));
     land = mix(land, uAmb*0.30 + vec3(0.0030, 0.0046, 0.0060), clamp(lowFog, 0.0, 0.85));
     col = land;
@@ -475,9 +478,9 @@ const float SIM_SIZE = ${SIM.size.toFixed(1)};
 // a long, low swell: three directional waves; returns the slope
 vec2 swell(vec2 p, float t){
   vec2 s = vec2(0.0);
-  s += vec2(0.20, -0.98)*0.030*0.165*cos(dot(p, vec2(0.20, -0.98))*0.165 - t*0.42);
-  s += vec2(-0.60, -0.80)*0.020*0.30*cos(dot(p, vec2(-0.60, -0.80))*0.30 - t*0.56 + 1.3);
-  s += vec2(0.80, -0.60)*0.012*0.52*cos(dot(p, vec2(0.80, -0.60))*0.52 - t*0.74 + 2.1);
+  s += vec2(0.20, -0.98)*0.018*0.165*cos(dot(p, vec2(0.20, -0.98))*0.165 - t*0.42);
+  s += vec2(-0.60, -0.80)*0.012*0.30*cos(dot(p, vec2(-0.60, -0.80))*0.30 - t*0.56 + 1.3);
+  s += vec2(0.80, -0.60)*0.007*0.52*cos(dot(p, vec2(0.80, -0.60))*0.52 - t*0.74 + 2.1);
   return s;
 }
 vec2 microRipples(vec2 p, float t){
@@ -911,7 +914,7 @@ void main(){
   float k = 0.0;
   if (kind < 0.5){        // mist: a soft, lumpy puff, lit from the aurora side (above and behind)
     vec2 q = vC*1.7 + vP.z*3.0 + vec2(uTime*0.07, -uTime*0.05);
-    float n = tfbm3(q)*0.65 + 0.35*tn(q*3.1 + 5.0);
+    float n = tfbm3(q)*0.55 + 0.25*tn(q*3.1 + 5.0) + 0.2*tn(q*7.3 + 1.0);
     float d = r + (n - 0.5)*0.95;
     float body = pow(1.0 - smoothstep(0.05, 0.95, d), 1.4);
     float lit = 0.4 + 0.6*smoothstep(-0.9, 0.9, vC.y + 0.35 + (n - 0.5)*0.6);

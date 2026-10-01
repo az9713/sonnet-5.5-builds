@@ -71,8 +71,8 @@ uniform vec2 uFocus;          // focus depth, aperture px
 uniform float uH;             // lattice spacing, box units
 uniform float uSize;          // kernel sigma of a web particle relative to the local spacing
 uniform float uEps;           // thickness floor of a collapsed sheet, in lattice spacings
-uniform float uStructSigma;   // kernel sigma of a neural / mycelial point, box units
-uniform float uStructGain;
+uniform vec2 uStructSigma;    // kernel sigma of a neural / mycelial point, box units
+uniform vec2 uStructGain;
 uniform float uWebGain;       // brightens the young, low-contrast web
 uniform float uGain, uCap, uMinSigma, uSoft;
 uniform float uDustPass;
@@ -105,19 +105,19 @@ void main() {
   // sigma along each axis = h * |1 + D lambda| * size (so neighbours always overlap, however squeezed) plus a thin floor.
   mat3 Sweb = uH * uH * (uSize * uSize * G + mat3(uEps * uEps));
   float logWeb = -0.5 * log(det3(G + mat3(uSoft * uSoft))) * 0.4342945;
-  mat3 Sstruct = mat3(uStructSigma * uStructSigma);
+  mat3 SN = mat3(uStructSigma.x * uStructSigma.x), SM = mat3(uStructSigma.y * uStructSigma.y);
   vec3 A; float lA, gA; mat3 SA;
   if (uFrom < 0.5) { A = webPos; lA = logWeb; SA = Sweb; gA = uWebGain; }
-  else if (uFrom < 1.5) { A = aNeural.xyz; lA = aNeural.w * 3.0 - 0.6; SA = Sstruct; gA = uStructGain; }
-  else { A = aMyc.xyz; lA = aMyc.w * 3.0 - 0.6; SA = Sstruct; gA = uStructGain; }
+  else if (uFrom < 1.5) { A = aNeural.xyz; lA = aNeural.w * 3.0 - 0.6; SA = SN; gA = uStructGain.x; }
+  else { A = aMyc.xyz; lA = aMyc.w * 3.0 - 0.6; SA = SM; gA = uStructGain.y; }
   vec3 P = A; float l = lA, s = 0.0, gain = gA;
   mat3 S = SA;
   float wN = uFrom > 0.5 && uFrom < 1.5 ? 1.0 : 0.0, wM = uFrom > 1.5 ? 1.0 : 0.0;
   if (uM > 0.0) {
     vec3 B; float lB, gB; mat3 SB;
     if (uTo < 0.5) { B = webPos; lB = logWeb; SB = Sweb; gB = uWebGain; }
-    else if (uTo < 1.5) { B = aNeural.xyz; lB = aNeural.w * 3.0 - 0.6; SB = Sstruct; gB = uStructGain; }
-    else { B = aMyc.xyz; lB = aMyc.w * 3.0 - 0.6; SB = Sstruct; gB = uStructGain; }
+    else if (uTo < 1.5) { B = aNeural.xyz; lB = aNeural.w * 3.0 - 0.6; SB = SN; gB = uStructGain.x; }
+    else { B = aMyc.xyz; lB = aMyc.w * 3.0 - 0.6; SB = SM; gB = uStructGain.y; }
     // The front sweeps outward from uCenter through the lattice, so neighbouring particles leave together.
     float off = clamp(length(wrapD(position - uCenter)) / 0.75 + (aRand.x - 0.5) * 0.12, 0.0, 1.0);
     float m = clamp(uM * (1.0 + uSpread) - uSpread * off, 0.0, 1.0);
@@ -191,14 +191,17 @@ void main() {
   float pn = 0.5 + 0.5 * sin(6.2831853 * (aPulse.x * 5.0 - uTime * 0.28));
   float pm = 0.5 + 0.5 * sin(6.2831853 * (aPulse.y * 4.0 - uTime * 0.22));
   float boost = 1.0 + 2.6 * wN * pow(pn, 8.0) + 1.4 * wM * pow(pm, 8.0);
+  boost *= 1.0 + 2.2 * 4.0 * s * (1.0 - s);   // matter in transit glows
   amp *= lum * boost * tw * edge * smoothstep(0.07, 0.2, d);
   if (uDustPass > 0.5) {
     amp = uGain * gain * mu / (s1x * s2x) * smoothstep(-0.2, 1.4, l) * edge * smoothstep(0.07, 0.25, d);
     col = mix(vec3(0.20, 0.16, 0.55), col, 0.35);
   }
 #ifdef SECOND
-  amp *= 0.25;
+  amp *= 0.15;
 #endif
+  // A sprite too faint to show would still cost its whole area in fragments: drop it.
+  if (amp * max(col.r, max(col.g, col.b)) < 4e-4) { cull(); return; }
   float ex = sqrt(max(a, 0.0)), ey = sqrt(max(c, 0.0));
   float need = 2.0 * 3.1 * max(max(ex, ey), uMinSigma);
   float size_px = clamp(need, 2.0, uCap);

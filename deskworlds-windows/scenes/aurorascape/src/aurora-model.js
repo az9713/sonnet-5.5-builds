@@ -30,8 +30,8 @@ export function emissionWeights(h, hard = 0.5) {
   const green = e < 125 ? Math.exp(-(((e - 125) / 15) ** 2)) : Math.exp(-(((e - 125) / 48) ** 2));
   const redTop = Math.exp(-((Math.max(e - 275, 0) / 55) ** 2));
   const red = sstep(196, 270, e) * redTop * (1.15 - 0.9 * hard);
-  const blue = 0.55 * Math.exp(-(((e - 108) / 22) ** 2));
-  const pink = (0.3 + 0.9 * hard) * Math.exp(-(((e - 94) / 8.5) ** 2));
+  const blue = 0.38 * Math.exp(-(((e - 108) / 22) ** 2));
+  const pink = (0.2 + 0.7 * hard) * Math.exp(-(((e - 94) / 8.5) ** 2));
   return { green, red, blue, pink };
 }
 
@@ -108,8 +108,8 @@ vec4 auroraWeights(float h, float hard, float blur) {
   float e = h + 22.0*(hard - 0.5);
   float g = gaussW(e, 125.0, e < 125.0 ? 15.0 : 48.0, blur);
   float r = smoothstep(196.0, 270.0, e)*(1.15 - 0.9*hard)*exp(-pow(max(e - 275.0, 0.0)/sqrt(55.0*55.0 + blur), 2.0));
-  float b = 0.55*gaussW(e, 108.0, 22.0, blur);
-  float p = (0.3 + 0.9*hard)*gaussW(e, 94.0, 8.5, blur);
+  float b = 0.38*gaussW(e, 108.0, 22.0, blur);
+  float p = (0.2 + 0.7*hard)*gaussW(e, 94.0, 8.5, blur);
   return vec4(g, r, b, p);
 }
 const vec3 AU_GREEN = vec3(${COLORS.green.join(', ')});
