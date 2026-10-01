@@ -129,7 +129,7 @@ void main(){
     float R = ${EARTH_R.toFixed(1)};
     float N = float(uSteps);
     float dH = (${ALT_MAX.toFixed(1)} - ${ALT_MIN.toFixed(1)})/N;
-    float jit = fract(ign(gl_FragCoord.xy) + uFrame*0.61803398);
+    float jit = fract(texture2D(uNoise, gl_FragCoord.xy/256.0).g + uFrame*0.61803398);
     float Ry = R*y;
     float T = 1.0;
     float rxz = length(rd.xz);
@@ -154,7 +154,7 @@ void main(){
           float rays = (1.0 + (0.20 + 1.35*pow(s1, 1.7) - 1.0)*a1*(0.5 + 0.5*m.a))*(1.0 + (0.5 + 0.9*s2 - 1.0)*a2*0.7)*(1.0 + (0.55 + 0.9*s3 - 1.0)*a3);
           // rays differ in how far down they reach
           float hh = h + 12.0*(s1 - 0.5)*a1 - 10.0*m.a;
-          vec3 e = auroraColor(hh, m.b, dH*dH/12.0);
+          vec3 e = auroraColor(hh, m.b, dH*dH/7.0);
           col += T*e*(m.r*rays*dt*0.024);
           T *= exp(-m.r*dt*0.0006);
         }

@@ -26,11 +26,22 @@ const EXPOSURE = 1.0;
 const PITCH = 0.07;         // rad the camera looks above the horizon
 const HFOV = 78 * Math.PI / 180;
 
+// A 256x256 random texture. R, B, A are white noise (smooth value noise is built from R in the shaders);
+// G is blue-noise-like: white noise with its low frequencies removed and the values rank-normalised, used
+// to jitter the aurora march so the residual error has no visible pattern.
 function noiseTexture() {
   const n = 256, data = new Uint8Array(n * n * 4);
   let s = 0x9e3779b9 | 0;
   const rnd = () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   for (let i = 0; i < data.length; i++) data[i] = Math.floor(rnd() * 256);
+  const white = new Float32Array(n * n), blur = new Float32Array(n * n), tmp = new Float32Array(n * n);
+  for (let i = 0; i < white.length; i++) white[i] = rnd();
+  const k = [0.06, 0.24, 0.40, 0.24, 0.06];
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { let a = 0; for (let d = -2; d <= 2; d++) a += k[d + 2] * white[y * n + ((x + d + n) % n)]; tmp[y * n + x] = a; }
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { let a = 0; for (let d = -2; d <= 2; d++) a += k[d + 2] * tmp[((y + d + n) % n) * n + x]; blur[y * n + x] = a; }
+  const high = white.map((v, i) => v - blur[i]);
+  const order = Uint32Array.from({ length: n * n }, (_, i) => i).sort((a, b) => high[a] - high[b]);
+  for (let r = 0; r < order.length; r++) data[order[r] * 4 + 1] = Math.round(255 * r / (order.length - 1));
   const tex = new THREE.DataTexture(data, n, n, THREE.RGBAFormat, THREE.UnsignedByteType);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.magFilter = tex.minFilter = THREE.LinearFilter;
