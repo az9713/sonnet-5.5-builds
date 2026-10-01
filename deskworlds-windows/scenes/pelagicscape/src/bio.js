@@ -168,3 +168,20 @@ export function createPlankton({ count, snow = 0, rings = 0, random, spawn }) {
   }
   return { count, snow, rings, total, pts, vel, kind, rise, refr, peak, tau, step, stats, flashCount: () => stats.flashes };
 }
+
+// Builds a plankton field with new counts (a quality tier change) that carries over the state of every particle that still exists:
+// positions, velocities and flash timers, so a glow in progress does not blink out. Extra particles spawn fresh; the ring markers
+// (which the world rewrites every frame) are carried too. Allocates once, never per frame.
+export function resizePlankton(old, { count, snow, rings = old.rings, random, spawn }) {
+  const next = createPlankton({ count, snow, rings, random, spawn });
+  const nc = Math.min(count, old.count), ns = Math.min(snow, old.snow);
+  const copy = (from, to) => {
+    next.pts.set(old.pts.subarray(from * 4, from * 4 + 4), to * 4);
+    next.vel.set(old.vel.subarray(from * 3, from * 3 + 3), to * 3);
+    next.kind.set(old.kind.subarray(from * 2, from * 2 + 2), to * 2);
+  };
+  for (let i = 0; i < nc; i++) { copy(i, i); next.rise[i] = old.rise[i]; next.refr[i] = old.refr[i]; next.peak[i] = old.peak[i]; next.tau[i] = old.tau[i]; }
+  for (let i = 0; i < ns; i++) copy(old.count + i, count + i);
+  next.stats.flashes = old.stats.flashes;
+  return next;
+}

@@ -5,7 +5,7 @@
 // its shear, marine snow is carried by it.
 import { randomGenerator } from '../../shared/random.js';
 import { ambientFlow, createAmbientLattice } from './flow.js';
-import { createDisturbance, createPlankton } from './bio.js';
+import { createDisturbance, createPlankton, resizePlankton } from './bio.js';
 import { createJelly, stepJelly, fillNodes, tankHalf, CAM_TAN_V, FIXED_STEP, NODE_W, TANK_Z } from './jelly.js';
 import { createComb, stepComb } from './comb.js';
 import { createChain, resetChain, stepChain } from './chain.js';
@@ -18,6 +18,8 @@ export const COUNTS = {
   detail: { plankton: 24000, snow: 1600, combs: 6 },
   native: { plankton: 24000, snow: 1600, combs: 6 },
 };
+// What each quality tier costs. The wallpaper's `native` tier falls back to `balanced` on battery (shared/render-policy.js).
+export function tierCounts(quality) { return COUNTS[quality] || COUNTS.balanced; }
 export const CURSOR_DEPTH = 7.4;
 const RING_MARKERS = 40;
 
@@ -35,6 +37,7 @@ const COMB_SPECS = [
 
 export function createWorld({ seed = 1, quality = 'balanced', aspect = 16 / 9 } = {}) {
   const rng = randomGenerator(seed);
+  const prng = randomGenerator((seed ^ 0x9e3779b9) >>> 0);   // plankton have their own stream, so a tier change never alters the animals
   const counts = COUNTS[quality] || COUNTS.balanced;
   const world = { time: 0, aspect, quality, steps: 0, camera: { x: 0, y: 0, z: 0, tanV: CAM_TAN_V } };
   const disturbance = createDisturbance();
@@ -56,9 +59,9 @@ export function createWorld({ seed = 1, quality = 'balanced', aspect = 16 / 9 } 
   // --- animals
   const jellies = SPECS.map((s, i) => createJelly(s, rng, i));
   for (const j of jellies) j.aspect = aspect;
-  const combSpecs = COMB_SPECS.slice(0, counts.combs);
-  const combs = combSpecs.map(([x, y, z, size], i) => {
-    const c = createComb({ x, y, z, size, zBand: [z - 1.5, z + 1.5] }, rng);
+  // All comb jellies exist and swim all the time (cheap); a tier only decides how many are shown, so switching tiers never makes one jump.
+  const combs = COMB_SPECS.map(([x, y, z, size], i) => {
+    const c = createComb({ x, y, z, size, zBand: [z - 1.5, z + 1.5] }, randomGenerator(seed * 7919 + i * 104729 + 13));
     c.index = i; c.length = size * 2.5;
     c.chains = [];
     for (let k = 0; k < 2; k++) {
@@ -86,7 +89,8 @@ export function createWorld({ seed = 1, quality = 'balanced', aspect = 16 / 9 } 
     p[0] = (rngf() * 2 - 1) * h.hx * 1.1; p[1] = (rngf() * 2 - 1) * h.hy * 1.15; p[2] = -d;
     return p;
   };
-  const plankton = createPlankton({ count: counts.plankton, snow: counts.snow, rings: jellies.length * 4 * RING_MARKERS, random: rng, spawn });
+  let plankton = createPlankton({ count: counts.plankton, snow: counts.snow, rings: jellies.length * 4 * RING_MARKERS, random: prng, spawn });
+  let tier = COUNTS[quality] ? quality : 'balanced', combCount = counts.combs;
   const field = (x, y, z, out) => disturbance.sample(x, y, z, out);
 
   // --- cursor
@@ -225,16 +229,27 @@ export function createWorld({ seed = 1, quality = 'balanced', aspect = 16 / 9 } 
     updateMarkers();
   }
 
+  // Switches quality tier in place: jellyfish, tentacles, the water and every surviving particle keep their state.
+  function setTier(name) {
+    const next = COUNTS[name] ? name : 'balanced', c = COUNTS[next];
+    if (next === tier) return false;
+    tier = next; combCount = c.combs;
+    if (c.plankton !== plankton.count || c.snow !== plankton.snow) plankton = resizePlankton(plankton, { count: c.plankton, snow: c.snow, random: prng, spawn });
+    api.plankton = plankton;
+    return true;
+  }
+
   function setAspect(a) { world.aspect = a; for (const j of jellies) j.aspect = a; }
 
   function diagnostics() {
     return {
-      time: world.time, jellyfish: jellies.length, combJellies: combs.length, plankton: plankton.count, snow: plankton.snow,
-      tentacles: jellies.reduce((s, j) => s + j.chains.length, 0), strokes: jellies.map(j => j.strokes),
+      time: world.time, jellyfish: jellies.length, combJellies: combCount, plankton: plankton.count, snow: plankton.snow,
+      tier, tentacles: jellies.reduce((s, j) => s + j.chains.length, 0), strokes: jellies.map(j => j.strokes),
       flashes: plankton.stats.flashes, flashEnergy: plankton.stats.energy, disturbedCells: disturbance.active,
       rings: jellies.reduce((s, j) => s + j.rings.filter(r => r.alive).length, 0), modes: jellies.map(j => j.mode),
       cursor: cursor.on, jellyPositions: jellies.map(j => j.pos.map(v => Math.round(v * 100) / 100)),
     };
   }
-  return { world, jellies, combs, plankton, disturbance, cursor, step, fillAll, setCursor, releaseCursor, setAspect, diagnostics, flow, ambient };
+  const api = { world, jellies, combs, plankton, disturbance, cursor, step, fillAll, setCursor, releaseCursor, setAspect, setTier, diagnostics, flow, ambient, get tier() { return tier; }, get combCount() { return combCount; } };
+  return api;
 }

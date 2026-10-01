@@ -6,6 +6,8 @@ import {
 import { VARIANTS, NODE_W } from './jelly.js';
 import { CURSOR_DEPTH } from './world.js';
 
+const levelsFor = tier => (tier === 'eco' ? 5 : 6);   // mip levels of the depth-of-field and bloom chain
+
 const V3 = THREE.Vector3;
 const FOCUS = 8.6;                 // the middle jellyfish is in focus
 const COC_REF = 17;                // circle of confusion in pixels at relative defocus 1, for a 720 px tall frame
@@ -62,7 +64,8 @@ export function createRenderer(canvas, sim, { quality = 'balanced' } = {}) {
   const tanV = sim.world.camera.tanV;
   const camera = new THREE.PerspectiveCamera(THREE.MathUtils.radToDeg(2 * Math.atan(tanV)), 1, 0.1, 80);
   const scene = new THREE.Scene();
-  const LEVELS = quality === 'eco' ? 5 : 6;
+  const MAX_LEVELS = 6;
+  let LEVELS = levelsFor(quality);
 
   const shared = {
     uTime: { value: 0 }, uFocus: { value: FOCUS }, uCoc: { value: COC_REF }, uCocMax: { value: 16 }, uPxScale: { value: 500 },
@@ -112,21 +115,27 @@ export function createRenderer(canvas, sim, { quality = 'balanced' } = {}) {
     const g = ribbons(NODES_C, 2, 0, [c.seed * 0.01, c.seed * 0.013 + 0.3], [1, 1]);
     const tu = { ...shared, uNodes: { value: tex }, uN: { value: NODES_C }, uWidth: { value: 0.0016 + 0.01 * c.size }, uKind: { value: 2 }, uColor: { value: new V3(0.45, 0.7, 1.0) }, uBead: { value: 0.03 + 0.1 * c.size }, uGain: { value: 1.2 } };
     const tent = add(g, mat({ uniforms: tu, vertexShader: THREAD_VERT, fragmentShader: THREAD_FRAG }));
-    const item = { kind: 'comb', c, meshes: [body, tent], u, tex, center: u.uCenter.value };
+    const item = { kind: 'comb', c, idx, meshes: [body, tent], u, tu, tentGain: 1.2, fade: idx < sim.combCount ? 1 : 0, tex, center: u.uCenter.value };
     items.push(item);
     return item;
   });
 
   // ---- plankton, snow, ring markers: one buffer, drawn in depth slices between the jellyfish
-  const pl = sim.plankton;
-  const pointGeometry = new THREE.BufferGeometry();
-  const interleaved = new THREE.InterleavedBuffer(pl.pts, 4);
-  interleaved.setUsage(THREE.DynamicDrawUsage);
-  pointGeometry.setAttribute('position', new THREE.InterleavedBufferAttribute(interleaved, 3, 0));
-  pointGeometry.setAttribute('aE', new THREE.InterleavedBufferAttribute(interleaved, 1, 3));
-  pointGeometry.setAttribute('aKind', new THREE.BufferAttribute(pl.kind, 2));
-  pointGeometry.setDrawRange(0, pl.total);
-  const pointShared = { ...shared, uMaxSize: { value: Math.min(maxPoint, 40) }, uPlanktonGain: { value: 4.2 * Math.min(1, 1.15 * Math.sqrt(12000 / pl.count)) }, uScale: { value: 1 } };
+  let pointGeometry = null, interleaved = null;
+  function buildPoints() {
+    const pl = sim.plankton;
+    const g = new THREE.BufferGeometry();
+    interleaved = new THREE.InterleavedBuffer(pl.pts, 4);
+    interleaved.setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('position', new THREE.InterleavedBufferAttribute(interleaved, 3, 0));
+    g.setAttribute('aE', new THREE.InterleavedBufferAttribute(interleaved, 1, 3));
+    g.setAttribute('aKind', new THREE.BufferAttribute(pl.kind, 2));
+    g.setDrawRange(0, pl.total);
+    return g;
+  }
+  pointGeometry = buildPoints();
+  const gainFor = n => 4.2 * Math.min(1, 1.15 * Math.sqrt(12000 / n));
+  const pointShared = { ...shared, uMaxSize: { value: Math.min(maxPoint, 40) }, uPlanktonGain: { value: gainFor(sim.plankton.count) }, uScale: { value: 1 } };
   const slices = [];
   for (let i = 0; i <= sim.jellies.length; i++) {
     const m = mat({ uniforms: { ...pointShared, uSlice: { value: new THREE.Vector2(0, 1e9) } }, vertexShader: POINTS_VERT, fragmentShader: POINTS_FRAG });
@@ -140,7 +149,7 @@ export function createRenderer(canvas, sim, { quality = 'balanced' } = {}) {
   const hdr = rt({ count: 2 });
   const dof = rt();
   const chain = (n) => Array.from({ length: n }, () => rt());
-  const downs = chain(LEVELS), ups = chain(LEVELS), cdowns = chain(4);
+  const downs = chain(MAX_LEVELS), ups = chain(MAX_LEVELS), cdowns = chain(4);
 
   const screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const passes = [];
@@ -182,6 +191,13 @@ export function createRenderer(canvas, sim, { quality = 'balanced' } = {}) {
       if (it.kind === 'jelly') { it.u.uPhase.value = it.j.phase; it.u.uAmp.value = it.j.amp; }
       it.tex.needsUpdate = true;
       it.depth = -(pos[2] - 0);
+      if (it.kind === 'comb') {
+        // comb jellies that a lower tier drops fade out over a second instead of vanishing
+        const want = it.idx < sim.combCount ? 1 : 0;
+        it.fade += Math.max(-0.02, Math.min(0.02, want - it.fade));
+        it.u.uGain.value = it.fade; it.tu.uGain.value = it.tentGain * it.fade;
+        for (const m of it.meshes) m.visible = it.fade > 0.001;
+      }
     }
   }
 
@@ -244,7 +260,7 @@ export function createRenderer(canvas, sim, { quality = 'balanced' } = {}) {
     renderer.setSize(w, h, false);
     size.set(w, h);
     hdr.setSize(w, h); dof.setSize(w, h);
-    for (let k = 1; k < LEVELS; k++) { const lw = Math.max(1, Math.ceil(w / 2 ** k)), lh = Math.max(1, Math.ceil(h / 2 ** k)); downs[k].setSize(lw, lh); ups[k].setSize(lw, lh); }
+    for (let k = 1; k < MAX_LEVELS; k++) { const lw = Math.max(1, Math.ceil(w / 2 ** k)), lh = Math.max(1, Math.ceil(h / 2 ** k)); downs[k].setSize(lw, lh); ups[k].setSize(lw, lh); }
     for (let k = 1; k <= 3; k++) cdowns[k].setSize(Math.max(1, Math.ceil(w / 2 ** k)), Math.max(1, Math.ceil(h / 2 ** k)));
     const scale = Math.min(1.5, h / 720);
     shared.uCoc.value = COC_REF * scale; shared.uCocMax.value = 15 * scale; shared.uPxScale.value = h / (2 * tanV);
@@ -253,6 +269,16 @@ export function createRenderer(canvas, sim, { quality = 'balanced' } = {}) {
     camera.updateProjectionMatrix();
     output.u.uAspect.value = cssWidth / cssHeight;
     sim.setAspect(cssWidth / cssHeight);
+  }
+
+  // A quality tier change: new particle buffers for the new counts (the simulation carried the old state over), deeper or shallower mip chain.
+  function setTier(name) {
+    const old = pointGeometry;
+    pointGeometry = buildPoints();
+    for (const p of slices) p.geometry = pointGeometry;
+    old.dispose();
+    pointShared.uPlanktonGain.value = gainFor(sim.plankton.count);
+    LEVELS = levelsFor(name);
   }
 
   function dispose() {
@@ -265,5 +291,5 @@ export function createRenderer(canvas, sim, { quality = 'balanced' } = {}) {
     for (const r of [hdr, dof, ...downs.slice(1), ...ups.slice(1), ...cdowns.slice(1)]) r.dispose();
     renderer.dispose();
   }
-  return { renderer, camera, render, resize, dispose, uniforms: { shared, output: output.u, pointShared, bloom: BLOOM }, focus: FOCUS, cursorDepth: CURSOR_DEPTH };
+  return { renderer, camera, render, resize, setTier, dispose, uniforms: { shared, output: output.u, pointShared, bloom: BLOOM }, focus: FOCUS, cursorDepth: CURSOR_DEPTH };
 }

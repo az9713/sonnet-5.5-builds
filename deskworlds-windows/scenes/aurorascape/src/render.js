@@ -8,19 +8,12 @@ import { NJ } from './rig.js';
 import { SIM } from './wave-sim.js';
 import { substorm, pulse, auroraAmbient } from './aurora-model.js';
 import { CAMERA } from './behaviour.js';
+import { TIERS, MAX_LEVELS, tierName, tierChanges } from './tiers.js';
 
 const V3 = THREE.Vector3;
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 
-// What each quality buys. The aurora march steps, the plan-map and march resolutions, the water
-// simulation size, the star density and the reflection taps all scale; eco is built to be cheap.
-export const TIERS = {
-  eco: { steps: 20, auroraScale: 0.5, map: [320, 184], simN: 192, starCell: 0.030, bisect: 8, ss: 2, taps: 1, msaa: 0, levels: 5, landMax: 1920 },
-  balanced: { steps: 24, auroraScale: 0.6, map: [512, 288], simN: 256, starCell: 0.022, bisect: 10, ss: 2, taps: 2, msaa: 4, levels: 6, landMax: 2560 },
-  detail: { steps: 32, auroraScale: 0.75, map: [640, 360], simN: 384, starCell: 0.018, bisect: 12, ss: 3, taps: 3, msaa: 4, levels: 6, landMax: 3072 },
-  native: { steps: 40, auroraScale: 0.8, map: [768, 432], simN: 512, starCell: 0.015, bisect: 12, ss: 3, taps: 4, msaa: 2, levels: 6, landMax: 3072 },
-};
-export const tierName = (q) => (Object.hasOwn(TIERS, q) ? q : 'balanced');
+export { TIERS, tierName };
 
 const EXPOSURE = 1.0;
 const PITCH = 0.07;         // rad the camera looks above the horizon
@@ -51,8 +44,9 @@ function noiseTexture() {
 }
 
 export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
-  const tier = TIERS[tierName(quality)];
-  let activeTier = tier;
+  let tierKey = tierName(quality);
+  let tier = TIERS[tierKey];
+  let stepsOverride = null, ssOverride = null;    // development captures pin these
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
   renderer.setPixelRatio(1);
   renderer.setClearColor(0x000000, 1);
@@ -78,7 +72,8 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   const hdr = new THREE.WebGLRenderTarget(64, 64, rtOpts({ depthBuffer: true, samples: tier.msaa }));
   const N = tier.simN;
   const simRTs = [0, 1].map(() => new THREE.WebGLRenderTarget(N, N, rtOpts({ wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping })));
-  const chain = () => Array.from({ length: tier.levels }, () => new THREE.WebGLRenderTarget(64, 64, rtOpts()));
+  // the bloom pyramid is allocated for the deepest tier; a shallower tier simply uses fewer levels
+  const chain = () => Array.from({ length: MAX_LEVELS }, () => new THREE.WebGLRenderTarget(64, 64, rtOpts()));
   const downs = chain(), ups = chain();
   let simCur = 0;
 
@@ -114,6 +109,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     uState: { value: simRTs[0].texture }, uTexel: { value: new THREE.Vector2(1 / N, 1 / N) }, uCount: { value: 0 },
     uD: { value: world.disturbances.data }, uF: { value: world.disturbances.foam }, uReset: { value: 1 },
   });
+  const copyPass = pass(POST_VERT, `varying vec2 vUv; uniform sampler2D uSrc; void main(){ gl_FragColor = texture2D(uSrc, vUv); }`, { uSrc: { value: null } });
   const down = pass(POST_VERT, DOWN_FRAG, { uSrc: { value: null }, uTexel: { value: new THREE.Vector2() }, uFirst: { value: 0 } });
   const up = pass(POST_VERT, UP_FRAG, { uSrc: { value: null }, uBase: { value: null }, uTexel: { value: new THREE.Vector2() }, uWeight: { value: 1 } });
   const output = pass(POST_VERT, OUTPUT_FRAG, {
@@ -329,12 +325,14 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     renderer.render(output.scene, screenCamera);
   }
 
+  const lastSize = [1, 1, 1, 1];
   function resize(cssWidth, cssHeight, w, h) {
+    lastSize[0] = cssWidth; lastSize[1] = cssHeight; lastSize[2] = w; lastSize[3] = h;
     renderer.setSize(w, h, false);
     size.set(w, h);
     shared.uRes.value.set(w, h);
     hdr.setSize(w, h); skyRT.setSize(w, h);
-    const aw = Math.max(64, Math.round(w * activeTier.auroraScale)), ah = Math.max(64, Math.round(h * activeTier.auroraScale));
+    const aw = Math.max(64, Math.round(w * tier.auroraScale)), ah = Math.max(64, Math.round(h * tier.auroraScale));
     auroraRT.setSize(aw, ah); auroraRaw.setSize(aw, ah);
     blurPass.u.uTexel.value.set(1 / aw, 1 / ah);
     for (let k = 1; k < tier.levels; k++) {
@@ -345,6 +343,40 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     landDirty = true;
     output.u.uRes.value.set(w, h);
     poseCamera(world.time);
+  }
+
+  // Change quality tier at run time. The world (whales, particles, time) is untouched; only render
+  // targets, shader constants and the land bake that depend on the tier are rebuilt, once, here.
+  function setTier(name) {
+    const key = tierName(name);
+    if (key === tierKey) return false;
+    const change = tierChanges(tierKey, key);
+    tierKey = key; tier = TIERS[key];
+    if (change.map) { mapRT.setSize(tier.map[0], tier.map[1]); aurPass.u.uTexKm.value = (MAP.x1 - MAP.x0) / tier.map[0]; }
+    if (stepsOverride === null) aurPass.u.uSteps.value = tier.steps;
+    if (change.land) {
+      landPass.u.uBisect.value = tier.bisect;
+      if (ssOverride === null) landPass.u.uSS.value = tier.ss;
+      landDirty = true;                                // re-traced on the next frame, at the new size and sampling
+    }
+    shared.uStarCell.value = tier.starCell; waterPass.u.uTaps.value = tier.taps;
+    if (change.msaa) { hdr.samples = tier.msaa; hdr.dispose(); }
+    if (change.sim) resizeSim(tier.simN);
+    // sizes that follow the tier (aurora march target, bloom depth, land bake size) are rebuilt from the last frame size
+    resize(lastSize[0], lastSize[1], lastSize[2], lastSize[3]);
+    return true;
+  }
+  // Resample the water height field into new simulation targets: the ripples on the water carry over.
+  function resizeSim(n) {
+    const fresh = [0, 1].map(() => new THREE.WebGLRenderTarget(n, n, rtOpts({ wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping })));
+    copyPass.u.uSrc.value = simRTs[simCur].texture;
+    renderer.setRenderTarget(fresh[0]); renderer.render(copyPass.scene, screenCamera);
+    renderer.setRenderTarget(fresh[1]); renderer.render(copyPass.scene, screenCamera);
+    simRTs[0].dispose(); simRTs[1].dispose();
+    simRTs[0] = fresh[0]; simRTs[1] = fresh[1]; simCur = 0;
+    simPass.material.fragmentShader = simShader(n); simPass.material.needsUpdate = true;
+    simPass.u.uTexel.value.set(1 / n, 1 / n); simPass.u.uState.value = simRTs[0].texture;
+    shared.uSimN.value = n; shared.uSim.value = simRTs[0].texture;
   }
 
   function dispose() {
@@ -360,13 +392,14 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   }
 
   return {
-    renderer, camera, render, resize, dispose, simStep, screenToWater, tier, hasFloat,
+    renderer, camera, render, resize, dispose, simStep, screenToWater, setTier, hasFloat,
+    get tier() { return tierKey; },
     setCameraYaw(v) { camYaw = v; },
     hide,
     setDebug(v) { for (const m of whaleMaterials) m.uniforms.uDbg.value = v; },
-    setAuroraSteps(n) { aurPass.u.uSteps.value = n; },
+    setAuroraSteps(n) { stepsOverride = n; aurPass.u.uSteps.value = n; },
     setAuroraScale(v) { auroraScale = v; },
-    setLandSamples(n) { landPass.u.uSS.value = Math.max(1, Math.min(4, n | 0)); landDirty = true; },
+    setLandSamples(n) { ssOverride = Math.max(1, Math.min(4, n | 0)); landPass.u.uSS.value = ssOverride; landDirty = true; },
     // Development stills only: a free camera, [px, py, pz, tx, ty, tz, fov?].
     setDebugCamera(v) { debugCam = v; landDirty = true; },
     get vfov() { return vfov; },

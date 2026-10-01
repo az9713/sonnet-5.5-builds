@@ -1,4 +1,4 @@
-import { QUALITY_PRESETS as presets, qualityName, activeQuality, frameRate, framebufferSize, renderScale } from '../../shared/render-policy.js';
+import { QUALITY_PRESETS as presets, activeQuality, frameRate, framebufferSize, renderScale } from '../../shared/render-policy.js';
 import { preferredQuality, reportSceneError } from '../../shared/controls.js';
 import { createFrameLoop } from '../../shared/frame-loop.js';
 import { createWorld, FIXED_STEP } from './world.js';
@@ -21,8 +21,10 @@ async function start() {
   // A capture is repeatable; a visit is not.
   const seed = capture ? 1 : Math.floor(Math.random() * 2 ** 32);
   const aspect0 = stage.clientWidth > 0 && stage.clientHeight > 0 ? stage.clientWidth / stage.clientHeight : 16 / 9;
-  const sim = createWorld({ seed, quality: qualityName(quality), aspect: aspect0 });
-  const { renderer, camera, render: draw, resize: sizeTargets, dispose } = createRenderer(canvas, sim, { quality: qualityName(quality) });
+  // Counts and passes follow the tier in force: on battery `native` is the `balanced` tier (shared/render-policy.js).
+  let tier = activeQuality(quality, onBattery);
+  const sim = createWorld({ seed, quality: tier, aspect: aspect0 });
+  const { renderer, camera, render: draw, resize: sizeTargets, setTier: setRendererTier, dispose } = createRenderer(canvas, sim, { quality: tier });
   let loop = null, accumulator = 0, frames = 0, zeroSize = false;
   let cpuEMA = 0, slowSamples = 0, autoScale = 1, ratio = 1;
   const running = () => !disposed && !paused && !document.hidden && !contextLost && !zeroSize && hostRate > 0;
@@ -64,7 +66,15 @@ async function start() {
     loop?.setHidden(document.hidden || contextLost || disposed || zeroSize);
   }
   changeRate = restart;
-  changePower = () => { resize(); restart(); };
+  // Reconfigures what depends on the tier (plankton, snow and comb jelly counts, mip levels) in place when the tier name changes.
+  function applyTier() {
+    const next = activeQuality(quality, onBattery);
+    if (next === tier) return;
+    tier = next;
+    sim.setTier(tier);
+    setRendererTier(tier);
+  }
+  changePower = () => { applyTier(); resize(); restart(); };
   function resize(redrawNow = true) {
     const width = stage.clientWidth, height = stage.clientHeight, preset = presets[activeQuality(quality, onBattery)];
     const wasZeroSize = zeroSize;
@@ -96,7 +106,7 @@ async function start() {
   canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); contextLost = true; restart(); loading.hidden = false; });
   canvas.addEventListener('webglcontextrestored', () => { contextLost = false; resize(false); render(); restart(); });
   if (navigator.getBattery && !isHost) {
-    navigator.getBattery().then(battery => { function update() { onBattery = !battery.charging; resize(); restart(); } battery.addEventListener('chargingchange', update); update(); }).catch(() => {});
+    navigator.getBattery().then(battery => { function update() { onBattery = !battery.charging; applyTier(); resize(); restart(); } battery.addEventListener('chargingchange', update); update(); }).catch(() => {});
   }
 
   // Capture mode advances the actual simulation, then renders the actual WebGL scene.
@@ -124,7 +134,7 @@ async function start() {
     diagnostics: () => ({
       ...sim.diagnostics(), frames, drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles,
       pixels: [canvas.width, canvas.height], quality, effectiveFPS: running() ? fps() : 0, renderScale: ratio, cpuFrameEMA: cpuEMA,
-      paused, hostRate, hidden: document.hidden, contextLost, webgl: 'WebGL2', renderer: gl.getParameter(gl.RENDERER),
+      tierActive: tier, onBattery, paused, hostRate, hidden: document.hidden, contextLost, webgl: 'WebGL2', renderer: gl.getParameter(gl.RENDERER),
     }),
     // Client pixel fractions of the canvas (y down), or nothing to take the cursor out of the water.
     cursor(x, y) { if (x === undefined) release(); else { const rect = canvas.getBoundingClientRect(); point(rect.left + x * rect.width, rect.top + y * rect.height); } render(); },

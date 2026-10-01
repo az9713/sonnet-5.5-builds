@@ -1,9 +1,10 @@
-import { QUALITY_PRESETS as presets, activeQuality, frameRate, framebufferSize, renderScale } from '../../shared/render-policy.js';
+import { QUALITY_PRESETS as presets, activeQuality, qualityName, frameRate, framebufferSize, renderScale } from '../../shared/render-policy.js';
 import { preferredQuality, reportSceneError } from '../../shared/controls.js';
 import { createFrameLoop } from '../../shared/frame-loop.js';
 import { randomGenerator } from '../../shared/random.js';
 import { createWorld, FIXED_STEP } from './behaviour.js';
-import { createRenderer, tierName } from './render.js';
+import { createRenderer } from './render.js';
+import { tierFor } from './tiers.js';
 
 const canvas = document.querySelector('#scene'), stage = document.querySelector('#stage'), loading = document.querySelector('#loading');
 const params = new URLSearchParams(location.search), isHost = document.documentElement.dataset.motion === 'host';
@@ -27,7 +28,7 @@ async function start() {
     random: randomGenerator(seed), visualRandom: randomGenerator(seed ^ 0x5bd1e995),
     netAt: capture && Number.isFinite(netParam) && params.has('net') ? netParam : null,
   });
-  const rend = createRenderer(canvas, world, { quality: tierName(activeQuality(quality, false)) });
+  const rend = createRenderer(canvas, world, { quality: tierFor(quality, onBattery) });
   const { renderer, resize: sizeTargets, dispose } = rend;
   if (capture && params.has('steps')) rend.setAuroraSteps(Math.min(64, Number(params.get('steps')) || 16));
   if (capture) for (const k of (params.get('hide') || '').split(',')) if (k) rend.hide[k] = true;
@@ -89,7 +90,10 @@ async function start() {
     loop?.setHidden(document.hidden || contextLost || disposed || zeroSize);
   }
   changeRate = restart;
-  changePower = () => { resize(); restart(); };
+  // The tier follows the quality and the power source; when it changes, the render targets and the
+  // constants that depend on it are rebuilt in place (the world is untouched).
+  function applyTier() { if (rend.setTier(tierFor(quality, onBattery))) autoScale = 1; }
+  changePower = () => { applyTier(); resize(); restart(); };
   function resize(redrawNow = true) {
     const width = stage.clientWidth, height = stage.clientHeight, preset = presets[activeQuality(quality, onBattery)];
     const wasZeroSize = zeroSize;
@@ -121,7 +125,7 @@ async function start() {
   canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); contextLost = true; restart(); loading.hidden = false; });
   canvas.addEventListener('webglcontextrestored', () => { contextLost = false; resize(false); render(); restart(); });
   if (navigator.getBattery && !isHost) {
-    navigator.getBattery().then(battery => { function update() { onBattery = !battery.charging; resize(); restart(); } battery.addEventListener('chargingchange', update); update(); }).catch(() => {});
+    navigator.getBattery().then(battery => { function update() { onBattery = !battery.charging; applyTier(); resize(); restart(); } battery.addEventListener('chargingchange', update); update(); }).catch(() => {});
   }
 
   // Capture mode advances the actual simulation, then renders the actual WebGL scene. Only the last
@@ -168,6 +172,7 @@ async function start() {
     },
     // Glide the cursor to (x, y) over `seconds` of simulated time (paused captures).
     glide(x, y, seconds = 2.6) { if (!paused) throw new Error('Pause before gliding.'); cursorSequence(x, y, seconds); render(); },
+    setQuality(value) { quality = qualityName(value); applyTier(); resize(); restart(); },
     pause(value = true) { paused = Boolean(value); restart(); },
     advance(seconds) {
       if (!paused) throw new Error('Pause before advancing deterministic capture time.');
