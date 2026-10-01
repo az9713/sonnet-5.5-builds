@@ -23,7 +23,8 @@ internal static class Program
         }
 
         // --window      show a normal window instead of drawing behind the desktop icons
-        // --world NAME  riverscape, reefscape, bettascape or plasmascape, for this run only
+        // --world NAME  riverscape, reefscape, bettascape, plasmascape,
+        //               slimescape, pelagicscape, aurorascape or cosmoscape, for this run only
         var windowed = args.Contains("--window");
         World? forced = null;
         var at = Array.IndexOf(args, "--world");

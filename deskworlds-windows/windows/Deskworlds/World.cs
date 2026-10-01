@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Deskworlds;
 
 /// <summary>The scenes the app can show, each a directory under scenes/ with a wallpaper.html.</summary>
-internal enum World { Riverscape, Reefscape, Bettascape, Plasmascape }
+internal enum World { Riverscape, Reefscape, Bettascape, Plasmascape, Slimescape, Pelagicscape, Aurorascape, Cosmoscape }
 
 internal static class Worlds
 {
@@ -15,11 +15,15 @@ internal static class Worlds
         World.Riverscape => "Riverbed",
         World.Reefscape => "Coral reef",
         World.Bettascape => "Betta",
-        _ => "Plasma globe",
+        World.Plasmascape => "Plasma globe",
+        World.Slimescape => "Slime mould",
+        World.Pelagicscape => "Pelagic",
+        World.Aurorascape => "Aurora fjord",
+        _ => "Cosmic web",
     };
 
     /// <summary>Only worlds with something to eat have anything to feed.</summary>
-    public static bool CanFeed(this World w) => w != World.Plasmascape;
+    public static bool CanFeed(this World w) => w is World.Riverscape or World.Reefscape or World.Bettascape or World.Slimescape;
 
     public static string Page(this World w) => $"/scenes/{w.Folder()}/wallpaper.html";
 
@@ -28,6 +32,10 @@ internal static class Worlds
     {
         World.Riverscape => Color.FromArgb(8, 14, 12),
         World.Reefscape => Color.FromArgb(11, 24, 37),
+        World.Pelagicscape => Color.FromArgb(0, 3, 8),
+        World.Cosmoscape => Color.FromArgb(1, 2, 5),
+        World.Aurorascape => Color.FromArgb(1, 4, 10),
+        World.Slimescape => Color.FromArgb(11, 11, 7),
         _ => Color.Black,
     };
 }

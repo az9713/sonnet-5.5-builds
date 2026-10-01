@@ -9,6 +9,6 @@
     "wallpaper": "powershell -NoProfile -ExecutionPolicy Bypass -File windows/install.ps1",
     "unwallpaper": "powershell -NoProfile -ExecutionPolicy Bypass -File windows/uninstall.ps1",
     "check": "node tools/check.mjs",
-    "test": "node ui/tests/gallery.mjs && node scenes/riverscape/tests/fish-behavior.mjs && node scenes/riverscape/tests/render-policy.mjs && node scenes/riverscape/tests/plant-budget.mjs && node scenes/reefscape/tests/behavior.mjs && node scenes/reefscape/tests/assets.mjs && node scenes/reefscape/tests/locomotion.mjs && node scenes/reefscape/tests/anemone.mjs && node scenes/bettascape/tests/food.mjs && node scenes/plasmascape/tests/plasma.mjs"
+    "test": "node ui/tests/gallery.mjs && node scenes/riverscape/tests/fish-behavior.mjs && node scenes/riverscape/tests/render-policy.mjs && node scenes/riverscape/tests/plant-budget.mjs && node scenes/reefscape/tests/behavior.mjs && node scenes/reefscape/tests/assets.mjs && node scenes/reefscape/tests/locomotion.mjs && node scenes/reefscape/tests/anemone.mjs && node scenes/bettascape/tests/food.mjs && node scenes/plasmascape/tests/plasma.mjs && node tools/test-new-scenes.mjs"
   }
 }
