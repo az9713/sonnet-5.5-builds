@@ -20,9 +20,9 @@ export const CAMERA = { x: 0, y: 3.2, z: 0 };
 // FJORD_GLSL in shaders.js): centre line and half width of the water.
 export const fjordCenter = (z) => 26 * Math.sin(z * 0.0016 + 0.4) - 6 + 520 * sstep(400, 5200, -z) ** 1.2;
 export const fjordHalfWidth = (z) => (240 + 30 * Math.sin(z * 0.0049 + 1.1)) * (1 + 0.9 * sstep(900, 3200, -z));
-export const BOUNDS = { minX: -128, maxX: 128, minZ: -150, maxZ: -38, shoreMargin: 42 };
+export const BOUNDS = { minX: -128, maxX: 128, minZ: -150, maxZ: -27, shoreMargin: 42 };
 export const SHORE_MARGIN = BOUNDS.shoreMargin;
-const VIEW = 0.62;      // whales keep to the wedge the camera sees: |x| < VIEW * distance
+const VIEW = 0.62;      // whales keep to the wedge the camera sees: |x| < VIEW * distance (the near whale keeps nearer the middle)
 export const inFjord = (x, z, margin = 0) => Math.abs(x - fjordCenter(z)) < fjordHalfWidth(z) - margin;
 
 // Cursor speed is in screen widths per second: below SLOW it is a patient hand, above FAST a swat.
@@ -59,7 +59,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   const log = [];
   const stats = { blows: 0, dives: 0, lunges: 0, nets: 0, invalid: 0, flees: 0, curious: 0 };
   const cursor = { active: false, x: 0, z: 0, speed: 0, movedAt: -1e9, fast: 0, drip: 0, travel: 0, havePrev: false };
-  const net = { state: 'idle', nextAt: netAt ?? rand(18, 28), who: -1, cx: 0, cz: 0, theta0: 0, dir: 1, ringAge: 0, last: -1e9 };
+  const net = { state: 'idle', nextAt: netAt ?? rand(7, 12), who: -1, cx: 0, cz: 0, theta0: 0, dir: 1, ringAge: 0, last: -1e9 };
   let time = 0;
 
   const emit = (type, i, extra = {}) => { if (log.length < 8192) log.push({ t: time, type, i, ...extra }); };
@@ -67,13 +67,14 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   function makeWhale(i, spec) {
     const scale = spec.scale ?? 1;
     const w = {
-      id: i, scale, rig: createRig({ scale, phase: rand(0, TAU) }),
+      id: i, scale, hero: Boolean(spec.hero), zNear: spec.zNear, zFar: spec.zFar, view: spec.view,
+      rig: createRig({ scale, phase: rand(0, TAU) }),
       x: spec.x, y: spec.y, z: spec.z, yaw: spec.yaw ?? Math.PI / 2, pitch: 0, roll: 0,
       speed: spec.speed ?? 1.6, yawRate: 0, pitchRate: 0, vy: 0,
       mode: spec.mode ?? 'travel', modeT: 0, breathsLeft: spec.breaths ?? 3, travelFor: spec.travelFor ?? rand(2, 6),
       goalX: 0, goalZ: 0, goalYaw: spec.yaw ?? Math.PI / 2, depth: -1.15, arch: 0, beat: 0.3, gape: 0, rollGoal: 0,
       blown: false, blowAt: 0, lastBlow: -99, lastSlap: -99, fleeUntil: 0, cooldownCurious: 0, hasNet: false,
-      holeY: -1, dripT: 0, ascendX: 0, ascendZ: 0, submergedFor: 0,
+      holeY: -1, dripT: 0, streamT: 0, ascendX: 0, ascendZ: 0, submergedFor: 0,
       lungeYaw: 0, spiralTau: 0, spiralFrom: [0, 0, 0], lungeFrom: [0, 0, 0], lastSplashIn: -99,
       _hole: [0, 0, 0], _pt: [0, 0, 0], _prevJointY: new Float32Array(NJ),
     };
@@ -83,13 +84,14 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
 
   const ws = [];
   const specs = [
-    { x: -30, y: -1.15, z: -78, yaw: Math.PI / 2 + 0.25, scale: 1.18, mode: 'travel', travelFor: 1.5, breaths: 3 },
-    { x: 32, y: -6.5, z: -104, yaw: Math.PI / 2 - 0.3, scale: 1.08, mode: 'submerged', breaths: 4 },
-    { x: 50, y: -1.15, z: -58, yaw: Math.PI / 2 + 0.7, scale: 1.28, mode: 'travel', travelFor: 9, breaths: 2 },
+    // the near whale: close to the camera and broadside to it, so its arched back and bending body fill a third of the frame
+    { x: -4, y: -1.15, z: -40, yaw: 0.1, scale: 1.26, mode: 'travel', travelFor: 1.2, breaths: 4, hero: true, zNear: -36, zFar: -54, view: 0.42 },
+    { x: 34, y: -6.5, z: -100, yaw: Math.PI / 2 - 0.3, scale: 1.08, mode: 'submerged', breaths: 4, zNear: -64, zFar: -120, view: 0.62 },
+    { x: 52, y: -1.15, z: -74, yaw: Math.PI / 2 + 0.7, scale: 1.18, mode: 'travel', travelFor: 8, breaths: 2, zNear: -62, zFar: -112, view: 0.62 },
   ];
   for (let i = 0; i < whales; i++) {
     const s = specs[i % specs.length];
-    ws.push(makeWhale(i, { ...s, x: s.x + rand(-6, 6), z: s.z + rand(-8, 8), yaw: s.yaw + rand(-0.2, 0.2) }));
+    ws.push(makeWhale(i, { ...s, x: s.x + rand(-4, 4), z: s.z + rand(-4, 4), yaw: s.yaw + rand(-0.15, 0.15) }));
   }
   if (ws[1]) ws[1].submergedFor = rand(5, 9);
   // settle each rig into its starting pose so the first steps carry no jump
@@ -98,7 +100,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   function pickWaypoint(w) {
     let best = null, bestScore = -1e9;
     for (let k = 0; k < 10; k++) {
-      const gz = BOUNDS.maxZ - 14 - 62 * Math.pow(random(), 1.4), reach = Math.min(BOUNDS.maxX - 20, VIEW * -gz);
+      const gz = w.zNear + (w.zFar - w.zNear) * Math.pow(random(), 1.2), reach = Math.min(BOUNDS.maxX - 20, w.view * -gz);
       const gx = rand(-reach, reach);
       if (!inFjord(gx, gz, SHORE_MARGIN + 10)) continue;
       let score = Math.min(60, Math.hypot(gx - w.x, gz - w.z)) * 0.25 + rand(0, 8);
@@ -128,8 +130,8 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
         // surface somewhere ahead, inside the frame
         for (let k = 0; k < 12; k++) {
           const ax = w.x + Math.cos(w.yaw) * rand(10, 40) + rand(-20, 20), az = w.z - Math.sin(w.yaw) * rand(10, 40) + rand(-10, 10);
-          w.ascendZ = clamp(az, BOUNDS.minZ + 26, BOUNDS.maxZ - 14);
-          w.ascendX = clamp(ax, Math.max(BOUNDS.minX + 20, VIEW * w.ascendZ), Math.min(BOUNDS.maxX - 20, -VIEW * w.ascendZ));
+          w.ascendZ = clamp(az, w.zFar, w.zNear);
+          w.ascendX = clamp(ax, Math.max(BOUNDS.minX + 20, w.view * w.ascendZ), Math.min(BOUNDS.maxX - 20, -w.view * w.ascendZ));
           if (inFjord(w.ascendX, w.ascendZ, SHORE_MARGIN + 8)) break;
         }
         break;
@@ -166,9 +168,9 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     if (edgeR < 30) avoid[0] -= clamp((30 - edgeR) / 30, 0, 1.5);
     if (w.x < BOUNDS.minX + 18) avoid[0] += (BOUNDS.minX + 18 - w.x) / 18;
     if (w.x > BOUNDS.maxX - 18) avoid[0] -= (w.x - (BOUNDS.maxX - 18)) / 18;
-    const wedge = VIEW * -w.z + 6;   // too far to the side: swim back into view
+    const wedge = w.view * -w.z + 6;   // too far to the side: swim back into view
     if (Math.abs(w.x) > wedge) avoid[0] -= Math.sign(w.x) * clamp((Math.abs(w.x) - wedge) / 24, 0, 1.2);
-    if (w.z > BOUNDS.maxZ - 26) avoid[1] -= clamp((w.z - (BOUNDS.maxZ - 26)) / 26, 0, 1.5);   // keep clear of the camera
+    if (w.z > BOUNDS.maxZ - 6) avoid[1] -= clamp((w.z - (BOUNDS.maxZ - 6)) / 8, 0, 1.5);   // keep clear of the camera
     if (w.z < BOUNDS.minZ + 16) avoid[1] += clamp((BOUNDS.minZ + 16 - w.z) / 16, 0, 1.5);
     for (const o of ws) {
       if (o === w) continue;
@@ -197,7 +199,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     switch (w.mode) {
       case 'travel': {
         const d = headToward(w, w.goalX, w.goalZ);
-        speedT = 1.5 + 0.5 * nz; depthT = -1.2 + 0.2 * nz; beat = 0.3 + 0.1 * nz;
+        speedT = 1.5 + 0.5 * nz; depthT = -1.2 + 0.2 * nz; beat = (w.hero ? 0.5 : 0.3) + 0.1 * nz;
         if (d < 14) pickWaypoint(w);
         if (w.modeT > w.travelFor) setMode(w, 'breath');
         break;
@@ -237,7 +239,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
         speedT = 2.4; beat = 0.5; depthT = w.depth + 1.2 * nz;
         if (w.fromFlee && w.modeT < 8) turn = 0.5; else w.fromFlee = false;
         if (d < 12) pickWaypoint(w);
-        if (w.modeT > w.submergedFor) setMode(w, 'ascend');
+        if (w.modeT > w.submergedFor * (w.hero ? 0.55 : 1)) setMode(w, 'ascend');
         break;
       }
       case 'ascend': {
@@ -314,7 +316,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     for (const w of ws) {
       if (NET_MODES.has(w.mode) || w.mode === 'flee' || w.mode === 'curious' || w.mode === 'dive') continue;
       if (w.mode === 'ascend' && w.y > -3) continue;
-      const score = rand(0, 1) + (w.mode === 'submerged' ? 1 : 0);
+      const score = rand(0, 1) + (w.mode === 'submerged' ? 1 : 0) - (w.hero ? 1.2 : 0);   // the near whale keeps the foreground
       if (score > bestScore) { best = w; bestScore = score; }
     }
     if (!best) { net.nextAt = time + 6; return; }
@@ -415,7 +417,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   function blow(w) {
     w.rig.blowhole(w._hole);
     w.lastBlow = time; stats.blows++;
-    particles.spout(w._hole[0], w._hole[1] + 0.05, w._hole[2], 0.9 + 0.2 * random(), 0.85);
+    particles.spout(w._hole[0], w._hole[1] + 0.05, w._hole[2], 1.0 + 0.2 * random(), 1.0);
     emit('blow', w.id, { y: w._hole[1], x: w._hole[0], z: w._hole[2] });
     addDisturbance(w._hole[0], w._hole[2], 1.6, 0.004, 0.2);
   }
@@ -443,6 +445,8 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       let amt = clamp(vy * DT * 0.08 * g, -0.0015, 0.0015);
       let foam = Math.abs(vy) > 1.8 ? clamp(Math.abs(vy) * 0.03, 0, 0.35) * g : 0;
       if (i >= 21 && Math.abs(vy) > 4.4 && depth < reach) { slap = Math.max(slap, Math.abs(vy)); foam = 0.6; amt = clamp(vy * DT * 0.2, -0.004, 0.004); }
+      // a collar of foam where the body cuts the surface
+      if (depth < r && depth > -r * 0.6 && w.speed > 0.3) foam = Math.max(foam, 0.12);
       if (Math.abs(amt) > 2e-5 || foam > 0) addDisturbance(x, z, -(r * 0.9 + 1.0), amt, foam);
     }
     // the bow wave and the wake of a swimmer at the surface
@@ -451,6 +455,12 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       w.lastSlap = time; particles.splash(P[(NJ - 1) * 3], P[(NJ - 1) * 3 + 2], clamp(slap / 8, 0.15, 1), 0.2);
       addDisturbance(P[(NJ - 1) * 3], P[(NJ - 1) * 3 + 2], 2.2, 0.012 * Math.sign(rig.jointVY[NJ - 1] || 1), 0.8);
       emit('slap', w.id, { v: slap });
+    }
+    // water streams off whatever is out of the water and still wet
+    if ((w.streamT -= dt) < 0) {
+      w.streamT = 0.06 + 0.1 * random();
+      const j = 2 + Math.floor(random() * 18);
+      if (rig.wet[j] > 0.35 && P[j * 3 + 1] > 0.15) particles.drip(P[j * 3] + rand(-0.8, 0.8) * sc, P[j * 3 + 1] + 0.3, P[j * 3 + 2] + rand(-0.8, 0.8) * sc);
     }
     // the fluke of a diving whale drips as it rises clear
     if (P[(NJ - 1) * 3 + 1] > 0.3 && (w.dripT -= dt) < 0) {

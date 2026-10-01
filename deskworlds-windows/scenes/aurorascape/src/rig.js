@@ -18,7 +18,7 @@ const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const approach = (x, target, rate, dt) => x + (target - x) * (1 - Math.exp(-rate * dt));
 const HN = 64;                        // history length (s * 60) for the delayed fin lag
-const FIN_W = [5.2, 4.3, 4.3], FIN_Z = [0.38, 0.42, 0.42], MAXL = [1.1, 0.55, 0.55];
+const FIN_W = [4.6, 3.8, 3.8], FIN_Z = [0.32, 0.36, 0.36], MAXL = [1.8, 0.9, 0.9];
 
 export function createRig({ scale = 1, phase = 0 } = {}) {
   const JD = BODY_LEN * scale / (NJ - 1);
@@ -81,12 +81,12 @@ export function createRig({ scale = 1, phase = 0 } = {}) {
     rig.arch = approach(rig.arch, arch, 1.3, dt);
     const f = 0.22 + 0.36 * beat;
     rig.tailFreq = approach(rig.tailFreq, f, 0.8, dt);
-    rig.tailAmp = approach(rig.tailAmp, 0.025 + 0.15 * beat, 1.2, dt);
+    rig.tailAmp = approach(rig.tailAmp, 0.04 + 0.2 * beat, 1.2, dt);
     rig.tailPhase += TAU * rig.tailFreq * dt;
 
     const L = BODY_LEN * scale, kw = TAU / (1.05 * L);
-    const turnTarget = clamp(-yawRate / Math.max(speed, 1.2), -0.2, 0.2) * 1.0;
-    const pitchTarget = clamp(pitchRate / Math.max(speed, 1.2), -0.2, 0.2) * 0.8;
+    const turnTarget = clamp(-yawRate / Math.max(speed, 1.0) * 1.7, -0.24, 0.24);
+    const pitchTarget = clamp(pitchRate / Math.max(speed, 1.0) * 1.4, -0.22, 0.22);
     for (let i = 0; i < NJ; i++) {
       const sd = i * JD, u = sd / L;
       const tau = 0.25 + 1.8 * Math.pow(u, 1.4);
@@ -97,7 +97,7 @@ export function createRig({ scale = 1, phase = 0 } = {}) {
     const kappaP = (i) => {
       const sd = i * JD, u = sd / L;
       const und = rig.tailAmp * Math.pow(sstep(0.22, 1.0, u), 1.15) * Math.cos(rig.tailPhase - kw * sd) / scale;
-      const archK = rig.arch * 0.145 * Math.sin(Math.PI * clamp(u * 1.02, 0, 1)) ** 0.9 / scale;
+      const archK = rig.arch * 0.17 * Math.sin(Math.PI * clamp(u * 1.02, 0, 1)) ** 0.9 / scale;
       return kPitch[i] + und + archK;
     };
     alpha[IP] = 0; beta[IP] = 0; lx[IP] = 0; ly[IP] = 0; lz[IP] = 0;
@@ -143,8 +143,8 @@ export function createRig({ scale = 1, phase = 0 } = {}) {
     const accF = rig.acc[0] * F[0] + rig.acc[1] * F[1] + rig.acc[2] * F[2];
     const accU = rig.acc[0] * Up[0] + rig.acc[1] * Up[1] + rig.acc[2] * Up[2];
     const accS = rig.acc[0] * S[0] + rig.acc[1] * S[1] + rig.acc[2] * S[2];
-    tg[0] = -accF * 0.3; tg[1] = -clamp(rig.tailVelUp, -3, 3) * 0.30 - accU * 0.2; tg[2] = -yawRate * 0.9 - accS * 0.3;
-    tg[3] = tg[6] = -accF * 0.22; tg[4] = tg[7] = -accU * 0.16 + pitchRate * 0.4; tg[5] = tg[8] = -yawRate * 0.45 - accS * 0.22;
+    tg[0] = -accF * 0.4; tg[1] = -clamp(rig.tailVelUp, -3.5, 3.5) * 0.5 - accU * 0.25; tg[2] = -yawRate * 1.8 - accS * 0.4;
+    tg[3] = tg[6] = -accF * 0.3; tg[4] = tg[7] = -accU * 0.2 + pitchRate * 0.9; tg[5] = tg[8] = -yawRate * 1.0 - accS * 0.3;
     for (let f = 0; f < 3; f++) {
       const sp = spring[f], o = f * 3;
       const n = Math.hypot(tg[o], tg[o + 1], tg[o + 2]);

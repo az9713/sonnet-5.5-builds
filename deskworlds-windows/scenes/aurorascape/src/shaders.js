@@ -746,7 +746,7 @@ vec3 flukeOff(float u, float v, float side){
   float th = side*0.075*(1.0 - 0.75*au)*(0.3 + 0.7*pow(sin(PI*clamp(v, 0.0, 1.0)), 0.6));
   vec3 off = vec3(-x, th + 0.10*au*au, u*${(1.95).toFixed(2)});
   vec3 lag = lagFor(0, au);
-  off += vec3(lag.x*0.4, lag.y, lag.z*0.5)*pow(au, 1.25)*(0.55 + 0.45*v);
+  off += vec3(lag.x*0.6, lag.y, lag.z*0.9)*pow(au, 1.15)*(0.55 + 0.45*v);
   return off*uScale;
 }
 void flukePoint(float u, float v, float side, out vec3 pos, out vec3 N){
@@ -922,30 +922,30 @@ void main(){
   vec3 Rv = reflect(-V, N);
   float Fs = 0.03 + 0.97*pow(1.0 - NV, 5.0);
   float gloss = 0.25 + 0.75*wet + film;
-  col += envSky(Rv)*Fs*gloss*0.55;
+  col += envSky(Rv)*Fs*gloss*1.5;
   vec3 H1 = normalize(V + Lg), H2 = normalize(V + Lm);
   float sh = mix(60.0, 380.0, clamp(wet, 0.0, 1.0));
-  col += uAurG*pow(max(dot(N, H1), 0.0), sh)*(0.05 + 0.5*gloss)*0.45;
-  col += uAurM*pow(max(dot(N, H2), 0.0), sh*0.8)*(0.04 + 0.4*gloss)*0.2;
+  col += uAurG*pow(max(dot(N, H1), 0.0), sh)*(0.05 + 0.5*gloss)*0.9;
+  col += uAurM*pow(max(dot(N, H2), 0.0), sh*0.8)*(0.04 + 0.4*gloss)*0.55;
   // rim: green on one side, magenta on the other
   float rim = pow(1.0 - NV, 2.6)*(0.25 + 0.75*up);
-  col += rim*mix(uAurG*0.9, uAurM*0.8, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*0.3;
+  col += rim*mix(uAurG*1.1, uAurM*1.7, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*1.1;
   // the thin bright film draining off the skin
-  col += film*(uAurG*0.12 + uAmb*0.8)*(0.3 + Fs);
+  col += film*(uAurG*0.30 + uAmb*2.0)*(0.3 + Fs);
 
   // ---- the waterline ----
   float dB = clamp(d, 0.0, 40.0);
   vec3 deep = vec3(0.0010, 0.0030, 0.0046) + uAmb*vec3(0.12, 0.30, 0.26)*0.2;
   vec3 trans = exp(-dB*vec3(0.34, 0.17, 0.12));
   col = col*trans*(1.0 - 0.6*(1.0 - exp(-dB*0.5))) + deep*(1.0 - exp(-dB*0.5))*0.6;
-  float meniscus = exp(-pow(d/0.07, 2.0));
-  col += meniscus*(uAurG*0.07 + uAmb*0.5);
+  float meniscus = exp(-pow(d/0.11, 2.0));
+  col += meniscus*(uAurG*0.30 + uAmb*1.8);
   float alpha = mix(1.0, exp(-dB*0.26)*0.72, smoothstep(0.0, 0.4, d));
   if (uMirror > 0.5){
     // the reflected whale: only what is above the water, faint and dim
-    float refl = 0.62*smoothstep(-0.3, 0.25, origY - wh);
+    float refl = 0.85*smoothstep(-0.3, 0.25, origY - wh);
     alpha = refl;
-    col *= 0.55;
+    col *= 0.9;
   }
   gl_FragColor = vec4(col*alpha, alpha);
 }
@@ -994,8 +994,8 @@ void main(){
     float body = smoothstep(1.0, 0.1, d);
     body = body*body;
     float lit = 0.35 + 0.65*smoothstep(-0.9, 0.9, vC.y + 0.35 + (n - 0.5)*0.8);
-    col = (uAmb*2.2 + uAurG*0.05 + uAurM*0.02 + vec3(0.004, 0.0055, 0.007))*lit*(0.7 + 0.6*n);
-    k = body*a;
+    col = (uAmb*5.0 + uAurG*0.14 + uAurM*0.06 + vec3(0.006, 0.009, 0.011))*lit*(0.7 + 0.6*n);
+    k = body*a*1.25;
   } else if (kind < 1.5){ // bubble: a glinting rim and a bright speck
     float rim = smoothstep(0.5, 0.9, r)*(1.0 - smoothstep(0.9, 1.0, r));
     float spec = exp(-dot(vC - vec2(-0.35, 0.38), vC - vec2(-0.35, 0.38))*14.0);
@@ -1003,15 +1003,15 @@ void main(){
     col = (uAmb*6.0 + uAurG*0.10 + vec3(0.003, 0.004, 0.005))*(0.3 + rim*1.6) + spec*(uAurG*0.4 + uAmb*6.0 + 0.01);
     k = (0.10 + rim*0.9)*a*att*0.34;
   } else if (kind < 2.5){ // droplet: a tiny bright point
-    col = (uAmb*12.0 + uAurG*0.25 + vec3(0.008, 0.01, 0.012));
-    k = pow(1.0 - r, 2.0)*a*0.9;
+    col = (uAmb*16.0 + uAurG*0.4 + vec3(0.012, 0.016, 0.02));
+    k = pow(1.0 - r, 2.0)*a*1.1;
   } else {                // surface foam bubble, glowing
     float rim = smoothstep(0.45, 0.9, r)*(1.0 - smoothstep(0.9, 1.0, r));
     col = (uAmb*7.0 + uAurG*0.12 + vec3(0.004, 0.005, 0.006))*(0.4 + rim);
     k = (0.12 + 0.7*rim)*a*0.45*pow(1.0 - r, 0.5);
   }
   // premultiplied: mist covers what is behind it, glints (alpha 0) only add light
-  float cover = kind < 0.5 ? clamp(k, 0.0, 1.0) : 0.0;
+  float cover = kind < 0.5 ? clamp(k*0.6, 0.0, 1.0) : 0.0;
   gl_FragColor = vec4(col*k, cover);
 }
 `;

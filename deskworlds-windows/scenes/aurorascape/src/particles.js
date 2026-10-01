@@ -37,10 +37,10 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
     // metres, then billows and wafts away on the wind.
     spout(px, py, pz, power = 1, heightScale = 1) {
       emitters.push({ x: px, y: py, z: pz, left: Math.round(56 + 16 * power), total: Math.round(56 + 16 * power), power, height: heightScale });
-      for (let j = 0; j < 14; j++) {   // droplets thrown out of the spout
+      for (let j = 0; j < 36; j++) {   // droplets thrown out of the spout
         const i = add(DROP), a = random() * TAU, sp = rand(0.4, 2.2);
-        x[i] = px; y[i] = py + 0.1; z[i] = pz; vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = rand(2.5, 6.5);
-        s0[i] = s1[i] = rand(0.05, 0.1); life[i] = 3; peak[i] = 1;
+        x[i] = px; y[i] = py + 0.1; z[i] = pz; vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = rand(4, 11);
+        s0[i] = s1[i] = rand(0.07, 0.15); life[i] = 3; peak[i] = 1;
       }
     },
     // A bubble of the net. (ox, oz) is the centre of the ring: the net drifts outward as it rises, so the ring grows.
@@ -83,10 +83,10 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
           const i = add(MIST), u = 1 - em.left / em.total;
           em.left--;
           x[i] = em.x + rand(-0.1, 0.1); y[i] = em.y + rand(0, 0.2); z[i] = em.z + rand(-0.1, 0.1);
-          const up = (7.2 + 3.6 * random()) * em.height * (0.6 + 0.4 * em.power);
-          const a = random() * TAU, sp = rand(0.05, 0.9) * (0.4 + 1.2 * u);
+          const up = (10.5 + 5.0 * random()) * em.height * (0.6 + 0.4 * em.power);
+          const a = random() * TAU, sp = rand(0.05, 1.4) * (0.4 + 1.6 * u);
           vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = up * (1 - 0.35 * u);
-          s0[i] = rand(0.14, 0.3); s1[i] = rand(0.9, 2.2) * (0.8 + 0.4 * em.power); life[i] = rand(2.6, 6.0); peak[i] = rand(0.14, 0.34);
+          s0[i] = rand(0.25, 0.5); s1[i] = rand(1.6, 3.6) * (0.8 + 0.4 * em.power); life[i] = rand(3.0, 7.0); peak[i] = rand(0.2, 0.44);
         }
         if (em.left <= 0) emitters.splice(e, 1);
       }
@@ -106,7 +106,7 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
         if (k === MIST) {
           vx[i] = vx[i] * dragM + wind[0] * 0.5 * dt + Math.sin(time * 0.9 + seed[i] * 3) * 0.25 * dt;
           vz[i] = vz[i] * dragM + wind[2] * 0.5 * dt + Math.cos(time * 0.7 + seed[i] * 5) * 0.25 * dt;
-          vy[i] = vy[i] * Math.exp(-2.1 * dt) + 0.08 * dt;
+          vy[i] = vy[i] * Math.exp(-1.7 * dt) + 0.1 * dt;
         } else if (k === DROP) {
           vy[i] -= 9.8 * dt;
         } else if (k === BUBBLE) {
