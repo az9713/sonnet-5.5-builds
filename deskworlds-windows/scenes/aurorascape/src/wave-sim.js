@@ -9,11 +9,11 @@ export const SIM = {
   minX: -150, minZ: -312,
   c: 6.0,               // m/s, wave speed
   step: 1 / 60,
-  damp: 0.62,           // 1/s, energy loss of the open water
+  damp: 0.40,           // 1/s, energy loss of the open water
   visc: 0.045,          // diffusion of velocity: ripples spread and soften as they travel
   sponge: 14,           // cells over which the edge absorbs part of an arriving wave
   spongeLoss: 0.10,     // extra loss per step at the very edge
-  leak: 0.30,           // 1/s, level drains back to rest so injected volume does not pile up
+  leak: 0.20,           // 1/s, level drains back to rest so injected volume does not pile up
   foamDecay: 0.72,      // 1/s
   drive: 0.4,           // how firmly a driven disturbance pulls the surface toward its velocity, per step
   maxDisturbances: 48,

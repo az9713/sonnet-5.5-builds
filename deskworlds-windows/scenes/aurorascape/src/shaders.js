@@ -559,10 +559,10 @@ void main(){
   vec3 foamCol = (uAmb*6.5 + vec3(0.0035, 0.0048, 0.0055))*foamAmt;
   vec3 col = body*(1.0 - F) + refl*F*(1.0 - 0.8*foamAmt) + foamCol;
   // wave crests catch the glow of the sky: rings read on dark water
-  float rip = clamp(length(slopeSim)*16.0, 0.0, 1.0);
+  float rip = clamp(length(slopeSim)*24.0, 0.0, 1.0);
   col += (uAmb*3.0 + vec3(0.0006, 0.0010, 0.0014))*rip*rip*(0.4 + 0.6*F);
-  float crestL = pow(clamp(hSim*55.0, 0.0, 1.0), 1.5);
-  col += (uAmb*2.2 + vec3(0.0005, 0.0009, 0.0012))*crestL*(0.4 + 0.6*F);
+  float crestL = pow(clamp(hSim*9.0, 0.0, 1.0), 2.0);
+  col += (uAmb*1.2 + vec3(0.0003, 0.0005, 0.0007))*crestL*(0.4 + 0.6*F);
 
   // the low fog that lies on the water
   float fogn = 0.55 + 0.9*tfbm3(xz*0.006 + vec2(uTime*0.006, 0.0));
@@ -736,7 +736,7 @@ void main(){
 export const WHALE_FRAG = /* glsl */`
 ${COMMON}
 uniform vec3 uCam, uAmb, uAurG, uAurM;
-uniform float uTime, uMirror, uSeed, uSimN, uGape;
+uniform float uTime, uMirror, uSeed, uSimN, uGape, uDbg;
 uniform sampler2D uSim;
 varying vec3 vWorld;
 varying vec3 vN;
@@ -796,7 +796,7 @@ void main(){
     barn = bm*(1.0 - smoothstep(0.1, 0.2, bd))*step(0.3, hash21(bi + 2.0));
     // scars: thin pale wandering lines
     float sr = 1.0 - abs(2.0*tfbm3(vec2(vRest.x*0.9 + uSeed*9.0, vRest.z*2.2 + vRest.y*1.7)) - 1.0);
-    scar = smoothstep(0.955, 0.985, sr)*0.55;
+    scar = smoothstep(0.94, 0.985, sr)*0.22;
     // mottling
     albedo *= 0.75 + 0.8*tfbm3(vRest.xz*1.7 + vRest.y);
     // the mouth line and the open mouth
@@ -843,6 +843,9 @@ void main(){
   albedo = mix(albedo, vec3(0.50, 0.52, 0.5), clamp(scar*(1.0 - white*0.4), 0.0, 1.0));
   albedo = mix(albedo, vec3(0.38, 0.37, 0.33), barn);
 
+  if (uDbg > 0.5 && uDbg < 1.5) { gl_FragColor = vec4(albedo*8.0, 1.0); return; }
+  if (uDbg > 1.5 && uDbg < 2.5) { gl_FragColor = vec4(N*0.5 + 0.5, 1.0); return; }
+  if (uDbg > 2.5 && uDbg < 3.5) { gl_FragColor = vec4(vec3(vWet), 1.0); return; }
   // ---- wet film ----
   float wet = max(vWet, step(0.0, d));
   float streak = tn(vec2(vWorld.x*3.0 + vWorld.z*2.3, vWorld.y*0.6 + uTime*0.8*vWet*0.0 + uTime*0.0)*vec2(1.0, 1.0) + vec2(0.0, -uTime*0.9*vWet));
@@ -877,7 +880,7 @@ void main(){
   vec3 trans = exp(-dB*vec3(0.34, 0.17, 0.12));
   col = col*trans*(1.0 - 0.6*(1.0 - exp(-dB*0.5))) + deep*(1.0 - exp(-dB*0.5))*0.6;
   float meniscus = exp(-pow(d/0.07, 2.0));
-  col += meniscus*(uAurG*0.18 + uAmb*1.2);
+  col += meniscus*(uAurG*0.07 + uAmb*0.5);
   float alpha = d > 0.0 ? exp(-dB*0.19)*0.82 : 1.0;
   if (uMirror > 0.5){
     // the reflected whale: only what is above the water, faint and dim

@@ -119,7 +119,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   world.whales.forEach((w, i) => {
     const own = {
       uSP: { value: w.rig.P }, uST: { value: w.rig.T }, uSU: { value: w.rig.U }, uWet: { value: w.rig.wet }, uLag: { value: w.rig.lag },
-      uJD: { value: w.rig.JD }, uScale: { value: w.scale }, uGape: { value: 0 }, uPleat: { value: 0 }, uSeed: { value: (i * 0.37 + 0.11) % 1 },
+      uJD: { value: w.rig.JD }, uScale: { value: w.scale }, uGape: { value: 0 }, uPleat: { value: 0 }, uSeed: { value: (i * 0.37 + 0.11) % 1 }, uDbg: { value: 0 },
     };
     for (const mirror of [1, 0]) {
       const m = new THREE.ShaderMaterial({
@@ -311,6 +311,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     renderer, camera, render, resize, dispose, simStep, screenToWater, tier, hasFloat,
     setCameraYaw(v) { camYaw = v; },
     hide,
+    setDebug(v) { for (const m of whaleMaterials) m.uniforms.uDbg.value = v; },
     setAuroraSteps(n) { aurPass.u.uSteps.value = n; },
     // Development stills only: a free camera, [px, py, pz, tx, ty, tz, fov?].
     setDebugCamera(v) { debugCam = v; },

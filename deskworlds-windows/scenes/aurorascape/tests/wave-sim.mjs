@@ -48,24 +48,29 @@ const cellX = (sim, i) => SIM.minX + (i + 0.5) * sim.dx, cellZ = (sim, j) => SIM
   assert.ok(best > 5e-4, 'a clear ring is travelling outward');
 }
 
-// Reflection: a pulse that meets the edge comes back, softened (not cancelled, not amplified).
+// Reflection (method of images): the echo of a pulse struck 28 m from the edge, felt 15 m back from the
+// strike point, has travelled 71 m; compare it with a free pulse after 71 m.
 {
-  const NN = 192, sim = createWaveSim(NN);
-  const cz = SIM.minZ + SIM.size / 2, edge = SIM.minX + SIM.size;
-  const dEdge = 90, dProbe = 30;
-  sim.inject(edge - dEdge, cz, 3, 0.05);
-  const mid = NN / 2, probe = NN - 1 - Math.round(dProbe / sim.dx);
-  const tIn = (dEdge - dProbe) / SIM.c, tBack = (dEdge + dProbe) / SIM.c;
-  let incoming = 0, reflected = 0;
-  for (let s = 0; s < Math.round((tBack + 6) / SIM.step); s++) {
-    sim.step();
-    const a = Math.abs(sim.h[mid * NN + probe]), t = (s + 1) * SIM.step;
-    if (t > tIn - 3 && t < tIn + 3) incoming = Math.max(incoming, a);
-    else if (t > tBack - 3 && t < tBack + 6) reflected = Math.max(reflected, a);
+  const NN = 192, d = 28, a = 15, L = 2 * d + a, T = L / SIM.c;
+  const cz = SIM.minZ + SIM.size / 2, cx = SIM.minX + SIM.size / 2, edge = SIM.minX + SIM.size;
+  const mid = NN / 2;
+  const experiment = createWaveSim(NN), control = createWaveSim(NN);
+  experiment.inject(edge - d, cz, 3, 0.05);
+  control.inject(cx, cz, 3, 0.05);
+  const ex = Math.round((edge - d - a - SIM.minX) / experiment.dx), cxi = Math.round((cx - SIM.minX) / control.dx);
+  const probeC = cxi + Math.round(L / control.dx);
+  let refl = 0, open = 0;
+  for (let s = 0; s < Math.round((T + 5) / SIM.step); s++) {
+    experiment.step(); control.step();
+    const t = (s + 1) * SIM.step;
+    if (t > T - 1.5 && t < T + 2.5) {
+      refl = Math.max(refl, Math.abs(experiment.h[mid * NN + ex]));
+      open = Math.max(open, Math.abs(control.h[mid * NN + probeC]));
+    }
   }
-  assert.ok(incoming > 1e-4, 'the pulse reached the probe');
-  assert.ok(reflected > 0.15 * incoming, `a reflection returns (${(reflected / incoming).toFixed(2)} of incoming)`);
-  assert.ok(reflected < 1.0 * incoming, 'the reflection is not amplified');
+  assert.ok(open > 1e-4, 'the free pulse reached the probe');
+  assert.ok(refl > 0.2 * open, `a reflection returns (${(refl / open).toFixed(2)} of a free pulse)`);
+  assert.ok(refl < 1.05 * open, 'the reflection is not amplified');
 }
 
 // Foam: injected agitation fades; the shader is generated from the same constants.

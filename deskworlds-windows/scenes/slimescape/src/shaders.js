@@ -20,6 +20,7 @@ uniform vec4 uSense;          // sensor angle, sensor distance, turn angle, step
 uniform vec4 uWeights;        // food weight, light weight, lost threshold, lost max
 uniform vec4 uCursor;         // x, y, radius, strength (0 = off)
 uniform vec3 uMore;           // wobble, agents per row, food immunity
+uniform float uMore2;         // lost counter growth while on food
 varying vec2 vUv;
 
 uint hashU(uint x) { x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16; return x; }
@@ -46,7 +47,7 @@ void main() {
   p = mod(p, uWorld);
   vec4 here = texture2D(uTrail, p / uWorld);
   float lit = lightAt(p);
-  if (here.r > uWeights.z || here.g > uMore.z) lost = max(lost - 3.0, 0.0); else lost += 1.0;
+  if (here.g > uMore.z) lost += uMore2; else if (here.r > uWeights.z) lost = max(lost - 3.0, 0.0); else lost += 1.0;
   lost += lit * 6.0;
   if (lost > uWeights.w) {
     // Lost agents are re-seeded next to a random agent that is itself on the colony and out of the light.

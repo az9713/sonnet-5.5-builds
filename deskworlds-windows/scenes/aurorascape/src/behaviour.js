@@ -529,7 +529,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       if (time - cursor.drip > 1.5 && time - cursor.movedAt > 0.25) { cursor.drip = time; cursor.train = 0; }
       if (cursor.train !== undefined && cursor.train < 3) {
         const age = time - cursor.drip;
-        if (age >= cursor.train * 0.17) { addDisturbance(cursor.x, cursor.z, 1.2, [0.08, -0.06, 0.045][cursor.train], cursor.train === 0 ? 0.05 : 0); cursor.train++; }
+        if (age >= cursor.train * 0.17) { addDisturbance(cursor.x, cursor.z, 1.2, [0.05, -0.04, 0.03][cursor.train], cursor.train === 0 ? 0.05 : 0); cursor.train++; }
       }
     }
   }
