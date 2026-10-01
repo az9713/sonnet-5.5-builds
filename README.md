@@ -30,7 +30,7 @@ Images are the original author's screenshots from [chaseleantj/deskworlds](https
 
 [![Preview of the "How the worlds work" page. Click to open the live page.](deskworlds-windows/docs/images/how-the-worlds-work-preview.jpg)](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)
 
-GitHub does not allow embedded pages or scripts in a README, so the preview above is an image. Click it to open the live, scrollable page. The source is [`deskworlds-windows/docs/how-the-worlds-work.html`](https://github.com/az9713/sonnet-5.5-builds/blob/claude/15-builds-recreation-review-5bw4pw/deskworlds-windows/docs/how-the-worlds-work.html).
+GitHub does not allow embedded pages or scripts in a README, so the preview above is an image. Click it to open the live, scrollable page. The source is [`deskworlds-windows/docs/how-the-worlds-work.html`](deskworlds-windows/docs/how-the-worlds-work.html).
 
 ## Also in this repo
 
