@@ -158,7 +158,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   const dir = new V3(), tmp = new V3();
   let camYaw = 0, vfov = 52;
   function frameCamera(aspect, heightPx) {
-    vfov = clamp(2 * Math.atan(Math.tan(HFOV / 2) / aspect) * 180 / Math.PI, 38, 74);
+    vfov = clamp(2 * Math.atan(Math.tan(HFOV / 2) / aspect) * 180 / Math.PI, 44, 74);
     camera.fov = vfov; camera.aspect = aspect;
     camera.updateProjectionMatrix();
     shared.uPixAng.value = 2 * Math.tan(vfov * Math.PI / 360) / Math.max(heightPx, 1);

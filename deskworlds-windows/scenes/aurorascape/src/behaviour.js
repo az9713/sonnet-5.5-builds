@@ -83,9 +83,9 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
 
   const ws = [];
   const specs = [
-    { x: -30, y: -1.15, z: -78, yaw: Math.PI / 2 + 0.25, scale: 1.12, mode: 'travel', travelFor: 1.5, breaths: 3 },
-    { x: 32, y: -6.5, z: -104, yaw: Math.PI / 2 - 0.3, scale: 1.02, mode: 'submerged', breaths: 4 },
-    { x: 50, y: -1.15, z: -58, yaw: Math.PI / 2 + 0.7, scale: 1.2, mode: 'travel', travelFor: 9, breaths: 2 },
+    { x: -30, y: -1.15, z: -78, yaw: Math.PI / 2 + 0.25, scale: 1.18, mode: 'travel', travelFor: 1.5, breaths: 3 },
+    { x: 32, y: -6.5, z: -104, yaw: Math.PI / 2 - 0.3, scale: 1.08, mode: 'submerged', breaths: 4 },
+    { x: 50, y: -1.15, z: -58, yaw: Math.PI / 2 + 0.7, scale: 1.28, mode: 'travel', travelFor: 9, breaths: 2 },
   ];
   for (let i = 0; i < whales; i++) {
     const s = specs[i % specs.length];
@@ -98,7 +98,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   function pickWaypoint(w) {
     let best = null, bestScore = -1e9;
     for (let k = 0; k < 10; k++) {
-      const gz = BOUNDS.maxZ - 14 - (BOUNDS.maxZ - BOUNDS.minZ - 40) * Math.pow(random(), 1.35), reach = Math.min(BOUNDS.maxX - 20, VIEW * -gz);
+      const gz = BOUNDS.maxZ - 14 - 62 * Math.pow(random(), 1.4), reach = Math.min(BOUNDS.maxX - 20, VIEW * -gz);
       const gx = rand(-reach, reach);
       if (!inFjord(gx, gz, SHORE_MARGIN + 10)) continue;
       let score = Math.min(60, Math.hypot(gx - w.x, gz - w.z)) * 0.25 + rand(0, 8);

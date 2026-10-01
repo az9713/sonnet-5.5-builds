@@ -102,6 +102,7 @@ void main(){
   }
   hard = rho > 1e-4 ? hard/rho : 0.5;
   ray = rho > 1e-4 ? ray/rho : 0.0;
+  rho = pow(rho, 1.18)*1.12;
   gl_FragColor = vec4(rho, w1.x + w2.x + w3.x, hard, ray);
 }
 `;
