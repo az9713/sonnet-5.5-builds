@@ -255,20 +255,21 @@ float crestHead(float x){
 }
 vec3 skyLight(vec3 n){
   vec3 Lc = normalize(vec3(0.1, 0.65, -0.75));
-  float up = 0.5 + 0.5*n.y;
-  return uAmb*0.17*(0.9 + 1.6*up) + uAmb*0.30*vec3(0.8, 1.0, 0.9)*max(dot(n, Lc), 0.0)*3.2;
+  float upl = pow(max(n.y, 0.0), 1.5);
+  return uAmb*(0.07 + 0.75*upl) + uAmb*0.30*vec3(0.8, 1.0, 0.9)*max(dot(n, Lc), 0.0)*3.2;
 }
 vec3 rockShade(vec3 p, vec3 n, float t, vec2 w){
   float ne = tfbm3(w*0.05);
   float ne2 = mix(0.5, tn(w*0.4), 1.0/(1.0 + t/200.0));
   float pch = tfbm(w*0.007 + 3.0);
+  float gul = tn(vec2(w.x*0.022, w.y*0.0045)) * 0.6 + 0.4*tn(vec2(w.x*0.07, w.y*0.012));   // vertical gullies
   // snow settles on ledges and in gullies, and covers the high ground
-  float snow = smoothstep(0.70, 0.80, pch + 0.0013*p.y + 0.16*n.y + 0.2*(ne - 0.5));
+  float snow = smoothstep(0.66, 0.80, pch + 0.0013*p.y + 0.18*n.y + 0.5*(gul - 0.5) + 0.2*(ne - 0.5));
   vec3 rock = vec3(0.022, 0.024, 0.030)*(0.55 + 0.9*ne)*(0.8 + 0.4*ne2);
   vec3 snowc = vec3(0.50, 0.62, 0.76)*(0.7 + 0.45*ne2);
   vec3 alb = mix(rock, snowc, snow);
   vec3 L = skyLight(n);
-  return alb*L*(1.0 + 0.5*snow);
+  return alb*L*(1.0 + 0.5*snow)*(0.55 + 0.9*gul);
 }
 vec3 hazeColor(){ return uAmb*0.16 + vec3(0.0012, 0.0022, 0.0042); }
 
