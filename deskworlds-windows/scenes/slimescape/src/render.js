@@ -74,7 +74,7 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
         uAgents: { value: null }, uTrail: { value: null }, uWorld: { value: world2 }, uFrame: { value: 0 },
         uSense: { value: new V4(model.sensorAngle, model.sensorDist, model.turnAngle, model.step) },
         uWeights: { value: new V4(model.foodWeight, model.lightWeight, model.lostThreshold, model.lostMax) },
-        uCursor: { value: cursorSim }, uMore: { value: new THREE.Vector2(model.wobble, N) },
+        uCursor: { value: cursorSim }, uMore: { value: new THREE.Vector3(model.wobble, N, model.foodImmune) },
       },
     }));
     s.diffuseMat = own('materials', material({

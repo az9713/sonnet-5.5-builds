@@ -14,7 +14,7 @@ export const SCENT = Object.freeze({ max: 2, everyMin: 12, everyMax: 26, lifeMin
 
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-export function createFood(random, arena = { w: 16 / 9, h: 1 }) {
+export function createFood(random, arena = { w: 16 / 9, h: 1 }, scent = SCENT) {
   const flakes = [], scents = [];
   let nextId = 1, scentTimer = 3 + random() * 6;
   const api = {
@@ -61,7 +61,7 @@ export function createFood(random, arena = { w: 16 / 9, h: 1 }) {
         }
       }
     },
-    scentAmount(c) { return SCENT.peak * smooth(0, SCENT.ramp, c.age) * (1 - smooth(c.life - SCENT.fade, c.life, c.age)); },
+    scentAmount(c) { return scent.peak * smooth(0, scent.ramp, c.age) * (1 - smooth(c.life - scent.fade, c.life, c.age)); },
     // The attractant sources as the simulation sees them: x, y, amplitude, sigma (flakes first, then scents).
     packSources(out) {
       let n = 0;

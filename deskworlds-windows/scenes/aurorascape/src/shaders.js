@@ -526,14 +526,14 @@ void main(){
   // the simulated surface: gradient from neighbouring texels, faded toward the domain edge
   vec2 suv = (xz - SIM_MIN)/SIM_SIZE;
   float inside = smoothstep(0.0, 0.03, suv.x)*(1.0 - smoothstep(0.97, 1.0, suv.x))*smoothstep(0.0, 0.03, suv.y)*(1.0 - smoothstep(0.97, 1.0, suv.y));
-  vec2 slopeSim = vec2(0.0); float foam = 0.0, velo = 0.0;
+  vec2 slopeSim = vec2(0.0); float foam = 0.0, velo = 0.0, hSim = 0.0;
   if (inside > 0.0){
     float e = 1.0/uSimN, dx = SIM_SIZE*e;
     vec4 c0 = texture2D(uSim, suv);
     float hx1 = texture2D(uSim, suv + vec2(e, 0.0)).r, hx0 = texture2D(uSim, suv - vec2(e, 0.0)).r;
     float hz1 = texture2D(uSim, suv + vec2(0.0, e)).r, hz0 = texture2D(uSim, suv - vec2(0.0, e)).r;
     slopeSim = vec2(hx1 - hx0, hz1 - hz0)/(2.0*dx)*inside;
-    foam = c0.b*inside; velo = c0.g*inside;
+    foam = c0.b*inside; velo = c0.g*inside; hSim = c0.r*inside;
   }
   float far = 1.0/(1.0 + dist/170.0);
   vec2 slope = slopeSim*3.0*(0.35 + 0.65*far) + swell(xz, uTime)*(0.5 + 0.5*far) + microRipples(xz, uTime)*0.007*exp(-dist/130.0);
@@ -561,6 +561,8 @@ void main(){
   // wave crests catch the glow of the sky: rings read on dark water
   float rip = clamp(length(slopeSim)*16.0, 0.0, 1.0);
   col += (uAmb*3.0 + vec3(0.0006, 0.0010, 0.0014))*rip*rip*(0.4 + 0.6*F);
+  float crestL = pow(clamp(hSim*55.0, 0.0, 1.0), 1.5);
+  col += (uAmb*2.2 + vec3(0.0005, 0.0009, 0.0012))*crestL*(0.4 + 0.6*F);
 
   // the low fog that lies on the water
   float fogn = 0.55 + 0.9*tfbm3(xz*0.006 + vec2(uTime*0.006, 0.0));

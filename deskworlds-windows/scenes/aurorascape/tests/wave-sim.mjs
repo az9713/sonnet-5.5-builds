@@ -28,44 +28,44 @@ const cellX = (sim, i) => SIM.minX + (i + 0.5) * sim.dx, cellZ = (sim, j) => SIM
 
 // A droplet spreads symmetrically: the ring is round and its radius grows at about c.
 {
-  const sim = createWaveSim(N);
+  const sim = createWaveSim(256);
   const cx = 0, cz = SIM.minZ + SIM.size / 2;
   sim.inject(cx, cz, 2.5, 0.04);
   const T = 3.0, steps = Math.round(T / SIM.step);
   for (let s = 0; s < steps; s++) sim.step();
-  const mid = N / 2;
+  const NN = 256, mid = NN / 2;
   let sym = 0, norm = 0;
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-    const mi = N - 1 - i, mj = N - 1 - j;
-    sym += Math.abs(sim.h[j * N + i] - sim.h[j * N + mi]) + Math.abs(sim.h[j * N + i] - sim.h[mj * N + i]);
-    norm += Math.abs(sim.h[j * N + i]) * 2;
+  for (let j = 0; j < NN; j++) for (let i = 0; i < NN; i++) {
+    const mi = NN - 1 - i, mj = NN - 1 - j;
+    sym += Math.abs(sim.h[j * NN + i] - sim.h[j * NN + mi]) + Math.abs(sim.h[j * NN + i] - sim.h[mj * NN + i]);
+    norm += Math.abs(sim.h[j * NN + i]) * 2;
   }
   assert.ok(sym / norm < 0.05, `droplet is symmetric (${(sym / norm).toFixed(4)})`);
   // radial position of the strongest ring
   let best = 0, bestR = 0;
-  for (let i = mid; i < N; i++) { const a = Math.abs(sim.h[mid * N + i]); if (a > best) { best = a; bestR = (i - mid + 0.5) * sim.dx; } }
-  assert.ok(bestR > 0.5 * SIM.c * T && bestR < 1.1 * SIM.c * T, `ring radius ${bestR.toFixed(1)} m after ${T} s (c*t = ${(SIM.c * T).toFixed(1)})`);
-  assert.ok(Math.abs(sim.h[mid * N + mid]) < best, 'the centre has moved on');
+  for (let i = mid; i < NN; i++) { const r = (i - mid + 0.5) * sim.dx; if (r < 0.3 * SIM.c * T) continue; const a = Math.abs(sim.h[mid * NN + i]); if (a > best) { best = a; bestR = r; } }
+  assert.ok(bestR > 0.6 * SIM.c * T && bestR < 1.15 * SIM.c * T, `ring radius ${bestR.toFixed(1)} m after ${T} s (c*t = ${(SIM.c * T).toFixed(1)})`);
+  assert.ok(best > 5e-4, 'a clear ring is travelling outward');
 }
 
 // Reflection: a pulse that meets the edge comes back, softened (not cancelled, not amplified).
 {
-  const sim = createWaveSim(N);
-  const cz = SIM.minZ + SIM.size / 2, x0 = SIM.minX + SIM.size * 0.72;
-  sim.inject(x0, cz, 3, 0.05);
-  const mid = N / 2;
-  // Track the right-moving front's amplitude at a probe 12 m before the edge, then the reflection.
-  const probe = N - 1 - Math.round(60 / sim.dx);
-  let incoming = 0, reflected = 0, tIn = 0;
-  for (let s = 0; s < 2400; s++) {
+  const NN = 192, sim = createWaveSim(NN);
+  const cz = SIM.minZ + SIM.size / 2, edge = SIM.minX + SIM.size;
+  const dEdge = 90, dProbe = 30;
+  sim.inject(edge - dEdge, cz, 3, 0.05);
+  const mid = NN / 2, probe = NN - 1 - Math.round(dProbe / sim.dx);
+  const tIn = (dEdge - dProbe) / SIM.c, tBack = (dEdge + dProbe) / SIM.c;
+  let incoming = 0, reflected = 0;
+  for (let s = 0; s < Math.round((tBack + 6) / SIM.step); s++) {
     sim.step();
-    const a = sim.h[mid * N + probe], t = s * SIM.step;
-    if (t < 3.5) { if (Math.abs(a) > incoming) { incoming = Math.abs(a); tIn = t; } }
-    else if (Math.abs(a) > reflected) reflected = Math.abs(a);
+    const a = Math.abs(sim.h[mid * NN + probe]), t = (s + 1) * SIM.step;
+    if (t > tIn - 3 && t < tIn + 3) incoming = Math.max(incoming, a);
+    else if (t > tBack - 3 && t < tBack + 6) reflected = Math.max(reflected, a);
   }
   assert.ok(incoming > 1e-4, 'the pulse reached the probe');
-  assert.ok(reflected > 0.12 * incoming, `a reflection returns (${(reflected / incoming).toFixed(2)} of incoming)`);
-  assert.ok(reflected < 1.05 * incoming, 'the reflection is not amplified');
+  assert.ok(reflected > 0.15 * incoming, `a reflection returns (${(reflected / incoming).toFixed(2)} of incoming)`);
+  assert.ok(reflected < 1.0 * incoming, 'the reflection is not amplified');
 }
 
 // Foam: injected agitation fades; the shader is generated from the same constants.

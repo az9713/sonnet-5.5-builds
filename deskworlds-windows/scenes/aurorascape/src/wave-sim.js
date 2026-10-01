@@ -13,7 +13,9 @@ export const SIM = {
   visc: 0.045,          // diffusion of velocity: ripples spread and soften as they travel
   sponge: 14,           // cells over which the edge absorbs part of an arriving wave
   spongeLoss: 0.10,     // extra loss per step at the very edge
+  leak: 0.30,           // 1/s, level drains back to rest so injected volume does not pile up
   foamDecay: 0.72,      // 1/s
+  drive: 0.4,           // how firmly a driven disturbance pulls the surface toward its velocity, per step
   maxDisturbances: 48,
 };
 
@@ -24,12 +26,13 @@ export function simConstants(N) {
     visc: SIM.visc,
     keep: Math.exp(-SIM.damp * SIM.step),
     foamKeep: Math.exp(-SIM.foamDecay * SIM.step),
+    hKeep: Math.exp(-SIM.leak * SIM.step),
     dx,
   };
 }
 
 export function createWaveSim(N = 128) {
-  const { k, visc, keep, foamKeep, dx } = simConstants(N);
+  const { k, visc, keep, foamKeep, hKeep, dx } = simConstants(N);
   const h = new Float32Array(N * N), v = new Float32Array(N * N), foam = new Float32Array(N * N);
   const h2 = new Float32Array(N * N), v2 = new Float32Array(N * N);
   const idx = (i, j) => Math.min(N - 1, Math.max(0, j)) * N + Math.min(N - 1, Math.max(0, i));
@@ -41,14 +44,18 @@ export function createWaveSim(N = 128) {
   };
   const sim = {
     N, dx, h, v, foam, k,
-    // A gaussian impulse of velocity (and foam) at world metres (x, z).
+    // A gaussian disturbance at world metres (x, z). A positive radius adds an impulse of velocity;
+    // a negative radius drives the surface toward a velocity (the way a moving body pushes water),
+    // which is bounded however long it is applied.
     inject(x, z, radius, amount, foamAmount = 0) {
+      const drive = radius < 0; radius = Math.abs(radius);
       const gx = (x - SIM.minX) / dx, gz = (z - SIM.minZ) / dx, r = radius / dx, r2 = r * r;
       const i0 = Math.max(0, Math.floor(gx - 3 * r)), i1 = Math.min(N - 1, Math.ceil(gx + 3 * r));
       const j0 = Math.max(0, Math.floor(gz - 3 * r)), j1 = Math.min(N - 1, Math.ceil(gz + 3 * r));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
         const g = Math.exp(-((i + 0.5 - gx) ** 2 + (j + 0.5 - gz) ** 2) / r2);
-        v[j * N + i] += amount * g;
+        if (drive) v[j * N + i] += (amount - v[j * N + i]) * g * SIM.drive;
+        else v[j * N + i] += amount * g;
         foam[j * N + i] = Math.min(1, foam[j * N + i] + foamAmount * g);
       }
     },
@@ -59,7 +66,7 @@ export function createWaveSim(N = 128) {
         const lapV = v[idx(i - 1, j)] + v[idx(i + 1, j)] + v[idx(i, j - 1)] + v[idx(i, j + 1)] - 4 * v[c];
         v2[c] = (v[c] + k * lapH + visc * lapV) * keep * (1 - edgeLoss(i, j));
       }
-      for (let c = 0; c < N * N; c++) { h2[c] = h[c] + v2[c]; }
+      for (let c = 0; c < N * N; c++) { h2[c] = (h[c] + v2[c]) * hKeep; }
       h.set(h2); v.set(v2);
       for (let c = 0; c < N * N; c++) foam[c] *= foamKeep;
     },
@@ -103,11 +110,13 @@ void main(){
   for (int i = 0; i < ${SIM.maxDisturbances}; i++) {
     if (i >= uCount) break;
     vec2 q = world - uD[i].xy;
-    float g = exp(-dot(q, q)/(uD[i].z*uD[i].z));
-    vel += uD[i].w*g;
+    float rr = abs(uD[i].z);
+    float g = exp(-dot(q, q)/(rr*rr));
+    if (uD[i].z < 0.0) vel += (uD[i].w - vel)*g*${SIM.drive.toFixed(2)};
+    else vel += uD[i].w*g;
     foam = min(1.0, foam + uF[i]*g);
   }
-  float h = s.x + vel;
+  float h = (s.x + vel)*${c.hKeep.toFixed(6)};
   gl_FragColor = vec4(h, vel, foam, 1.0)*(1.0 - uReset);
 }
 `;

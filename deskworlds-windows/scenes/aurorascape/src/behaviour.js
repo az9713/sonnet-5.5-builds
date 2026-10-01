@@ -46,6 +46,7 @@ const SURFACE_MODES = new Set(['travel', 'breath', 'curious', 'ascend']);
 const NET_MODES = new Set(['netApproach', 'spiral', 'netBelow', 'lunge']);
 export const NET = { radius: 8.5, spiralTime: 13, belowTime: 5.0, lungeTime: 5.6, speed: 3.3 };
 const MAXD = SIM.maxDisturbances;
+const DT = FIXED_STEP;
 const SAMPLE_JOINTS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 23];
 
 export function createWorld({ random = Math.random, visualRandom = random, whales = 3, particleCapacity = 2600, netAt = null } = {}) {
@@ -417,6 +418,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     emit('blow', w.id, { y: w._hole[1], x: w._hole[0], z: w._hole[2] });
     addDisturbance(w._hole[0], w._hole[2], 1.6, 0.004, 0.2);
   }
+  // radius > 0: an impulse of velocity; radius < 0: drive the surface toward `amount` (a moving body)
   function addDisturbance(x, z, radius, amount, foam = 0) {
     if (distCount >= MAXD) return;
     const o = distCount * 4;
@@ -437,14 +439,18 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       if (Math.abs(vy) < 1e-4 || depth > reach + 2.5 || depth < -(r + 2)) continue;
       // inside the surface layer a vertical motion pushes water; deeper, a broad swell
       const g = depth < reach ? 1 : Math.exp(-(((depth - reach) / 1.6) ** 2));
-      let amt = clamp(vy * 0.0020 * r / 1.2 * g, -0.02, 0.02);
+      let amt = clamp(vy * DT * 0.08 * g, -0.0015, 0.0015);
       let foam = Math.abs(vy) > 1.8 ? clamp(Math.abs(vy) * 0.03, 0, 0.35) * g : 0;
-      if (i >= 21 && Math.abs(vy) > 4.4 && depth < reach) { slap = Math.max(slap, Math.abs(vy)); amt = clamp(vy * 0.0035, -0.04, 0.04); foam = 0.6; }
-      if (Math.abs(amt) > 2e-5 || foam > 0) addDisturbance(x, z, r * 0.9 + 1.0, amt, foam);
+      if (i >= 21 && Math.abs(vy) > 4.4 && depth < reach) { slap = Math.max(slap, Math.abs(vy)); foam = 0.6; amt = clamp(vy * DT * 0.2, -0.004, 0.004); }
+      if (Math.abs(amt) > 2e-5 || foam > 0) addDisturbance(x, z, -(r * 0.9 + 1.0), amt, foam);
     }
     // the bow wave and the wake of a swimmer at the surface
-    if (w.speed > 0.5 && P[1] > -2.4) addDisturbance(P[0], P[2], 2.2 * sc, 0.0013 * Math.min(w.speed, 3), 0.05);
-    if (slap > 0 && time - w.lastSlap > 0.3) { w.lastSlap = time; particles.splash(P[(NJ - 1) * 3], P[(NJ - 1) * 3 + 2], clamp(slap / 8, 0.15, 1), 0.2); emit('slap', w.id, { v: slap }); }
+    if (w.speed > 0.5 && P[1] > -2.4) addDisturbance(P[0], P[2], -2.2 * sc, 0.0003 * Math.min(w.speed, 3), 0.05);
+    if (slap > 0 && time - w.lastSlap > 0.3) {
+      w.lastSlap = time; particles.splash(P[(NJ - 1) * 3], P[(NJ - 1) * 3 + 2], clamp(slap / 8, 0.15, 1), 0.2);
+      addDisturbance(P[(NJ - 1) * 3], P[(NJ - 1) * 3 + 2], 2.2, 0.012 * Math.sign(rig.jointVY[NJ - 1] || 1), 0.8);
+      emit('slap', w.id, { v: slap });
+    }
     // the fluke of a diving whale drips as it rises clear
     if (P[(NJ - 1) * 3 + 1] > 0.3 && (w.dripT -= dt) < 0) {
       w.dripT = 0.05 + 0.1 * random();
@@ -454,10 +460,10 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     // a breach or a lunge: the splash as the head leaves and as the body falls back
     if (w.mode === 'lunge') {
       const y = w.y;
-      if (w.modeT > 1.2 && y > -0.3 && !w.exited) { w.exited = true; particles.splash(P[0], P[2], 0.9, 0.2); addDisturbance(P[0], P[2], 5, 0.035, 1); emit('exit', w.id); }
+      if (w.modeT > 1.2 && y > -0.3 && !w.exited) { w.exited = true; particles.splash(P[0], P[2], 0.9, 0.2); addDisturbance(P[0], P[2], 5, 0.02, 1); emit('exit', w.id); }
       if (y < 0.1 && w.modeT > 3.3 && time - w.lastSplashIn > 2) {
         w.lastSplashIn = time; particles.splash(P[IP * 3], P[IP * 3 + 2], 1.4, 0.3); emit('splashdown', w.id);
-        for (let j = 2; j < NJ; j += 4) addDisturbance(P[j * 3], P[j * 3 + 2], 4.5, -0.06, 1);
+        for (let j = 2; j < NJ; j += 4) addDisturbance(P[j * 3], P[j * 3 + 2], 4.5, -0.03, 1);
       }
     } else w.exited = false;
   }
@@ -508,8 +514,8 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     particles.step(dt);
     for (let e = 0; e < particles.eventCount; e++) {
       const ex = particles.events[e * 3], ez = particles.events[e * 3 + 1], k = particles.events[e * 3 + 2];
-      if (k >= 1) addDisturbance(ex, ez, 1.3, 0.0016, 0.3);
-      else addDisturbance(ex, ez, 0.7, 0.0015 * k, 0.06);
+      if (k >= 1) addDisturbance(ex, ez, 1.3, 0.0005, 0.3);
+      else addDisturbance(ex, ez, 0.7, 0.0008 * k, 0.06);
     }
     particles.clearEvents();
     // The cursor's own marks: a wake along its path, and a slow drip ring while it rests.
@@ -523,7 +529,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       if (time - cursor.drip > 1.5 && time - cursor.movedAt > 0.25) { cursor.drip = time; cursor.train = 0; }
       if (cursor.train !== undefined && cursor.train < 3) {
         const age = time - cursor.drip;
-        if (age >= cursor.train * 0.17) { addDisturbance(cursor.x, cursor.z, 1.2, [0.05, -0.04, 0.03][cursor.train], cursor.train === 0 ? 0.05 : 0); cursor.train++; }
+        if (age >= cursor.train * 0.17) { addDisturbance(cursor.x, cursor.z, 1.2, [0.08, -0.06, 0.045][cursor.train], cursor.train === 0 ? 0.05 : 0); cursor.train++; }
       }
     }
   }

@@ -23,6 +23,7 @@ export const MODEL = Object.freeze({
   lightWeight: 220,     // Physarum is photophobic: light counts as strongly negative trail
   lostThreshold: 0.8,   // agents on less trail than this count as lost
   lostMax: 60,         // after this many lost steps an agent is re-seeded on the colony
+  foodImmune: 0.12,     // where the attractant is stronger than this an agent is never counted as lost
   foodBoost: 2.5,       // agents on food deposit this much more
   reinforce: 2.5,       // agents on moderate trail deposit more (tube reinforcement): trunks thicken, side branches fade
   reinforceScale: 30,   // trail value at which the reinforcement reaches 1
@@ -125,12 +126,12 @@ export function createAgentSim({ width, height, count, random, model = MODEL, ce
       th += (random() - 0.5) * m.wobble;
       x = wrapX(x + Math.cos(th) * m.step); y = wrapY(y + Math.sin(th) * m.step);
       const here = sample(trail, x, y), lit = lightAt(x, y);
-      if (here > m.lostThreshold || sample(food, x, y) > 0.12) lost = Math.max(lost - 3, 0); else lost += 1;
+      if (here > m.lostThreshold || sample(food, x, y) > m.foodImmune) lost = Math.max(lost - 3, 0); else lost += 1;
       lost += lit * 6;
       if (lost > m.lostMax) {
         // Re-seed on a random agent that is itself on the colony and out of the light.
         const j = Math.floor(random() * count) * 4;
-        if (agents[j + 3] < m.lostMax * 0.3 && lightAt(agents[j], agents[j + 1]) < 0.1 && sample(food, agents[j], agents[j + 1]) < 0.12) {
+        if (agents[j + 3] < m.lostMax * 0.3 && lightAt(agents[j], agents[j + 1]) < 0.1 && sample(food, agents[j], agents[j + 1]) < m.foodImmune) {
           x = wrapX(agents[j] + (random() - 0.5) * 0.02 * cellsPerUnit); y = wrapY(agents[j + 1] + (random() - 0.5) * 0.02 * cellsPerUnit);
           th = random() * TAU; lost = 0;
         }
