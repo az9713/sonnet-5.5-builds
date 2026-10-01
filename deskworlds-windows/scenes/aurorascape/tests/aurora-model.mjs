@@ -60,7 +60,7 @@ import { emissionWeights, colorByAltitude, substorm, pulse, auroraEnergy, aurora
   for (let t = 0.5; t < 1500; t += 0.5) { const s = substorm(t); if (s.onset < prev.onset && s.onset >= 0) onsets.push(t); prev = s; }
   assert.ok(onsets.length >= 4);
   for (let i = 1; i < onsets.length; i++) { const g = onsets[i] - onsets[i - 1]; assert.ok(g >= 149 && g <= 292, `onset gap ${g}`); }
-  assert.ok(substorm(12).act > 0.3, 'the scene opens with an active sky');
+  assert.ok(substorm(12).act > 0.3 && substorm(0).level > 0.6, 'the scene opens with a lively sky');
   const amb = auroraAmbient(10);
   assert.ok(amb.every((v) => v > 0 && v < 0.3) && amb[1] > amb[0]);
 }

@@ -47,7 +47,7 @@ const hash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return
 // Substorms: a growth phase of slowly brightening arcs, a sudden onset (breakup) that
 // brightens, moves poleward and turns on rapid ray activity, an expansion, then a recovery.
 // The gaps between onsets are uneven (150-290 s), fixed by a hash so any time can be asked.
-const STORM_START = -34;     // the first onset is a few seconds after the scene starts
+const STORM_START = -38;     // the first onset is two seconds after the scene starts
 const onsets = [STORM_START + 40];
 function onsetAt(k) {
   while (onsets.length <= k) onsets.push(onsets[onsets.length - 1] + 150 + 140 * hash(onsets.length * 3.17 + 0.5));
@@ -61,8 +61,8 @@ export function substorm(t) {
   const next = onsetAt(k + 1) - onsetAt(k);
   let level, act;
   if (k === 0 && dt < 0) {
-    level = 0.45 + 0.2 * sstep(-40, 0, dt); act = 0.1;
-  } else if (dt < 0) { level = 0.4; act = 0.1; } else {
+    level = 0.62 + 0.2 * sstep(-40, 0, dt); act = 0.18;
+  } else if (dt < 0) { level = 0.5; act = 0.1; } else {
     const rise = sstep(0, 9, dt), fall = 1 - sstep(60, next - 25, dt);
     level = 0.45 + 0.95 * rise * (0.35 + 0.65 * fall);
     act = rise * (0.25 + 0.75 * (1 - sstep(25, 110, dt))) ;
