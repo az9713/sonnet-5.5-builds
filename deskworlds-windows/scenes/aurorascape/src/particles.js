@@ -59,12 +59,12 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
         vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = rand(1.5, 4 + 6 * power);
         s0[i] = s1[i] = rand(0.05, 0.16); life[i] = 3; peak[i] = 1;
       }
-      const puffs = Math.round(5 + 14 * power);
+      const puffs = Math.round(3 + 8 * power);
       for (let j = 0; j < puffs; j++) {
         const i = add(MIST), a = random() * TAU, sp = rand(0.2, 1.6) * (0.5 + power);
         x[i] = px + rand(-0.8, 0.8); y[i] = py; z[i] = pz + rand(-0.8, 0.8);
         vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = rand(0.6, 2.6) * (0.5 + power);
-        s0[i] = rand(0.5, 1.0); s1[i] = rand(2.0, 4.5) * (0.6 + 0.5 * power); life[i] = rand(1.8, 3.8); peak[i] = rand(0.12, 0.3);
+        s0[i] = rand(0.4, 0.8); s1[i] = rand(1.3, 3.0) * (0.6 + 0.5 * power); life[i] = rand(1.6, 3.2); peak[i] = rand(0.07, 0.17);
       }
     },
     drip(px, py, pz) {
