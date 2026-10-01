@@ -85,7 +85,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   const ws = [];
   const specs = [
     // the near whale: close to the camera and broadside to it, so its arched back and bending body fill a third of the frame
-    { x: -4, y: -0.7, z: -40, yaw: 0.1, scale: 1.3, mode: 'travel', travelFor: 1.2, breaths: 4, hero: true, zNear: -33, zFar: -46, view: 0.4 },
+    { x: -4, y: -0.7, z: -40, yaw: 0.1, scale: 1.3, mode: 'travel', travelFor: 3, breaths: 4, hero: true, zNear: -33, zFar: -46, view: 0.4 },
     { x: 34, y: -6.5, z: -100, yaw: Math.PI / 2 - 0.3, scale: 1.08, mode: 'submerged', breaths: 4, zNear: -64, zFar: -120, view: 0.62 },
     { x: 52, y: -0.65, z: -74, yaw: Math.PI / 2 + 0.7, scale: 1.18, mode: 'travel', travelFor: 8, breaths: 2, zNear: -62, zFar: -112, view: 0.62 },
   ];
@@ -108,6 +108,8 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       for (const o of ws) if (o !== w) score += Math.min(Math.hypot(gx - o.x, gz - o.z), 45) * 0.35;
       const dyaw = Math.abs(wrapPi(Math.atan2(-(gz - w.z), gx - w.x) - w.yaw));
       score -= dyaw * 5;
+      // the near whale crosses the frame rather than swimming at the camera, so it shows its flank
+      if (w.hero) score += Math.min(Math.abs(gx - w.x), 40) * 0.6 - Math.abs(gz - w.z) * 1.5;
       // a recently frightened whale picks somewhere well away from the cursor
       if (cursor.active && time - cursor.fast < 40) score += Math.min(Math.hypot(gx - cursor.x, gz - cursor.z), 90) * 0.6;
       if (score > bestScore) { bestScore = score; best = [gx, gz]; }
@@ -290,7 +292,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     let pitchT = clamp((depthT - w.y) * 0.24, -0.55, 0.55);
     if (bias) pitchT = w.mode === 'dive' || w.mode === 'flee' ? bias : clamp(pitchT + bias, -0.9, 0.9);
     // limit turning to what a long body can do, less when slow
-    const tr = turn * clamp(0.4 + w.speed / 1.6, 0.35, 1.4);
+    const tr = turn * (w.hero ? 1.6 : 1) * clamp(0.4 + w.speed / 1.6, 0.35, 1.4);
     const yawErr = wrapPi(w.goalYaw - w.yaw);
     const yawRateT = clamp(yawErr * 0.9, -tr, tr);
     w.yawRate = approach(w.yawRate, yawRateT, 1.6, dt);
