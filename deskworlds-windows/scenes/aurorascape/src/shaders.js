@@ -897,9 +897,8 @@ void main(){
   vDepth = max(-wp.y, 0.0);
   float kind = aParam.y;
   vec3 world;
-  if (kind > 2.5){            // foam lies flat on the water
-    world = wp + vec3(position.x, 0.0, position.y)*aPosSize.w;
-    gl_Position = projectionMatrix*viewMatrix*vec4(world, 1.0);
+  if (false){
+    gl_Position = vec4(0.0);
   } else {
     vec4 vp = viewMatrix*vec4(wp, 1.0);
     vp.xy += position.xy*aPosSize.w;

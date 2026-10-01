@@ -43,9 +43,11 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
         s0[i] = s1[i] = rand(0.05, 0.1); life[i] = 3; peak[i] = 1;
       }
     },
-    bubble(px, py, pz, size) {
+    // A bubble of the net. (ox, oz) is the centre of the ring: the net drifts outward as it rises, so the ring grows.
+    bubble(px, py, pz, size, ox = px, oz = pz) {
       const i = add(BUBBLE);
-      x[i] = px; y[i] = py; z[i] = pz; vx[i] = rand(-0.1, 0.1); vz[i] = rand(-0.1, 0.1); vy[i] = rand(0.55, 1.1);
+      let dx = px - ox, dz = pz - oz; const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
+      x[i] = px; y[i] = py; z[i] = pz; vx[i] = dx * rand(0.1, 0.25) + rand(-0.05, 0.05); vz[i] = dz * rand(0.1, 0.25) + rand(-0.05, 0.05); vy[i] = rand(0.4, 0.7);
       s0[i] = s1[i] = size * rand(0.7, 1.3); life[i] = 30; peak[i] = rand(0.55, 1);
     },
     // A splash: droplets thrown up, a burst of mist, foam on the water.
@@ -108,9 +110,9 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
         } else if (k === DROP) {
           vy[i] -= 9.8 * dt;
         } else if (k === BUBBLE) {
-          vy[i] += (0.9 - vy[i]) * 0.8 * dt;
-          vx[i] += Math.sin(time * 2.1 + seed[i] * 7) * 0.5 * dt - vx[i] * 0.6 * dt;
-          vz[i] += Math.cos(time * 1.9 + seed[i] * 9) * 0.5 * dt - vz[i] * 0.6 * dt;
+          vy[i] += (0.6 - vy[i]) * 0.8 * dt;
+          vx[i] += Math.sin(time * 2.1 + seed[i] * 7) * 0.25 * dt;
+          vz[i] += Math.cos(time * 1.9 + seed[i] * 9) * 0.25 * dt;
         } else {
           vx[i] *= Math.exp(-1.2 * dt); vz[i] *= Math.exp(-1.2 * dt);
         }
@@ -120,7 +122,12 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
           life[i] = 0; // removed next step
         } else if (k === BUBBLE && y[i] >= -0.05) {   // a bubble reaches the surface: foam, and a ripple
           if (eventCount < 256) { events[eventCount * 3] = x[i]; events[eventCount * 3 + 1] = z[i]; events[eventCount * 3 + 2] = 1; eventCount++; }
-          kind[i] = FOAM; y[i] = 0.04; vy[i] = 0; age[i] = 0; life[i] = rand(1.2, 3.2); s0[i] = s1[i] * 1.1; s1[i] = s0[i] * 1.8; peak[i] = rand(0.6, 1);
+          if (random() < 0.22) {   // a bursting bubble flicks a drop up
+            const d = add(DROP);
+            x[d] = x[i]; y[d] = 0.05; z[d] = z[i]; vx[d] = rand(-0.4, 0.4); vz[d] = rand(-0.4, 0.4); vy[d] = rand(0.9, 2.2);
+            s0[d] = s1[d] = rand(0.04, 0.09); life[d] = 3; peak[d] = 1; age[d] = 0;
+          }
+          kind[i] = FOAM; y[i] = 0.04; vy[i] = 0; age[i] = 0; life[i] = rand(3.5, 8.0); s0[i] = s1[i] * 1.1; s1[i] = s0[i] * 1.8; peak[i] = rand(0.6, 1);
         }
       }
     },

@@ -44,7 +44,7 @@ export const TRANSITIONS = {
 };
 const SURFACE_MODES = new Set(['travel', 'breath', 'curious', 'ascend']);
 const NET_MODES = new Set(['netApproach', 'spiral', 'netBelow', 'lunge']);
-export const NET = { radius: 6.8, spiralTime: 13, belowTime: 3.6, lungeTime: 5.6, speed: 3.3 };
+export const NET = { radius: 8.5, spiralTime: 13, belowTime: 5.0, lungeTime: 5.6, speed: 3.3 };
 const MAXD = SIM.maxDisturbances;
 const SAMPLE_JOINTS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 23];
 
@@ -319,7 +319,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     net.who = best.id; net.state = 'active';
     // the ring is centred well inside the fjord and in view
     for (let k = 0; k < 14; k++) {
-      net.cx = rand(-38, 38); net.cz = rand(-118, -78);
+      net.cx = rand(-34, 34); net.cz = rand(-102, -68);
       if (inFjord(net.cx, net.cz, SHORE_MARGIN + 30) && Math.hypot(net.cx - best.x, net.cz - best.z) > 24) break;
     }
     net.theta0 = Math.atan2(best.z - net.cz, best.x - net.cx); net.dir = random() < 0.5 ? 1 : -1;
@@ -364,7 +364,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
         for (let b = 0; b < nb; b++) {
           const j = 2 + Math.floor(random() * 7);
           w.rig.at(j * w.rig.JD, w._pt);
-          if (w._pt[1] < -1.2) particles.bubble(w._pt[0] + rand(-0.5, 0.5), w._pt[1] - 0.8, w._pt[2] + rand(-0.5, 0.5), rand(0.18, 0.42));
+          if (w._pt[1] < -1.2) particles.bubble(w._pt[0] + rand(-0.5, 0.5), w._pt[1] - 0.8, w._pt[2] + rand(-0.5, 0.5), rand(0.18, 0.42), net.cx, net.cz);
         }
       }
       if (u >= 1) { net.ringAge = 0; setMode(w, 'netBelow'); }
