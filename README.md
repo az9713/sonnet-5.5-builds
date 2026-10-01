@@ -9,6 +9,7 @@ A Windows port of [chaseleantj/deskworlds](https://github.com/chaseleantj/deskwo
 - **[Try the four worlds live in your browser](https://az9713.github.io/sonnet-5.5-builds/)**
 - How to run it on a Windows laptop: [`deskworlds-windows/README.md`](deskworlds-windows/README.md)
 - How the port was done, step by step: [porting journey](https://az9713.github.io/sonnet-5.5-builds/docs/porting-journey.html) (source: [`deskworlds-windows/docs/porting-journey.html`](deskworlds-windows/docs/porting-journey.html))
+- How the worlds are built, layer by layer: [how the worlds work](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)
 
 ## The four worlds
 

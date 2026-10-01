@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>How the Worlds Work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column; figures, tables and scene panels break wider. Same identity as the porting-journey page. */
+:root {
+  --bg: #eef2f1; --surface: #f8fbfa; --ink: #10201c; --muted: #4b5f58; --line: #c7d4cf;
+  --accent: #0a6b5b; --accent-soft: #d5e9e3; --ok: #17643a; --ok-soft: #d6ecdf;
+  --warn: #8a5a00; --warn-soft: #f3e3bd; --code: #e2eae7;
+  --r: #b3261e; --g: #1d7a3a; --b: #1f5fbf;
+  --font-display: "Unbounded", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a1310; --surface: #111e19; --ink: #e3eee9; --muted: #94aaa2; --line: #24382f;
+    --accent: #4fd1b0; --accent-soft: #123a30; --ok: #6fd69a; --ok-soft: #12321f;
+    --warn: #e6b955; --warn-soft: #3b2e0e; --code: #0e1b16;
+    --r: #ff7a70; --g: #62d98a; --b: #6aa6ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a1310; --surface: #111e19; --ink: #e3eee9; --muted: #94aaa2; --line: #24382f;
+  --accent: #4fd1b0; --accent-soft: #123a30; --ok: #6fd69a; --ok-soft: #12321f;
+  --warn: #e6b955; --warn-soft: #3b2e0e; --code: #0e1b16;
+  --r: #ff7a70; --g: #62d98a; --b: #6aa6ff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.6 var(--font-body); padding-inline: 1rem; }
+.wrap { max-width: 48rem; margin-inline: auto; padding-block: 2.5rem 4.5rem; display: flex; flex-direction: column; gap: 3rem; }
+h1, h2, h3, h4 { text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font: 600 clamp(1.6rem, 5.5vw, 2.35rem)/1.15 var(--font-display); letter-spacing: -0.01em; }
+h2 { font: 600 1.4rem/1.25 var(--font-display); letter-spacing: -0.005em; }
+h3 { font: 700 1.15rem/1.3 var(--font-body); }
+h4 { font: 600 0.74rem/1.3 var(--font-mono); text-transform: uppercase; letter-spacing: 0.09em; color: var(--accent); }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 0.18em; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+code, pre { font-family: var(--font-mono); font-size: 0.86em; }
+code { background: var(--code); padding: 0.1em 0.35em; border-radius: 4px; overflow-wrap: anywhere; }
+pre { background: var(--code); padding: 0.9rem 1rem; border-radius: 6px; overflow-x: auto; margin: 0; line-height: 1.5; }
+pre code { background: none; padding: 0; overflow-wrap: normal; }
+.eyebrow { font: 600 0.75rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+.lead { font-size: 1.22rem; line-height: 1.55; }
+.muted { color: var(--muted); }
+.src { font: 400 0.76rem/1.4 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+section { display: flex; flex-direction: column; gap: 1.1rem; min-width: 0; }
+header { display: flex; flex-direction: column; gap: 1rem; }
+nav.jump { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+nav.jump a { font: 600 0.78rem/1 var(--font-mono); padding: 0.45rem 0.7rem; border: 1px solid var(--line); border-radius: 99px; text-decoration: none; background: var(--surface); }
+
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 36rem; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); }
+th { font: 600 0.7rem/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); background: var(--accent-soft); }
+tr:last-child td { border-bottom: 0; }
+td.c, th.c { text-align: center; }
+.yes { color: var(--ok); font-weight: 700; }
+.no { color: var(--muted); }
+
+.figure { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; }
+.figure .cap { font-size: 0.9rem; color: var(--muted); }
+.formula { font: 600 0.95rem/1.5 var(--font-mono); background: var(--code); padding: 0.7rem 0.9rem; border-radius: 6px; overflow-x: auto; white-space: pre; }
+
+.pipe { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.6rem; counter-reset: p; }
+.pipe > div { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 0.7rem 0.8rem; counter-increment: p; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
+.pipe > div::before { content: counter(p); font: 600 0.72rem/1 var(--font-mono); color: var(--accent); }
+.pipe b { font-size: 0.98rem; }
+.pipe small { color: var(--muted); font-size: 0.82rem; }
+
+.layer { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 0.4rem 1rem; }
+.layer > .n { font: 600 0.95rem/2.2rem var(--font-mono); width: 2.2rem; height: 2.2rem; border-radius: 50%; text-align: center; background: var(--accent); color: var(--bg); }
+.layer > div { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+@media (max-width: 30rem) { .layer { grid-template-columns: 1fr; } }
+
+.scene { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.scene img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: var(--code); }
+.scene .body { padding: 1.1rem 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 1.2rem; min-width: 0; }
+.tech { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+.tech h3 { font-size: 1.02rem; }
+.tag { font: 600 0.68rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; padding: 0.28rem 0.5rem; border-radius: 99px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag.art { background: var(--warn-soft); color: var(--warn); }
+.tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+@media (max-width: 40rem) { .charts { grid-template-columns: 1fr; } }
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .tick, .chart .axl { fill: var(--muted); font: 400 11px var(--font-mono); }
+.chart .curve { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.chart .cr { stroke: var(--r); } .chart .cg { stroke: var(--g); } .chart .cb { stroke: var(--b); }
+.chart .lab { font: 600 11px var(--font-mono); }
+.chart .crt { fill: var(--r); } .chart .cgt { fill: var(--g); } .chart .cbt { fill: var(--b); }
+
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 0.8rem 1rem; border-radius: 0 6px 6px 0; }
+.callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+.callout b:first-child { display: block; font: 600 0.72rem/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.15rem; }
+ul.tight { margin: 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.35rem; }
+footer { font-size: 0.92rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 1.2rem; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+</head>
+<body>
+<main class="wrap">
+
+<header>
+  <div class="eyebrow">Computer graphics / simulation / four case studies</div>
+  <h1>How a few thousand lines of code become a living world</h1>
+  <p class="lead">Riverbed, Coral reef, Betta and Plasma globe look like footage, but they are equations evaluated 30 to 60 times a second on your graphics card. There are almost no 3D models and very few photographs in them. This page shows the layers all four share, then the specific trick each one is built around. Every number below was read from the source, and the key ones were re-checked against it.</p>
+  <nav class="jump" aria-label="Sections">
+    <a href="#principle">The principle</a><a href="#common">Shared layers</a><a href="#river">Riverbed</a><a href="#reef">Coral reef</a><a href="#betta">Betta</a><a href="#plasma">Plasma globe</a><a href="#further">Go further</a>
+  </nav>
+</header>
+
+<section id="principle">
+  <h2>The principle: fake the cue, not the physics</h2>
+  <p>A frame has about 16 to 33 milliseconds. A real renderer would trace billions of light paths through water. These scenes instead ask, for each visual effect, "what is the smallest formula that produces the same cue to a human eye?" Then they evaluate that formula per pixel or per vertex.</p>
+  <p>The pattern repeats everywhere: take a real law, keep its shape, drop what the eye cannot tell apart. Water dims red first, so use <code>exp(-k·distance)</code>. Light focuses where a wavy surface curves, so compute curvature instead of tracing rays. A lens blurs by depth, so use the thin-lens formula on each primitive. The results are approximations, and the code usually says so in its comments.</p>
+  <div class="figure" role="group" aria-label="The frame pipeline">
+    <div class="pipe">
+      <div><b>Simulate</b><small>Fixed 1/60 s steps: fish steering, plasma channels, food.</small></div>
+      <div><b>Geometry</b><small>Generated or bent on the GPU: bodies, fins, plants, tentacles.</small></div>
+      <div><b>Materials</b><small>Custom shaders: scales, skin, rock, glass, plasma glow.</small></div>
+      <div><b>Light &amp; medium</b><small>Absorption, caustics, shafts, reflections, fog.</small></div>
+      <div><b>Camera</b><small>Depth of field, bloom, chromatic aberration, grain.</small></div>
+      <div><b>Tone map</b><small>HDR to screen with a filmic curve and dither.</small></div>
+    </div>
+    <p class="cap">Every frame runs this chain. Steps 3 to 6 run on the GPU, and step 2 is generated at startup or bent by vertex shaders each frame. Step 1 runs in JavaScript and is kept separate so it behaves identically at any frame rate.</p>
+  </div>
+</section>
+
+<section id="common">
+  <h2>The layers all four scenes share</h2>
+  <p>Seven ideas appear in all four scenes, even though the scenes look nothing alike.</p>
+
+  <div class="layer"><div class="n">1</div><div>
+    <h3>The world is generated, not modelled</h3>
+    <p>No scene loads a 3D model file. Bodies, plants, corals and rocks are built from formulas at startup. Where a scene does use image data, it is small and bounded: Riverbed loads rock, wood and sand textures (three JPG diffuse and normal pairs); Coral reef loads textures and two binary files that were themselves computed offline by Python scripts; Betta and Plasma load nothing at all.</p>
+    <p>Randomness is seeded. <code>scenes/shared/random.js</code> is a 32-bit generator (mulberry32 family, default seed 7731), so a given seed always builds the same world. That is what allows tests to assert things like "fish never overlap" without a GPU.</p>
+  </div></div>
+
+  <div class="layer"><div class="n">2</div><div>
+    <h3>Three.js is a thin wrapper; the look is hand-written GLSL</h3>
+    <p>Three.js 0.180 supplies vectors, cameras and the WebGL2 plumbing. The appearance comes from shader code, small programs that run once per vertex or per pixel. Across all four scenes, three things always appear: custom <code>ShaderMaterial</code> programs, a hand-written noise function, and half-float HDR render targets. Everything else varies.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Technique</th><th class="c">River</th><th class="c">Reef</th><th class="c">Betta</th><th class="c">Plasma</th></tr></thead>
+      <tbody>
+        <tr><td>Custom GLSL shaders</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td></tr>
+        <tr><td>Hand-rolled noise / hash in GLSL</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td></tr>
+        <tr><td>HDR half-float render target</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td></tr>
+        <tr><td>GPU instancing</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">pellets</td><td class="c yes">segments</td></tr>
+        <tr><td>Stock PBR material patched with shader hooks</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td></tr>
+        <tr><td>Shadow maps</td><td class="c yes">yes</td><td class="c yes">static only</td><td class="c no">no</td><td class="c no">no</td></tr>
+        <tr><td>Three.js fog</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td></tr>
+        <tr><td>Shared post-processing module</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">own chain</td><td class="c no">own chain</td></tr>
+        <tr><td>Volumetric ray-march</td><td class="c no">no</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td></tr>
+        <tr><td>Depth of field</td><td class="c no">no</td><td class="c no">no</td><td class="c yes">full pass</td><td class="c yes">per primitive</td></tr>
+        <tr><td>Bloom / glow</td><td class="c no">no</td><td class="c no">no</td><td class="c yes">glow</td><td class="c yes">6-level pyramid</td></tr>
+      </tbody>
+    </table></div>
+    <p class="src">Source: a feature-by-scene read of each scene's src/ folder; see the per-scene sections for line references.</p>
+  </div></div>
+
+  <div class="layer"><div class="n">3</div><div>
+    <h3>Light is computed in linear HDR, then compressed once</h3>
+    <p>Lighting is done in linear, high-dynamic-range values where a highlight can be 10 times brighter than white. A final pass squeezes that into what a monitor can show using a filmic curve. This is why sunlit edges roll off smoothly instead of clipping.</p>
+    <p>Riverbed and Coral reef use Three.js's ACES filmic tone mapping (exposures 1.17 and 1.08). Betta and Plasma do it in their own output shader. Plasma uses the well-known ACES fit:</p>
+    <div class="formula">f(x) = (x·(2.51x + 0.03)) / (x·(2.43x + 0.59) + 0.14)</div>
+    <p>Both families then apply a gamma of about 1/2.2 and a small dither (plus or minus 1/255) so dark gradients do not show banding.</p>
+    <p class="src">river/src/main.js:73, reef/src/main.js:35, plasma/src/shaders.js:346-375, betta/src/shaders.js:138-145</p>
+  </div></div>
+
+  <div class="layer"><div class="n">4</div><div>
+    <h3>Simulation and drawing are separate loops</h3>
+    <p>Three scenes advance their simulation in fixed 1/60 second steps (at most 6 catch-up steps per frame), independent of how often they draw. Riverbed splits elapsed time into equal sub-steps of about 1/60 s instead. Either way, a fish behaves the same at 20, 30 or 60 fps, and a test can run 120 seconds of fish behaviour with no graphics at all.</p>
+    <p>The drawing loop (<code>shared/frame-loop.js</code>) is demand-driven. When a scene is paused or hidden there is no animation callback at all, so it costs essentially nothing. Below the screen's refresh rate it sleeps on a timer until about 3 ms before the next deadline, instead of waking 60 times a second to throw frames away. Elapsed time per frame is capped at 0.1 s so a stall cannot teleport the simulation.</p>
+  </div></div>
+
+  <div class="layer"><div class="n">5</div><div>
+    <h3>A performance governor trades pixels for frames</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Profile</th><th>Frame rate</th><th>Pixel budget</th><th>Device pixel ratio cap</th></tr></thead>
+      <tbody>
+        <tr><td><code>eco</code></td><td>20 fps</td><td>1.05 million</td><td>1</td></tr>
+        <tr><td><code>balanced</code> (browser default)</td><td>30 fps</td><td>1.8 million</td><td>1.25</td></tr>
+        <tr><td><code>detail</code></td><td>60 fps</td><td>3 million</td><td>1.5</td></tr>
+        <tr><td><code>native</code> (the wallpaper)</td><td>60 fps</td><td>16 million</td><td>none; falls back to balanced on battery</td></tr>
+      </tbody>
+    </table></div>
+    <p>On battery the frame rate is capped at 30 and the resolution scaled by 0.9. Reef, Betta and Plasma also watch themselves: if a smoothed CPU cost per frame exceeds 85% of the frame budget (or a frame takes more than 1.65 times its budget) for over 80 samples, resolution steps down by 0.1, to a floor of 0.72. It never steps back up. The scenes render to their own target at a computed size, so hardware antialiasing and browser pixel-ratio scaling are switched off.</p>
+    <p class="src">shared/render-policy.js:12-41; reef/src/main.js:129-133; betta/src/main.js:79-83; plasma/src/main.js:59-63</p>
+  </div></div>
+
+  <div class="layer"><div class="n">6</div><div>
+    <h3>The cursor is a physical object in the scene</h3>
+    <p>Every scene turns a 2D mouse position into a 3D ray and intersects it with something: a plane in front of the tank glass (Riverbed at z = 2.6, Reef at z = 2.4), a camera-facing plane (Betta), or a sphere just outside the glass (Plasma, radius 1.16 = glass 1 + fingertip 0.16). That 3D point goes into the simulation, where it frightens fish, attracts a betta's gaze, or acts as a grounded conductor. Pointer speed matters: fast motion scares fish, slow motion only makes them give way.</p>
+  </div></div>
+
+  <div class="layer"><div class="n">7</div><div>
+    <h3>Each scene carries its own host interface</h3>
+    <p>For the wallpaper, every scene exposes the same five hooks (<code>sceneRate</code>, <code>scenePower</code>, <code>scenePause</code>, <code>sceneFeed</code>, plus pointer injection) so a native program can throttle it. This is the layer the Windows port plugs into; see the <a href="https://az9713.github.io/sonnet-5.5-builds/docs/porting-journey.html">porting journey</a>.</p>
+  </div></div>
+</section>
+
+<section id="river">
+  <h2>Riverbed: a planted tank, built from plant biology and fish ethology</h2>
+  <div class="scene">
+    <img src="images/thumbs/riverscape.jpg" alt="Neon fish swimming through green rivergrass and driftwood" width="960" height="540" loading="lazy">
+    <div class="body">
+      <div class="tags"><span class="tag">7,100 lines JS</span><span class="tag">24 tetras</span><span class="tag">one draw call for all plants</span></div>
+
+      <div class="tech">
+        <h4>Technique 1</h4>
+        <h3>A quarter-million-vertex meadow in a single draw call</h3>
+        <p>Every leaf of every plant is baked once into one mesh: 373,792 vertices and 500,546 triangles at the default quality (measured by the repo's own budget test). One draw call, no per-frame cost for placement.</p>
+        <p>Grass blades are cubic Bezier curves swept into ribbons, 30 rows by 6 columns in the foreground and 20 by 2 at the back. Older leaves are longer, paler and brown at the tips. Species like Anubias and Cryptocoryne are built as petioles and blades swept along midribs.</p>
+        <p>Motion is done entirely in the vertex shader. Each vertex knows its root, its distance along the leaf <code>s</code> and a compliance. The displacement is a drag bend <code>0.09·s² / (1 + 0.06·s²)</code> plus a travelling wave <code>sin(t·0.95 − 1.05·s + phase)</code> with a weaker second harmonic. The shading normal is tilted by the slope of that motion, and the same function runs in the shadow pass, so shadows sway with the leaves.</p>
+        <p class="src">river/src/plants.js:146,250; foliage.js:15-50; tests/plant-budget.mjs</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 2</h4>
+        <h3>Leaves that glow green when backlit, with no textures</h3>
+        <p>Leaf veins, midribs and mottling are procedural functions. Translucency uses <code>alphaToCoverage</code> on 4x multisampling, which turns a fixed alpha of 0.5 or 0.75 into sub-pixel coverage, so thin leaves blend without any depth sorting. A backlight term <code>(0.55, 0.85, 0.30) · thinness</code> adds light that has passed through the leaf. Specular is kept very low (0.07) because leaf and water refractive indices are similar.</p>
+        <p class="src">river/src/foliage.js:56-126</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 3</h4>
+        <h3>Water as a light filter: absorption and focusing, hooked into every material</h3>
+        <p>The code overrides the direct-light function of every patched material. Each light is multiplied by absorption, <code>exp(-(0.020, 0.008, 0.012) · depth)</code> measured from the surface at y = 10, and by a caustic-style focusing term built from four sine waves: <code>focus = 1 / max(0.45, 1 − 0.25·depth·curvature·4)</code>. Where the simulated surface is concave, light concentrates; where convex, it thins. No caustic texture exists.</p>
+        <p>Because red decays fastest and green slowest, distance turns the scene green. The curves below are drawn from those constants, to scale.</p>
+        <div class="figure">
+          <svg viewBox="0 0 420 260" role="img" aria-label="Riverbed: light remaining by depth, red green blue" class="chart">
+<line x1="62" x2="406" y1="218.0" y2="218.0" class="grid"/>
+<text x="56" y="222.0" class="tick" text-anchor="end">0</text>
+<line x1="62" x2="406" y1="167.0" y2="167.0" class="grid"/>
+<text x="56" y="171.0" class="tick" text-anchor="end">0.25</text>
+<line x1="62" x2="406" y1="116.0" y2="116.0" class="grid"/>
+<text x="56" y="120.0" class="tick" text-anchor="end">0.5</text>
+<line x1="62" x2="406" y1="65.0" y2="65.0" class="grid"/>
+<text x="56" y="69.0" class="tick" text-anchor="end">0.75</text>
+<line x1="62" x2="406" y1="14.0" y2="14.0" class="grid"/>
+<text x="56" y="18.0" class="tick" text-anchor="end">1</text>
+<line x1="62.0" x2="62.0" y1="14" y2="218" class="grid"/>
+<text x="62.0" y="234" class="tick" text-anchor="middle">0</text>
+<line x1="130.8" x2="130.8" y1="14" y2="218" class="grid"/>
+<text x="130.8" y="234" class="tick" text-anchor="middle">2</text>
+<line x1="199.6" x2="199.6" y1="14" y2="218" class="grid"/>
+<text x="199.6" y="234" class="tick" text-anchor="middle">4</text>
+<line x1="268.4" x2="268.4" y1="14" y2="218" class="grid"/>
+<text x="268.4" y="234" class="tick" text-anchor="middle">6</text>
+<line x1="337.2" x2="337.2" y1="14" y2="218" class="grid"/>
+<text x="337.2" y="234" class="tick" text-anchor="middle">8</text>
+<line x1="406.0" x2="406.0" y1="14" y2="218" class="grid"/>
+<text x="406.0" y="234" class="tick" text-anchor="middle">10</text>
+<polyline points="62.0,14.0 66.3,14.5 70.6,15.0 74.9,15.5 79.2,16.0 83.5,16.5 87.8,17.0 92.1,17.5 96.4,18.0 100.7,18.5 105.0,19.0 109.3,19.5 113.6,20.0 117.9,20.5 122.2,21.0 126.5,21.5 130.8,22.0 135.1,22.5 139.4,23.0 143.7,23.5 148.0,23.9 152.3,24.4 156.6,24.9 160.9,25.4 165.2,25.9 169.5,26.4 173.8,26.8 178.1,27.3 182.4,27.8 186.7,28.3 191.0,28.7 195.3,29.2 199.6,29.7 203.9,30.2 208.2,30.6 212.5,31.1 216.8,31.6 221.1,32.0 225.4,32.5 229.7,33.0 234.0,33.4 238.3,33.9 242.6,34.3 246.9,34.8 251.2,35.2 255.5,35.7 259.8,36.2 264.1,36.6 268.4,37.1 272.7,37.5 277.0,38.0 281.3,38.4 285.6,38.9 289.9,39.3 294.2,39.8 298.5,40.2 302.8,40.7 307.1,41.1 311.4,41.5 315.7,42.0 320.0,42.4 324.3,42.9 328.6,43.3 332.9,43.7 337.2,44.2 341.5,44.6 345.8,45.0 350.1,45.5 354.4,45.9 358.7,46.3 363.0,46.8 367.3,47.2 371.6,47.6 375.9,48.0 380.2,48.5 384.5,48.9 388.8,49.3 393.1,49.7 397.4,50.1 401.7,50.6 406.0,51.0" class="curve cr"/>
+<line x1="228" x2="248" y1="112.0" y2="112.0" class="curve cr"/>
+<text x="254" y="116.0" class="lab crt">R  k=0.02  82% left</text>
+<polyline points="62.0,14.0 66.3,14.2 70.6,14.4 74.9,14.6 79.2,14.8 83.5,15.0 87.8,15.2 92.1,15.4 96.4,15.6 100.7,15.8 105.0,16.0 109.3,16.2 113.6,16.4 117.9,16.6 122.2,16.8 126.5,17.0 130.8,17.2 135.1,17.4 139.4,17.6 143.7,17.8 148.0,18.0 152.3,18.2 156.6,18.4 160.9,18.6 165.2,18.8 169.5,19.0 173.8,19.2 178.1,19.4 182.4,19.6 186.7,19.8 191.0,20.0 195.3,20.2 199.6,20.4 203.9,20.6 208.2,20.8 212.5,21.0 216.8,21.2 221.1,21.4 225.4,21.6 229.7,21.8 234.0,22.0 238.3,22.2 242.6,22.4 246.9,22.6 251.2,22.8 255.5,23.0 259.8,23.2 264.1,23.4 268.4,23.6 272.7,23.8 277.0,23.9 281.3,24.1 285.6,24.3 289.9,24.5 294.2,24.7 298.5,24.9 302.8,25.1 307.1,25.3 311.4,25.5 315.7,25.7 320.0,25.9 324.3,26.1 328.6,26.3 332.9,26.5 337.2,26.6 341.5,26.8 345.8,27.0 350.1,27.2 354.4,27.4 358.7,27.6 363.0,27.8 367.3,28.0 371.6,28.2 375.9,28.4 380.2,28.6 384.5,28.7 388.8,28.9 393.1,29.1 397.4,29.3 401.7,29.5 406.0,29.7" class="curve cg"/>
+<line x1="228" x2="248" y1="128.0" y2="128.0" class="curve cg"/>
+<text x="254" y="132.0" class="lab cgt">G  k=0.008  92% left</text>
+<polyline points="62.0,14.0 66.3,14.3 70.6,14.6 74.9,14.9 79.2,15.2 83.5,15.5 87.8,15.8 92.1,16.1 96.4,16.4 100.7,16.7 105.0,17.0 109.3,17.3 113.6,17.6 117.9,17.9 122.2,18.2 126.5,18.5 130.8,18.8 135.1,19.1 139.4,19.4 143.7,19.7 148.0,20.0 152.3,20.3 156.6,20.6 160.9,20.9 165.2,21.2 169.5,21.5 173.8,21.8 178.1,22.1 182.4,22.4 186.7,22.7 191.0,23.0 195.3,23.3 199.6,23.6 203.9,23.9 208.2,24.1 212.5,24.4 216.8,24.7 221.1,25.0 225.4,25.3 229.7,25.6 234.0,25.9 238.3,26.2 242.6,26.5 246.9,26.7 251.2,27.0 255.5,27.3 259.8,27.6 264.1,27.9 268.4,28.2 272.7,28.5 277.0,28.7 281.3,29.0 285.6,29.3 289.9,29.6 294.2,29.9 298.5,30.2 302.8,30.4 307.1,30.7 311.4,31.0 315.7,31.3 320.0,31.6 324.3,31.8 328.6,32.1 332.9,32.4 337.2,32.7 341.5,33.0 345.8,33.2 350.1,33.5 354.4,33.8 358.7,34.1 363.0,34.3 367.3,34.6 371.6,34.9 375.9,35.2 380.2,35.4 384.5,35.7 388.8,36.0 393.1,36.3 397.4,36.5 401.7,36.8 406.0,37.1" class="curve cb"/>
+<line x1="228" x2="248" y1="144.0" y2="144.0" class="curve cb"/>
+<text x="254" y="148.0" class="lab cbt">B  k=0.012  89% left</text>
+<text x="234.0" y="254" class="axl" text-anchor="middle">depth below the surface (scene units)</text>
+<text x="11" y="116.0" class="axl" text-anchor="middle" transform="rotate(-90 11 116.0)">light remaining</text>
+</svg>
+          <p class="cap">Riverbed: fraction of each colour channel left at depth d, from surface (0) to 10 scene units. The constants are (R, G, B) = (0.020, 0.008, 0.012). Absorption is gentle; much of the green depth cue comes from the exponential fog (<code>FogExp2</code> density 0.034, colour #16312a).</p>
+        </div>
+        <p class="src">river/src/water.js:113-129; main.js:80</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 4</h4>
+        <h3>A current that every object feels</h3>
+        <p>One flow field, a slow reversing term <code>0.34·sin(0.031t)</code> plus three travelling sines, is written twice: in GLSL for plants and dust, and in JavaScript for fish and food pellets. Because both copies are the same equation, a leaf, a dust fleck and a pellet all lean the same way. It is scaled by a shelter factor: 0.3 near the sand rising to 1 by height 1.4, and another 0.35 inside grass beds. The slow term has a period of 2π/0.031, about 203 seconds, so the current swings back and forth over a few minutes.</p>
+        <p class="src">river/src/water.js:29-37, 94-100</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 5</h4>
+        <h3>Fish: swimming computed in the vertex shader, behaviour from ethology</h3>
+        <p>There are 24 bloodfin tetras. Each body is an 84 by 62 grid lofted from cross-section stations on a spline, with a modelled eye lens and mouth, and fins with 8 to 23 rays plus membrane. Proportions come from published morphometrics cited in the code comments.</p>
+        <p>The swimming bend is integrated along the spine inside the shader in 8 steps, using a travelling wave <code>amp · along^1.35 · sin(phase − 7.5·s)</code> plus turning curvature. The CPU writes only a few floats per fish per frame.</p>
+        <p>Skin is a patched physical material with procedural scales (a 34 by 11 grid), a blue-green guanine reflector band, and thin-film iridescence at 230 to 500 nm thickness. Per-channel absorption <code>(34, 84, 109)</code> fakes light passing through tissue.</p>
+        <p>Behaviour is a state machine (hover, settle, travel, inspect, feed, escape) with a shoaling layer on top: separation over a 1.1 s look-ahead of predicted closest approach, alignment 0.5, cohesion 0.3 beyond 1.8 units, all within a 2.6-unit perception range with a blind cone behind the fish. Fish sense food three ways: splash through a lateral-line model (range 4.6, latency 0.13 to 0.24 s), sight, and an odour plume that drifts with the current. Startle uses a two-stage C-start, and alarm spreads to neighbours within 2.2 units in 0.04 to 0.13 s. Repeated startles raise a habituation threshold.</p>
+        <p class="src">river/src/fish.js:12,54,90-102,284-337,1027-1177; fish-anatomy.js:77-78,811-1184; tests/fish-behavior.mjs</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 6</h4>
+        <h3>Rocks, wood, moss and grit from geometry operations</h3>
+        <p>A rock is a 112 by 78 sphere cut by 15 planes spaced by the golden angle, then displaced by three noise octaves, strata and 115 pits whose darkness is baked into vertex colour. Driftwood is seven Catmull-Rom branches with ridges of 9, 17 and 31 lobes, a knot and 14 splits carved into the radius. Moss coverage is baked per vertex from 8 colonies and two noise fields, then 2,480 instanced fronds are planted by weighted sampling of the high-coverage vertices. One analytic ground-height function is shared by plants, fish, pellets and the sand mesh, so everything rests on the same surface. 900 dust and bubble points are lit only where the key light reaches them, by sampling the shadow map by hand in the particle shader.</p>
+        <p class="src">river/src/environment.js:169,291,368,813-960; math.js:54</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 7</h4>
+        <h3>Food that obeys surface tension</h3>
+        <p>A pellet floats in the surface film for 2.2 s plus an exponentially distributed time (mean 4.5 s), and 15% linger for 22 to 55 s. It then sinks at a constant 0.33 to 0.47 units per second, drifts with the sheltered current, and dissolves over 20 to 40 s after landing. Fish bow waves can push a pellet away, and about a quarter of captures are mouthed and spat out.</p>
+        <p class="src">river/src/food.js</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reef">
+  <h2>Coral reef: geology baked offline, life assembled from recursion</h2>
+  <div class="scene">
+    <img src="images/thumbs/reefscape.jpg" alt="A coral reef with clownfish, anemones and branching corals" width="960" height="540" loading="lazy">
+    <div class="body">
+      <div class="tags"><span class="tag">2,600 lines JS</span><span class="tag">368,290-triangle baked rock</span><span class="tag">~385 anemone tentacles</span></div>
+
+      <div class="tech">
+        <h4>Technique 1</h4>
+        <h3>Porous limestone from a density field and marching cubes</h3>
+        <p>The rock cannot be made fast enough at runtime, so a Python script (numpy, scipy, scikit-image) bakes it once. Each rock is a 3D grid (54 samples per axis for large rocks, 38 for small). Every cell holds a signed density: positive means solid. The base is <code>f = 1 − (x² + y² + z²)</code>, a blob, plus Gaussian-blurred random fields at three scales (sigma, amplitude) = (7, 0.28), (2.5, 0.13), (0.85, 0.065), plus a fourth crust octave.</p>
+        <p>35 random ellipsoid cavities per rock are carved with <code>f = min(f, cavity·0.4)</code>, and two rocks get a wobbling tunnel. The marching cubes algorithm then extracts the surface where <code>f = 0</code>, yielding real pits and caves instead of a bump map.</p>
+        <p>Ambient occlusion is baked too: each vertex samples the density along 4 sky directions at 3 distances and loses 0.056 of light per blocked sample. The result is <code>live-rock.bin</code>: a 16-byte header (magic "REEF", version 1, 184,195 vertices, 1,104,870 indices, so 368,290 triangles), then positions, normals and 3 bytes per vertex (sky visibility, coralline thickness, coralline hue). The browser maps it straight onto typed arrays with no parsing.</p>
+        <p class="src">tools/bake-live-rock.py:19-77; reef/src/terrain.js:13-24; header read from assets/live-rock.bin</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 2</h4>
+        <h3>A support heightmap that tells life where the rock is</h3>
+        <p>A second baked file stores a 385 by 193 heightmap of the top of the rock, made by rasterising every triangle and keeping the maximum height per cell. Corals, zoanthid polyps, anemone columns and shrimp feet all query it with a bilinear lookup to sit on the real surface. Fish use coarse ellipsoids for collision instead, which is why a separate fine field was needed.</p>
+        <p class="src">tools/bake-live-rock.py:78-103; reef/src/terrain.js:7-11; corals.js:45</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 3</h4>
+        <h3>Surface detail without UV maps: triplanar textures and Voronoi grains</h3>
+        <p>Rock uses one 1024 by 1024 relief/coralline/algae texture projected along x, y and z and blended by the normal raised to the 4th power, at two scales, with the normal map sampled again at 4x for millimetre grain. A stone-only pre-pass writes depth first, so the expensive rock shader never runs on hidden surfaces. Sand is a 1024 by 1024 texture of about 60,000 Voronoi grains (3.5% dark mineral) plus 160 shell flakes, with two crossed warped ripple fields added in the shader.</p>
+        <p class="src">reef/src/terrain.js:35-89; tools/bake-rock-detail.py; tools/bake-sand.py</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 4</h4>
+        <h3>Corals by recursion and phyllotaxis</h3>
+        <p>Branching corals are recursive forking tubes. Roots sit on a golden-angle spiral (2.39996 rad, 137.5 degrees), thickness tapers by 0.62 per fork, growing tips are pale, and small corallite cups are added along branches. Acropora gets 18 roots, 5 forks and 34 radials. A plate coral is 15 rings by 84 sides ruffled with sines. Brain coral is a sphere with meandering valleys from two cross-modulated sines. A sea fan forks in a plane to order 9. Zoanthid mats are instanced 12-tip polyps packed on a spiral, about 460·size² per patch.</p>
+        <p>Polyp skin is a 3D Voronoi field in world space (27-cell search, one polyp per cell), so no UV unwrap is needed, and it fades out when cells drop below a few pixels.</p>
+        <p class="src">reef/src/geometry.js:62-191; corals.js:16-36,92-113</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 5</h4>
+        <h3>An anemone animated entirely by the GPU</h3>
+        <p>Five anemones carry roughly 385 tentacles in total (derived from the tentacle-count formulas: about 169 on the host, then 96, 48, 48 and 24). They are one instanced mesh and one draw call. Each tentacle is a straight 12-sided tube that the vertex shader bends along a circular arc, with a cantilever sway from the shared water-flow function: a root term quadratic in distance along the tentacle and a tip term quartic, each lagged by a per-tentacle time constant. Normals are corrected analytically. Tips are pale and lilac with a thin-tissue rim term. Lower quality keeps 57% or 70% of tentacles, chosen by farthest-point ordering so any subset is evenly spread.</p>
+        <p class="src">reef/src/anemone.js:98-120; anemone-crown.js:233-250; tests/anemone.mjs</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 6</h4>
+        <h3>Fish, shrimp and their social life</h3>
+        <p>Fish bodies are 56 rings by 34 sides from measured-proportion knot arrays through a cubic Hermite spline. The skin is pure shader: clownfish bars drawn from a signed distance function, chromis green-to-silver, anthias with a violet cheek stripe. Species are instanced, one draw call each.</p>
+        <p>Nineteen fish (3 clownfish, 9 chromis, 7 anthias) steer with separation 1.3, cohesion 0.035, alignment 0.20, anticipatory repulsion from rock ellipsoids, and routes found by Dijkstra over a visibility graph of an 8 by 5 by 5 lattice of clear-water points. Heading turns at a bounded rate and thrust acts only along the heading, so fish do not slide sideways; a test requires over 94% of moving time to be along the heading. A fast pointer sets an alarm that spreads as a wave, with a 0.055 s recruitment delay.</p>
+        <p>Two cleaner shrimp run a state machine (advertise, walk, pick, serve, escape). A fish near an advertising shrimp diverts 12% of the time to hover above it and be cleaned. Shrimp limbs are animated in the vertex shader from codes stored in the UVs, and each foot is stretched to the local heightmap so it does not skate. The anthias male performs a U-swim display every 11 to 24 s.</p>
+        <p class="src">reef/src/fish-model.js:93-230; simulation.js:14-557; navigation.js; shrimp.js:184-187; tests/behavior.mjs, locomotion.mjs</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 7</h4>
+        <h3>Deep-water optics: absorption, analytic caustics and god rays</h3>
+        <p>Colour absorption is <code>exp(−(0.108, 0.052, 0.030) · path)</code>, measured from the front glass. Red dies first, so distance turns blue.</p>
+        <div class="figure">
+          <svg viewBox="0 0 420 260" role="img" aria-label="Coral reef: light remaining by path length, red green blue" class="chart">
+<line x1="62" x2="406" y1="218.0" y2="218.0" class="grid"/>
+<text x="56" y="222.0" class="tick" text-anchor="end">0</text>
+<line x1="62" x2="406" y1="167.0" y2="167.0" class="grid"/>
+<text x="56" y="171.0" class="tick" text-anchor="end">0.25</text>
+<line x1="62" x2="406" y1="116.0" y2="116.0" class="grid"/>
+<text x="56" y="120.0" class="tick" text-anchor="end">0.5</text>
+<line x1="62" x2="406" y1="65.0" y2="65.0" class="grid"/>
+<text x="56" y="69.0" class="tick" text-anchor="end">0.75</text>
+<line x1="62" x2="406" y1="14.0" y2="14.0" class="grid"/>
+<text x="56" y="18.0" class="tick" text-anchor="end">1</text>
+<line x1="62.0" x2="62.0" y1="14" y2="218" class="grid"/>
+<text x="62.0" y="234" class="tick" text-anchor="middle">0</text>
+<line x1="130.8" x2="130.8" y1="14" y2="218" class="grid"/>
+<text x="130.8" y="234" class="tick" text-anchor="middle">5</text>
+<line x1="199.6" x2="199.6" y1="14" y2="218" class="grid"/>
+<text x="199.6" y="234" class="tick" text-anchor="middle">10</text>
+<line x1="268.4" x2="268.4" y1="14" y2="218" class="grid"/>
+<text x="268.4" y="234" class="tick" text-anchor="middle">15</text>
+<line x1="337.2" x2="337.2" y1="14" y2="218" class="grid"/>
+<text x="337.2" y="234" class="tick" text-anchor="middle">20</text>
+<line x1="406.0" x2="406.0" y1="14" y2="218" class="grid"/>
+<text x="406.0" y="234" class="tick" text-anchor="middle">25</text>
+<polyline points="62.0,14.0 66.3,20.8 70.6,27.3 74.9,33.6 79.2,39.8 83.5,45.7 87.8,51.4 92.1,56.9 96.4,62.3 100.7,67.4 105.0,72.4 109.3,77.3 113.6,81.9 117.9,86.5 122.2,90.8 126.5,95.0 130.8,99.1 135.1,103.1 139.4,106.9 143.7,110.6 148.0,114.1 152.3,117.6 156.6,120.9 160.9,124.1 165.2,127.2 169.5,130.3 173.8,133.2 178.1,136.0 182.4,138.7 186.7,141.3 191.0,143.9 195.3,146.3 199.6,148.7 203.9,151.0 208.2,153.2 212.5,155.4 216.8,157.5 221.1,159.5 225.4,161.4 229.7,163.3 234.0,165.1 238.3,166.9 242.6,168.6 246.9,170.2 251.2,171.8 255.5,173.3 259.8,174.8 264.1,176.2 268.4,177.6 272.7,179.0 277.0,180.3 281.3,181.5 285.6,182.7 289.9,183.9 294.2,185.0 298.5,186.1 302.8,187.2 307.1,188.2 311.4,189.2 315.7,190.1 320.0,191.1 324.3,192.0 328.6,192.8 332.9,193.7 337.2,194.5 341.5,195.3 345.8,196.0 350.1,196.7 354.4,197.4 358.7,198.1 363.0,198.8 367.3,199.4 371.6,200.0 375.9,200.6 380.2,201.2 384.5,201.8 388.8,202.3 393.1,202.8 397.4,203.3 401.7,203.8 406.0,204.3" class="curve cr"/>
+<line x1="228" x2="248" y1="40.6" y2="40.6" class="curve cr"/>
+<text x="254" y="44.6" class="lab crt">R  k=0.108  7% left</text>
+<polyline points="62.0,14.0 66.3,17.3 70.6,20.5 74.9,23.7 79.2,26.8 83.5,29.9 87.8,33.0 92.1,35.9 96.4,38.9 100.7,41.8 105.0,44.6 109.3,47.4 113.6,50.1 117.9,52.8 122.2,55.5 126.5,58.1 130.8,60.7 135.1,63.2 139.4,65.7 143.7,68.2 148.0,70.6 152.3,73.0 156.6,75.3 160.9,77.6 165.2,79.9 169.5,82.1 173.8,84.3 178.1,86.5 182.4,88.6 186.7,90.7 191.0,92.7 195.3,94.7 199.6,96.7 203.9,98.7 208.2,100.6 212.5,102.5 216.8,104.4 221.1,106.2 225.4,108.0 229.7,109.8 234.0,111.5 238.3,113.2 242.6,114.9 246.9,116.6 251.2,118.2 255.5,119.8 259.8,121.4 264.1,123.0 268.4,124.5 272.7,126.0 277.0,127.5 281.3,128.9 285.6,130.4 289.9,131.8 294.2,133.2 298.5,134.5 302.8,135.9 307.1,137.2 311.4,138.5 315.7,139.8 320.0,141.1 324.3,142.3 328.6,143.5 332.9,144.7 337.2,145.9 341.5,147.1 345.8,148.2 350.1,149.3 354.4,150.4 358.7,151.5 363.0,152.6 367.3,153.6 371.6,154.7 375.9,155.7 380.2,156.7 384.5,157.7 388.8,158.7 393.1,159.6 397.4,160.6 401.7,161.5 406.0,162.4" class="curve cg"/>
+<line x1="228" x2="248" y1="56.6" y2="56.6" class="curve cg"/>
+<text x="254" y="60.6" class="lab cgt">G  k=0.052  27% left</text>
+<polyline points="62.0,14.0 66.3,15.9 70.6,17.8 74.9,19.7 79.2,21.5 83.5,23.3 87.8,25.2 92.1,27.0 96.4,28.7 100.7,30.5 105.0,32.3 109.3,34.0 113.6,35.7 117.9,37.4 122.2,39.1 126.5,40.8 130.8,42.4 135.1,44.1 139.4,45.7 143.7,47.3 148.0,48.9 152.3,50.5 156.6,52.0 160.9,53.6 165.2,55.1 169.5,56.6 173.8,58.1 178.1,59.6 182.4,61.1 186.7,62.6 191.0,64.0 195.3,65.4 199.6,66.9 203.9,68.3 208.2,69.7 212.5,71.1 216.8,72.4 221.1,73.8 225.4,75.1 229.7,76.5 234.0,77.8 238.3,79.1 242.6,80.4 246.9,81.7 251.2,83.0 255.5,84.2 259.8,85.5 264.1,86.7 268.4,87.9 272.7,89.1 277.0,90.3 281.3,91.5 285.6,92.7 289.9,93.9 294.2,95.0 298.5,96.2 302.8,97.3 307.1,98.4 311.4,99.6 315.7,100.7 320.0,101.8 324.3,102.8 328.6,103.9 332.9,105.0 337.2,106.0 341.5,107.1 345.8,108.1 350.1,109.1 354.4,110.2 358.7,111.2 363.0,112.2 367.3,113.2 371.6,114.1 375.9,115.1 380.2,116.1 384.5,117.0 388.8,118.0 393.1,118.9 397.4,119.8 401.7,120.7 406.0,121.6" class="curve cb"/>
+<line x1="228" x2="248" y1="72.6" y2="72.6" class="curve cb"/>
+<text x="254" y="76.6" class="lab cbt">B  k=0.03  47% left</text>
+<text x="234.0" y="254" class="axl" text-anchor="middle">path length through water (scene units)</text>
+<text x="11" y="116.0" class="axl" text-anchor="middle" transform="rotate(-90 11 116.0)">light remaining</text>
+</svg>
+          <p class="cap">Coral reef: fraction of each colour channel left after a path through water, to scale. After 25 units only 7% of red survives against 47% of blue. Compare with Riverbed above, where the same equation with different constants gives a green tint. One unit is 10 cm in this scene.</p>
+        </div>
+        <p>Caustics come from real wave physics. The surface is a sum of 5 waves using the finite-depth dispersion relation <code>ω² = g·k·tanh(k·h)</code>, which a unit test checks to 1e-9. Light focuses where the ray map's Jacobian determinant approaches zero, which the shader computes from the Hessian (second derivatives) of the wave height: <code>focus = 0.84 + 4.40 · (1 − |det|·1.35)^3.4</code>. That multiplies the key light per fragment, with no caustic texture.</p>
+        <p>Light shafts are a 10-step ray march per pixel through the water, with a per-pixel jitter hash to hide banding. Each step adds blue sky glow decaying as <code>exp(−0.48·depth)</code> and four stacked sine-power shaft patterns refracted through index 1.333, darkened where the shadow map says rock blocks the light. A custom back wall continues the water past the glass with inscatter integrated over 14 more units. 4,500 marine-snow points are advected by the same flow function and lit by the shaft field.</p>
+        <p>Water circulation is a faked pump flow (two sinusoidal pulses over a fixed spatial profile), and the code says explicitly that it makes no claim to solve Navier-Stokes. The same function drives the anemone, the sea fan and the snow.</p>
+        <p class="src">reef/src/water.js:17-28,71-122,96-100; composite.js:5-43; terrain.js:109-139; particles.js</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="betta">
+  <h2>Betta: one fish, rendered like a macro lens photograph</h2>
+  <div class="scene">
+    <img src="images/thumbs/bettascape.jpg" alt="A halfmoon betta with long red and blue fins spread against a black background" width="960" height="500" loading="lazy">
+    <div class="body">
+      <div class="tags"><span class="tag">3,000 lines JS</span><span class="tag">no models, no textures, no Three.js lights</span><span class="tag">~59k vertices</span></div>
+
+      <div class="tech">
+        <h4>Technique 1</h4>
+        <h3>A fish from a flat grid</h3>
+        <p>There is no mesh file. The body is a flat 221 by 97 grid (21,437 vertices) that the vertex shader bends into a fish. <code>bodyProfile(t)</code> is a set of smooth curves for upper height, lower height, width and centre-line offset along the length. Small bumps add the lips, mouth gape, gill-cover plate, pelvic lobes and pectoral pad, and the mouth and gill opening are driven live by breathing. Seven fin meshes (about 37,600 vertices) are grids too. Eyes are two 48 by 32 icospheres.</p>
+        <p class="src">betta/src/shaders.js:33-51,178-237; render.js:178-246</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 2</h4>
+        <h3>A 32-joint spine driven by curvature</h3>
+        <p>The CPU builds a spine of 32 joints each step. The turn bend target is <code>−yawRate · 1.1</code>, and each joint eases toward it with time constant <code>τ = 0.05 + 0.4·(i/N)^1.5</code>, so the tail reacts after the head. A travelling sine wave whose amplitude grows toward the tail, <code>tailAmp · smoothstep(0.2, 1.05, s) · sin(phase − 5.2·s)</code>, is added, and curvature is integrated joint by joint into positions. The shader interpolates these positions with Catmull-Rom splines to place each surface point. Tail beat runs at 0.8 Hz at rest and up to about 4 Hz when swimming.</p>
+        <p class="src">betta/src/behaviour.js:479-514,380-381; rig.js:4-8; shaders.js:53-69</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 3</h4>
+        <h3>Fins as a damped spring plus travelling delays</h3>
+        <p>The halfmoon fins are fans of Bezier rays that end on a shared round outline, which is what makes the dorsal, caudal and anal fins read as one big D. Their motion has three layers.</p>
+        <ul class="tight">
+          <li>A real underdamped spring on the CPU: <code>LAG_W = 4.0 rad/s</code>, <code>LAG_ZETA = 0.45</code>, pushed by the fish's acceleration and turn rates, so fins overshoot slightly and settle.</li>
+          <li>That lag is sampled at delays of 0, 0.1, 0.22 and 0.38 s and interpolated from fin root to tip, so a jolt travels outward and the tips trail late.</li>
+          <li>Slow sine waves, a fast rim flutter and a billow run in the shader, fading to zero at the root. The sway clock itself runs at an uneven rate so the motion never repeats visibly. When swimming fast, the fins fold back.</li>
+        </ul>
+        <p>There is no cloth or fluid simulation; it is a spring, delays and noise.</p>
+        <p class="src">betta/src/behaviour.js:25-26,391-415,462-475; shaders.js:80-110,793-963</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 4</h4>
+        <h3>Scales with parallax, iridescence and fake subsurface light</h3>
+        <p>Scales are a staggered lattice of 56 rows around the body, with random size, some missing or offset, overlapping with the front one on top. Each has a relief profile, cast shadow from the raised margin of its neighbour, and a 4-step parallax-occlusion march that makes scales stack convincingly at grazing angles. The march is skipped when scales shrink to a few pixels. Each scale's guanine plates shift from violet to cobalt to teal depending on view angle, light half-vector and per-scale tilt, with rare sparkle glints that flash only when they mirror a light. Thin areas get a wrapped-diffuse and back-lit transmission term, which approximates subsurface scattering without computing it.</p>
+        <p>Specular is GGX with Smith visibility and Schlick Fresnel, adapted for water where the small index mismatch removes the white grazing glare. Eyes have procedural irises with flecks and a corneal reflection, with gaze driven by the cursor.</p>
+        <p class="src">betta/src/shaders.js:121-129,239-777</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 5</h4>
+        <h3>Depth peeling for translucent fins</h3>
+        <p>Overlapping see-through sheets normally need sorting, and sorting triangles is slow and often wrong. Betta renders the opaque body, then 4 fin passes that each keep only the nearest fin surface behind the previous layer, then a last pass that blends everything deeper. A composite shader stacks the layers front to back. Fin opacity rises at grazing angles by <code>1 − (1 − α)^path</code>, and a backlight transmission term lights the membrane.</p>
+        <p class="src">betta/src/render.js:16-18,174-191,393-406; shaders.js:1416,1436,1524-1558</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 6</h4>
+        <h3>A real thin-lens camera</h3>
+        <p>Depth of field uses the optics formula rather than a fixed blur. The circle of confusion at depth <code>z</code> with focus <code>f</code> is:</p>
+        <div class="formula">CoC = APERTURE · focalPx · |z − f| / (z · f)    APERTURE = 0.011, max 10 px</div>
+        <p>Focus eases to the fish's head at 6 per second. A 16-tap golden-angle gather, rotated per pixel by interleaved gradient noise, weights each sample by whether its own blur disc reaches the pixel, and sharper foreground pixels block samples behind them. A quarter-resolution tile pass stores the maximum blur nearby so in-focus regions skip the gather. A shutter blend of 6 ms with neighbourhood clamping gives a short smear on fast fins instead of ghosts. On top come bloom, lateral chromatic aberration (0.0012), a vignette, film grain (0.03) and 150 floating motes that are sized by their own blur. When there is enough pixel budget the whole scene is rendered at 2x and averaged down, since hardware antialiasing is off.</p>
+        <p class="src">betta/src/render.js:12-14,169-172,217-218,303-454; shaders.js:1525-1703</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 7</h4>
+        <h3>A fish that notices you</h3>
+        <p>A state machine (hover, cruise, descend, surface, breathe, curious, feed) with hover dwells of 6 to 15 s, air gulps at least 40 s apart and independent eye saccades. The cursor makes it curious for 5 s: it turns only part way (0.85 rad) toward you, keeps its flank to the viewer at a standoff of 0.8 to 1.1, and its eyes follow. A near-reversal is routed through facing the viewer, never tail-first. Food outranks the cursor (a test asserts it): it notices a pellet after 0.35 to 0.9 s, approaches at 0.55 to 0.7, strikes at 0.2 distance only if facing it, and pauses 0.3 to 0.8 s before the next.</p>
+        <p class="src">betta/src/behaviour.js:179-341; tests/food.mjs:70-79</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="plasma">
+  <h2>Plasma globe: a physically motivated model, drawn with light</h2>
+  <div class="scene">
+    <img src="images/thumbs/plasmascape.jpg" alt="A plasma globe glowing in a dark room with blue filaments running from its electrode to the glass" width="960" height="500" loading="lazy">
+    <div class="body">
+      <div class="tags"><span class="tag">1,150 lines JS</span><span class="tag">40 streamers</span><span class="tag">no stock lit materials</span><span class="tag art">part physics, part art direction</span></div>
+
+      <div class="tech">
+        <h4>Technique 1</h4>
+        <h3>Lightning as a traced path, rebuilt every frame</h3>
+        <p>The CPU runs a small simulation that outputs three flat arrays: line segments, glass-landing brushes and electrode roots. Each of 40 channels is a polyline traced from the electrode in steps of 0.033 globe radii, up to 44 points, until it reaches the inner glass at radius 0.955. Each step does four things:</p>
+        <ul class="tight">
+          <li>Take the field direction from the electrode, a point charge with field falling as 1/r².</li>
+          <li>Add a random kink from two octaves of 3D value noise, projected perpendicular to the field, strength 1.05.</li>
+          <li>Add a slight upward buoyancy, 0.22, because hot gas rises.</li>
+          <li>Blend with the old heading: <code>new = 0.74·old + 0.26·target</code>, so channels have inertia instead of jittering.</li>
+        </ul>
+        <p>Branches (2 to 4 per channel, at 22 to 77% along, angled 0.4 to 1.25 rad) are traced by the same function. Each channel ends in a brush of 3 tendrils that wander over the inside of the glass. The whole path is recomputed each frame, so it moves with the field. The noise field drifts with time, which makes channels writhe.</p>
+        <p class="src">plasma/src/plasma.js:33-38,220-260,285-334,351</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 2</h4>
+        <h3>A fingertip as a grounded conductor</h3>
+        <p>Your cursor becomes a softened attractive sink of charge, <code>q = 2.4 · near^1.25</code>, where <code>near</code> is 1 when touching and <code>exp(−clearance/0.55)</code> otherwise. Channels lean toward it. One channel takes the current: it is chosen as the nearest to the contact with hysteresis so it does not flicker between candidates, then its last four points are pulled onto the contact, its strength is multiplied by up to 6 and its width by up to 2.8, and a shader adds a white-hot core. All other channels are dimmed by a "potential drop" factor <code>1 − 0.5·near^0.9</code>, and most of the rest fade out.</p>
+        <div class="callout warn"><b>Physics versus art</b>The finger model is not a solved electrostatics problem. There is no Poisson equation, no induced charge and no dielectric glass: it is a superposition of two hand-shaped point-like fields, and exponents like 1.25 are tuning values. The "potential drop" is one scalar, not a voltage variable.</div>
+        <p class="src">plasma/src/plasma.js:154-169,221-232,344-377; tests/plasma.mjs:58-77</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 3</h4>
+        <h3>Charge repulsion and "strike where it is emptiest"</h3>
+        <p>Each channel's root is a point on the electrode sphere. Roots repel each other with an inverse-cube-like force, <code>0.2 · level / (d² + 0.03)^1.5</code> weighted by the other channel's brightness, so they glide apart as the README describes. A channel lives 1.4 to 5 s, fades in and out with smoothstep envelopes, then respawns where the electrode is emptiest: the code scores 9 random candidates by angular distance to the nearest lit root and keeps the best. Initial roots sit on a Fibonacci lattice using the golden angle. A test asserts the brightness-weighted centroid of all roots stays below 0.2, meaning they stay evenly spread.</p>
+        <p class="src">plasma/src/plasma.js:118-150,179-214; tests/plasma.mjs:23-27</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 4</h4>
+        <h3>Gaussian capsules with max blending</h3>
+        <p>Channels are not tubes or particles. Each segment is one GPU instance that the vertex shader expands into a screen-space quad. The fragment shader measures pixel distance to the segment and shades a Gaussian sheath plus a thinner hot core. Overlaps use <code>MaxEquation</code> blending so joints between pieces do not double-brighten, while glass, brushes and stem use additive blending.</p>
+        <p>Colour follows a ramp along each channel: blue near the electrode, violet in the middle, red at the tips, with the comment attributing it to argon and xenon at the hot stem and neon near the cooler tips. It is a position ramp, not computed from a temperature: no temperature variable exists in the code. The main channel compresses the ramp so it stays blue-white end to end.</p>
+        <p class="src">plasma/src/shaders.js:5-93; render.js:23-32,86-102</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 5</h4>
+        <h3>Glass, reflections and the table</h3>
+        <ul class="tight">
+          <li><b>Glass</b> is an additive glow shader with Schlick Fresnel <code>0.04 + 0.96·(1 − μ)^5</code>. It does not refract; a comment notes thin hollow glass does not visibly refract.</li>
+          <li><b>Back-wall reflection</b>: the same channel geometry is drawn a second time mirrored about a plane at the back of the shell, at 12% gain.</li>
+          <li><b>Table reflection</b>: the whole scene is re-rendered from a mirrored camera into a half-resolution target, then sampled with a 12-tap Vogel-spiral blur whose radius grows with distance from the globe, a cheap stand-in for rough-surface reflection.</li>
+          <li><b>Light pool</b> on the table follows the point-source cosine law <code>h / (h² + d²)^1.5</code> with h = 1.75.</li>
+        </ul>
+        <p class="src">plasma/src/shaders.js:188-307; render.js:46,156-164</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 6</h4>
+        <h3>Depth of field applied to lines, with energy conserved</h3>
+        <p>Instead of blurring an image, each segment endpoint computes its own circle of confusion <code>k = blur · |w − focus| / w</code>, and the Gaussian is widened to <code>σ' = sqrt(σ² + 0.16·k² + 0.36)</code>. Brightness is scaled by <code>σ/σ'</code> so total light is conserved while it spreads. The electrode stays sharp and channels on the near and far glass go soft. After that, a 6-level bloom pyramid (13-tap downsample, tent upsample, weights 0.6, 0.4, 0.2, 0.08, 0.04), ACES, a chroma boost of 1.3 and dither.</p>
+        <p class="src">plasma/src/shaders.js:53-62,316-375; render.js:13-15,148-149</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 7</h4>
+        <h3>Testing a simulation with no GPU</h3>
+        <p>Because the simulation is separate from drawing, <code>plasma.mjs</code> runs in plain Node. It checks that segment counts stay between 1,500 and 9,000, all endpoints lie between the electrode and glass radii, runs with the same seed are identical, a touching finger gives a main channel with more than 1.8 times the peak intensity, fewer feet, and recovery after the finger lifts. One assertion, on proximity being monotonic, is weak: it accepts either ordering.</p>
+        <p class="src">plasma/tests/plasma.mjs</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="further">
+  <h2>Where you could take this next</h2>
+  <p>Each scene stops at a clear approximation. Replacing one approximation with its real model is a good solo project.</p>
+  <ul class="tight">
+    <li><b>Plasma: solve the field.</b> Replace the hand-shaped finger sink with a real Poisson solve on a 64³ grid, with the finger as a grounded boundary. Then grow channels with the dielectric breakdown model of Niemeyer, Pietronero and Wiesmann (1984), where branching probability scales with a power of the local field. You would learn how much of today's look the heuristics already capture.</li>
+    <li><b>Betta: swap the spring for a rod.</b> Model each fin ray as a Cosserat rod or chain of springs with bending stiffness, coupled by a membrane. Compare its trailing behaviour against the four-delay lag trick.</li>
+    <li><b>Reef: photon-map the caustics.</b> The Hessian method assumes a single thin refraction. Trace photons through the real wave heightfield into a receiver texture and see where the analytic formula fails (steep waves and shallow floors).</li>
+    <li><b>River: move the shoal to compute shaders.</b> The fish rules here are per-fish and branchy. A WebGPU compute version of separation, alignment and cohesion for 50,000 fish is a classic exercise, and shows which rules survive without branching.</li>
+    <li><b>All four: fit the tuning constants.</b> Take reference imagery and fit the absorption coefficients, exposures and the plasma finger exponent by gradient-free optimisation, to see how sensitive the look is to each knob.</li>
+  </ul>
+</section>
+
+<footer>
+  Scenes by <a href="https://github.com/chaseleantj/deskworlds">chaseleantj/deskworlds</a> (MIT); this page explains the copy in <a href="https://github.com/az9713/sonnet-5.5-builds">az9713/sonnet-5.5-builds</a>. Numbers and file:line references come from reading the source with automated research passes; the reef mesh header, plasma constants, Betta spring constants, reef and river absorption constants, river fog and quality presets were re-checked against the files directly. Values marked "derived" are arithmetic on code formulas, not printed by the code. I did not run the scenes for this page; screenshots are the original author's.
+</footer>
+
+</main>
+</body>
+</html>

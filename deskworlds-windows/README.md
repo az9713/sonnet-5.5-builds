@@ -7,7 +7,7 @@ A Windows port of **[chaseleantj/deskworlds](https://github.com/chaseleantj/desk
 - **Betta**, a single halfmoon betta on black
 - **Plasma globe**, a plasma lamp that reaches for your cursor
 
-The scenes are the original author's Three.js code, copied unchanged. Only the part that puts them on the desktop is new. The original README is kept as [`README.upstream.md`](README.upstream.md). To see how the port was done, read the [porting journey](docs/porting-journey.html) (open it in a browser).
+The scenes are the original author's Three.js code, copied unchanged. Only the part that puts them on the desktop is new. The original README is kept as [`README.upstream.md`](README.upstream.md). To see how the port was done, read the [porting journey](docs/porting-journey.html) (open it in a browser). To see how the worlds themselves are built (shared rendering layers, then the technique behind each scene), read [how the worlds work](docs/how-the-worlds-work.html).
 
 Credit and licence: original project by Chase Lean, MIT (see [`LICENSE`](LICENSE)). Three.js 0.180 is bundled under its MIT licence. Rock, wood and sand textures come from Poly Haven under CC0.
 
