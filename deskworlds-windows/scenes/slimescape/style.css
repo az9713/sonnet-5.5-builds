@@ -1,0 +1,5 @@
+@import url("../../ui/scene.css");
+/* The plate is dark umber; the page around it is the same colour as its corners. */
+:root { --background: #060703; }
+/* The cursor is a lamp over the plate; the plate itself takes pointer moves, never drags. */
+html:not([data-motion="host"]) #scene { touch-action: none; cursor: none; }

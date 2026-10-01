@@ -1,0 +1,6 @@
+@import url("../../ui/scene.css");
+/* Deep water: the page around the canvas is the same near-black blue. */
+:root { --background: #000308; }
+html:not([data-motion="host"]) #scene { touch-action: none; cursor: none; }
+/* No words on screen; the loading and error boxes stay empty until something goes wrong. */
+#loading { display: block; }

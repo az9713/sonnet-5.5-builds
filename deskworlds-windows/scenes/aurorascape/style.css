@@ -1,0 +1,6 @@
+@import url("../../ui/scene.css");
+/* A polar night: the page around the fjord is the same black as its darkest sky. */
+:root { --background: #01040a; }
+html:not([data-motion="host"]) #scene { touch-action: none; cursor: none; }
+/* No words on screen; the loading and error boxes stay empty until something goes wrong. */
+#loading { display: block; }

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#01040a" />
+    <meta name="description" content="A polar night over a calm Arctic fjord. The aurora ripples overhead and in the black water while humpback whales surface, blow and dive. Move the cursor to make ripples and a curious whale drifts over." />
+    <title>Aurora fjord • Deskworlds</title>
+    <link rel="icon" href="../../ui/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../vendor/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="stage" aria-label="Aurora over an Arctic fjord with humpback whales">
+      <canvas id="scene" tabindex="0" aria-label="A polar night over a still fjord. Curtains of aurora ripple across the sky and in the black water while humpback whales surface, blow and dive. Move the cursor to make ripples; a curious whale may drift over. Space pauses. F enters fullscreen."></canvas>
+      <div id="loading" role="status" aria-label="Loading"></div>
+      <div id="error" role="alert" hidden></div>
+    </main>
+    <script type="module" src="../shared/start.js" data-entry="./src/main.js"></script>
+  </body>
+</html>
