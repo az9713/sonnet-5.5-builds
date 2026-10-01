@@ -26,6 +26,7 @@ export const MODEL = Object.freeze({
   foodImmune: 0.12,     // where the attractant is stronger than this an agent is never counted as lost
   foodStay: 0.12,       // agents on food still tire of it (lost counter grows this fast) and return to the colony
   cloneJitter: 0.02,    // a re-seeded agent lands this far (plate units) from the agent it copies: fronts and hair grow from here
+  foragers: 4,          // one agent in this many is a forager: only foragers smell food and linger on it; the rest keep the mesh
   foodBoost: 2.5,       // agents on food deposit this much more
   reinforce: 2.5,       // agents on moderate trail deposit more (tube reinforcement): trunks thicken, side branches fade
   reinforceScale: 30,   // trail value at which the reinforcement reaches 1
@@ -112,15 +113,16 @@ export function createAgentSim({ width, height, count, random, model = MODEL, ce
     const dx = x / cellsPerUnit - l.x, dy = y / cellsPerUnit - l.y;
     return l.strength * Math.exp(-(dx * dx + dy * dy) / (l.radius * l.radius));
   };
-  const sense = (x, y) => sample(trail, x, y) + m.foodWeight * sample(food, x, y) - m.lightWeight * lightAt(x, y);
+  const sense = (x, y, forager) => sample(trail, x, y) + (forager ? m.foodWeight * sample(food, x, y) : 0) - m.lightWeight * lightAt(x, y);
 
   function step() {
     for (let i = 0; i < count; i++) {
       const o = i * 4;
       let x = agents[o], y = agents[o + 1], th = agents[o + 2], lost = agents[o + 3];
-      const C = sense(x + Math.cos(th) * m.sensorDist, y + Math.sin(th) * m.sensorDist);
-      const L = sense(x + Math.cos(th + m.sensorAngle) * m.sensorDist, y + Math.sin(th + m.sensorAngle) * m.sensorDist);
-      const R = sense(x + Math.cos(th - m.sensorAngle) * m.sensorDist, y + Math.sin(th - m.sensorAngle) * m.sensorDist);
+      const forager = m.foragers > 0 && i % m.foragers === 0;
+      const C = sense(x + Math.cos(th) * m.sensorDist, y + Math.sin(th) * m.sensorDist, forager);
+      const L = sense(x + Math.cos(th + m.sensorAngle) * m.sensorDist, y + Math.sin(th + m.sensorAngle) * m.sensorDist, forager);
+      const R = sense(x + Math.cos(th - m.sensorAngle) * m.sensorDist, y + Math.sin(th - m.sensorAngle) * m.sensorDist, forager);
       if (C > L && C > R) { /* straight on */ }
       else if (C < L && C < R) th += (random() < 0.5 ? -1 : 1) * m.turnAngle;
       else if (L < R) th -= m.turnAngle;
@@ -128,7 +130,7 @@ export function createAgentSim({ width, height, count, random, model = MODEL, ce
       th += (random() - 0.5) * m.wobble;
       x = wrapX(x + Math.cos(th) * m.step); y = wrapY(y + Math.sin(th) * m.step);
       const here = sample(trail, x, y), lit = lightAt(x, y);
-      if (sample(food, x, y) > m.foodImmune) lost += m.foodStay; else if (here > m.lostThreshold) lost = Math.max(lost - 3, 0); else lost += 1;
+      if (forager && sample(food, x, y) > m.foodImmune) lost += m.foodStay; else if (here > m.lostThreshold) lost = Math.max(lost - 3, 0); else lost += 1;
       lost += lit * 6;
       if (lost > m.lostMax) {
         // Re-seed on a random agent that is itself on the colony and out of the light.

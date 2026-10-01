@@ -148,7 +148,7 @@ void main(){
           float xp = q.x + m.g;
           // Vertical rays: noise across the curtain, constant up the field line. Rays narrower than a
           // pixel's footprint on the curtain fade out instead of aliasing into speckle.
-          float fp = t*uPixAng*1.6;
+          float fp = max(t*uPixAng*1.6, dt*abs(rd.x)*0.9);   // pixel footprint, or the sideways run between marching steps
           float a1 = 1.0 - smoothstep(0.25, 0.8, fp/4.0), a2 = 1.0 - smoothstep(0.25, 0.8, fp/1.7), a3 = 1.0 - smoothstep(0.25, 0.8, fp/15.0);
           float s1 = n1(xp/4.0 + uTime*0.06), s2 = n1(xp/1.7 - uTime*0.17 + 7.0), s3 = n1(xp/15.0 + uTime*0.025 + 3.0);
           float rays = (1.0 + (0.20 + 1.35*pow(s1, 1.7) - 1.0)*a1*(0.5 + 0.5*m.a))*(1.0 + (0.5 + 0.9*s2 - 1.0)*a2*0.7)*(1.0 + (0.55 + 0.9*s3 - 1.0)*a3);
@@ -244,7 +244,7 @@ const vec3 FOG_C = vec3(0.0020, 0.0030, 0.0046);
 
 // wall surface x = c(z) + s*(W(z) + g(y, z)): leans back and is carved by noise
 float wallG(float y, float z, float s){
-  return 0.5*y + 36.0*tfbm3(vec2(y*0.011 + s*3.0, z*0.0075)) + 14.0*tn(vec2(y*0.045, z*0.03 + s*5.0)) - 25.0;
+  return 0.5*y + 36.0*tfbm3(vec2(y*0.011 + s*3.0, z*0.0075)) + 14.0*tn(vec2(y*0.045, z*0.03 + s*5.0)) + 5.0*tn(vec2(y*0.16, z*0.11 + s*2.0)) - 27.0;
 }
 float crest(float z, float s){
   float n = tfbm(vec2(z*0.0012 + s*7.3, s*3.1));
@@ -264,15 +264,24 @@ vec3 skyG(vec3 n){
   return vec3(0.07 + 0.75*upl) + 0.30*vec3(0.8, 1.0, 0.9)*max(dot(n, Lc), 0.0)*3.2;
 }
 vec3 rockWeights(vec3 p, vec3 n, float t, vec2 w){
+  float lod = 1.0/(1.0 + t/260.0);                      // fine detail fades with distance
   float ne = tfbm3(w*0.05);
-  float ne2 = mix(0.5, tn(w*0.4), 1.0/(1.0 + t/200.0));
+  float ne2 = mix(0.5, tn(w*0.4), lod);
   float pch = tfbm(w*0.007 + 3.0);
   float gul = tn(vec2(w.x*0.022, w.y*0.0045))*0.6 + 0.4*tn(vec2(w.x*0.07, w.y*0.012));   // vertical gullies
+  // crags: terraced ledges and cracks give the face treads that catch light and risers that stay dark
+  float strata = fract(w.y*0.032 + 1.4*tn(w*0.02) + 0.5*tn(vec2(w.x*0.05, w.y*0.01)));
+  float tread = smoothstep(0.0, 0.18, strata)*(1.0 - smoothstep(0.18, 0.46, strata));
+  float crack = 1.0 - abs(2.0*tn(vec2(w.x*0.13, w.y*0.045)) - 1.0);
+  vec3 nn = n;
+  nn.y += lod*(0.7*tread - 0.18);
+  nn.xz += lod*0.35*(vec2(tn(w*0.31), tn(w*0.31 + 7.0)) - 0.5);
+  nn = normalize(nn);
   // snow settles on ledges and in gullies, and covers the high ground
-  float snow = smoothstep(0.66, 0.80, pch + 0.0013*p.y + 0.18*n.y + 0.5*(gul - 0.5) + 0.2*(ne - 0.5));
-  vec3 rock = vec3(0.022, 0.024, 0.030)*(0.55 + 0.9*ne)*(0.8 + 0.4*ne2);
+  float snow = smoothstep(0.64, 0.80, pch + 0.0013*p.y + 0.18*nn.y + 0.5*(gul - 0.5) + 0.2*(ne - 0.5) + 0.22*tread*lod);
+  vec3 rock = vec3(0.022, 0.024, 0.030)*(0.55 + 0.9*ne)*(0.8 + 0.4*ne2)*(1.0 - 0.45*lod*smoothstep(0.82, 1.0, crack));
   vec3 snowc = vec3(0.50, 0.62, 0.76)*(0.7 + 0.45*ne2);
-  return mix(rock, snowc, snow)*skyG(n)*(1.0 + 0.5*snow)*(0.55 + 0.9*gul);
+  return mix(rock, snowc, snow)*skyG(nn)*(1.0 + 0.5*snow)*(0.55 + 0.9*gul);
 }
 // distant ranges: silhouettes in angle, as ridged noise in the lateral position
 float rangeTop(float x, float k){
