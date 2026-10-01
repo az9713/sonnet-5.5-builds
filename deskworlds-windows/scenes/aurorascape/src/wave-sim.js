@@ -7,7 +7,7 @@
 export const SIM = {
   size: 300,            // m, the simulated square
   minX: -150, minZ: -312,
-  c: 8.0,               // m/s, wave speed
+  c: 6.0,               // m/s, wave speed
   step: 1 / 60,
   damp: 0.62,           // 1/s, energy loss of the open water
   visc: 0.045,          // diffusion of velocity: ripples spread and soften as they travel

@@ -118,7 +118,7 @@ for (const seed of [1, 2, 3]) {
   assert.ok(wake >= 100, `a moving cursor leaves a wake (${wake} of 120 steps)`);
   let drips = 0;
   for (let i = 0; i < 300; i++) { world.setCursor(14, -60, 0); world.step(FIXED_STEP); const d = world.disturbances; for (let k = 0; k < d.count; k++) if (Math.hypot(d.data[k * 4] - 14, d.data[k * 4 + 1] + 60) < 0.01) { drips++; amp = Math.max(amp, d.data[k * 4 + 3]); } }
-  assert.ok(drips >= 3 && drips <= 8, `a resting cursor drips a ring about every second (${drips})`);
+  assert.ok(drips >= 6 && drips <= 12, `a resting cursor taps out ring trains (${drips} pulses in 5 s)`);
   assert.ok(amp > 0.02 && amp < 0.08, 'rings are gentle');
   world.setCursor(null);
   let after = 0; for (let i = 0; i < 120; i++) { world.step(FIXED_STEP); after += near(14, -60); }
