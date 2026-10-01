@@ -16,6 +16,7 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
   const events = new Float32Array(256 * 3);
   const wind = [0.9, 0, -0.35];
   let count = 0, nextSlot = 0, eventCount = 0, time = 0;
+  const emitters = [];   // spouts in progress: { x, y, z, left, power, height }
   const rand = (a, b) => a + random() * (b - a);
 
   function add(k) {
@@ -32,18 +33,11 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
     clearEvents() { eventCount = 0; },
     reset() { count = 0; nextSlot = 0; eventCount = 0; },
 
-    // The blow: a narrow fast core of mist climbing through the first two metres, then billowing.
+    // The blow: a spout lasts about half a second. A narrow fast core of mist climbs three to five
+    // metres, then billows and wafts away on the wind.
     spout(px, py, pz, power = 1, heightScale = 1) {
-      const puffs = Math.round(30 + 22 * power);
-      for (let j = 0; j < puffs; j++) {
-        const i = add(MIST), u = j / puffs;
-        x[i] = px + rand(-0.12, 0.12); y[i] = py + rand(0, 0.25); z[i] = pz + rand(-0.12, 0.12);
-        const up = (6.2 + 3.4 * random()) * heightScale * (0.55 + 0.45 * power);
-        const a = random() * TAU, sp = rand(0.1, 0.9) * (0.3 + u * 1.3);
-        vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = up * (0.75 + 0.5 * u);
-        s0[i] = rand(0.25, 0.5); s1[i] = rand(1.6, 3.4) * (0.8 + 0.4 * power); life[i] = rand(2.4, 5.2); peak[i] = rand(0.22, 0.5);
-      }
-      for (let j = 0; j < 16; j++) {   // droplets thrown out of the spout
+      emitters.push({ x: px, y: py, z: pz, left: Math.round(34 + 12 * power), total: Math.round(34 + 12 * power), power, height: heightScale });
+      for (let j = 0; j < 14; j++) {   // droplets thrown out of the spout
         const i = add(DROP), a = random() * TAU, sp = rand(0.4, 2.2);
         x[i] = px; y[i] = py + 0.1; z[i] = pz; vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = rand(2.5, 6.5);
         s0[i] = s1[i] = rand(0.05, 0.1); life[i] = 3; peak[i] = 1;
@@ -79,6 +73,21 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
 
     step(dt) {
       time += dt;
+      for (let e = emitters.length - 1; e >= 0; e--) {
+        const em = emitters[e];
+        const per = em.total / 30;   // spawn over 30 steps
+        let n = Math.min(em.left, Math.floor(per) + (random() < per % 1 ? 1 : 0));
+        while (n-- > 0) {
+          const i = add(MIST), u = 1 - em.left / em.total;
+          em.left--;
+          x[i] = em.x + rand(-0.1, 0.1); y[i] = em.y + rand(0, 0.2); z[i] = em.z + rand(-0.1, 0.1);
+          const up = (7.2 + 3.6 * random()) * em.height * (0.6 + 0.4 * em.power);
+          const a = random() * TAU, sp = rand(0.05, 0.6) * (0.4 + u);
+          vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = up * (1 - 0.35 * u);
+          s0[i] = rand(0.22, 0.4); s1[i] = rand(1.1, 2.2) * (0.8 + 0.4 * em.power); life[i] = rand(2.6, 5.4); peak[i] = rand(0.2, 0.42);
+        }
+        if (em.left <= 0) emitters.splice(e, 1);
+      }
       const dragM = Math.exp(-1.5 * dt);
       for (let i = 0; i < count; i++) {
         age[i] += dt;
@@ -95,7 +104,7 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
         if (k === MIST) {
           vx[i] = vx[i] * dragM + wind[0] * 0.5 * dt + Math.sin(time * 0.9 + seed[i] * 3) * 0.25 * dt;
           vz[i] = vz[i] * dragM + wind[2] * 0.5 * dt + Math.cos(time * 0.7 + seed[i] * 5) * 0.25 * dt;
-          vy[i] = vy[i] * Math.exp(-2.6 * dt) + 0.08 * dt;
+          vy[i] = vy[i] * Math.exp(-2.1 * dt) + 0.08 * dt;
         } else if (k === DROP) {
           vy[i] -= 9.8 * dt;
         } else if (k === BUBBLE) {
@@ -119,12 +128,12 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
     // Writes the instance buffers; returns how many particles to draw.
     fill() {
       for (let i = 0; i < count; i++) {
-        const t = age[i] / life[i], k = kind[i];
+        const t = life[i] > 0 ? Math.min(age[i] / life[i], 1) : 1, k = kind[i];
         let a;
         if (k === MIST) a = peak[i] * clamp(age[i] / 0.35, 0, 1) * Math.pow(1 - t, 1.6);
         else if (k === BUBBLE) a = peak[i] * clamp(age[i] / 0.4, 0, 1);
         else if (k === FOAM) a = peak[i] * clamp(age[i] / 0.2, 0, 1) * (1 - t * t);
-        else a = 1 - 0.7 * t;
+        else a = life[i] > 0 ? 1 - 0.7 * t : 0;
         const size = k === MIST ? s0[i] + (s1[i] - s0[i]) * Math.pow(t, 0.55) : k === FOAM ? s0[i] + (s1[i] - s0[i]) * t : s0[i];
         posSize[i * 4] = x[i]; posSize[i * 4 + 1] = y[i]; posSize[i * 4 + 2] = z[i]; posSize[i * 4 + 3] = size;
         params[i * 4] = a; params[i * 4 + 1] = k; params[i * 4 + 2] = seed[i]; params[i * 4 + 3] = t;

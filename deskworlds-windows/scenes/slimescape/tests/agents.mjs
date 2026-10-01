@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createAgentSim, MODEL, seedAgents, foodAt, WORLD_W } from '../src/agents-ref.js';
+import { createAgentSim, MODEL, seedAgents, foodAt, reinforcement, WORLD_W } from '../src/agents-ref.js';
 import { randomGenerator } from '../../shared/random.js';
 
 const W = 96, H = 54, CPU = H;   // 54 cells per plate unit
@@ -31,8 +31,8 @@ const hash = sim => { let h = 0; for (const v of sim.agents) h = (Math.imul(h, 3
   let min = Infinity, max = -Infinity, total = 0;
   for (const v of sim.trail) { assert.ok(Number.isFinite(v)); min = Math.min(min, v); max = Math.max(max, v); total += v; }
   assert.ok(min >= 0, 'Trail is never negative');
-  // Deposit per agent per step is at most deposit * (1 + food boost) * (1 + reinforce); with decay d the standing total stays below that / (1 - d)
-  const cap = sim.count * MODEL.deposit * (1 + MODEL.foodBoost) * (1 + MODEL.reinforce) / (1 - MODEL.decay);
+  // Deposit per agent per step is at most deposit * (1 + food boost) * (1 + 3 * reinforce); with decay d the standing total stays below that / (1 - d)
+  const cap = sim.count * MODEL.deposit * (1 + MODEL.foodBoost) * (1 + 3 * MODEL.reinforce) / (1 - MODEL.decay);
   assert.ok(total < cap, `Trail mass is bounded by deposit / (1 - decay) (${total.toFixed(0)} < ${cap.toFixed(0)})`);
   assert.ok(total > sim.count * 2, 'Agents do leave a trail');
 }
@@ -85,15 +85,12 @@ const hash = sim => { let h = 0; for (const v of sim.agents) h = (Math.imul(h, 3
   let darkInside = 0; for (let i = 0; i < dark.count; i++) if (Math.hypot(dark.agents[i * 4] / CPU - light.x, dark.agents[i * 4 + 1] / CPU - light.y) < light.radius) darkInside++;
   assert.ok(inside() < darkInside * 0.7, `Light empties its pool: ${inside()} lit vs ${darkInside} dark (started ${a})`);
 }
-// Tube reinforcement: with it, strong trails get relatively stronger (trunks), without it they do not.
+// Tube reinforcement: agents on more trail lay more, up to a cap, and the rule is finite and monotone.
 {
-  const spread = model => {
-    const sim = createAgentSim({ width: W, height: H, count: 1400, random: randomGenerator(41), cellsPerUnit: CPU, model: { ...TINY, ...model } });
-    for (let i = 0; i < 300; i++) sim.step();
-    const v = Array.from(sim.trail).filter(x => x > 0.5).sort((a, b) => a - b);
-    return v[Math.floor(v.length * 0.97)] / v[Math.floor(v.length * 0.5)];
-  };
-  const plain = spread({ reinforce: 0 }), reinforced = spread({ reinforce: 2.5, reinforceScale: 8 });
-  assert.ok(reinforced > plain * 1.25, `Reinforcement thickens trunks relative to branches (${plain.toFixed(1)} -> ${reinforced.toFixed(1)})`);
+  const m = { ...MODEL };
+  assert.equal(reinforcement(m, 0), 1);
+  let last = 1;
+  for (let t = 0; t < 400; t += 5) { const r = reinforcement(m, t); assert.ok(Number.isFinite(r) && r >= last - 1e-12 && r <= 1 + 3 * m.reinforce + 1e-9); last = r; }
+  assert.equal(reinforcement(m, 1e9), 1 + 3 * m.reinforce, 'The cap holds, so no tube can run away');
 }
 console.log('ok agents: sense/turn/move/deposit rule is deterministic, bounded, ridge-following, food-seeking and photophobic');

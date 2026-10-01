@@ -73,6 +73,7 @@ uniform float uSize;          // kernel sigma of a web particle relative to the 
 uniform float uEps;           // thickness floor of a collapsed sheet, in lattice spacings
 uniform float uStructSigma;   // kernel sigma of a neural / mycelial point, box units
 uniform float uStructGain;
+uniform float uWebGain;       // brightens the young, low-contrast web
 uniform float uGain, uCap, uMinSigma, uSoft;
 uniform float uDustPass;
 uniform float uDustSize, uDustGain;
@@ -106,7 +107,7 @@ void main() {
   float logWeb = -0.5 * log(det3(G + mat3(uSoft * uSoft))) * 0.4342945;
   mat3 Sstruct = mat3(uStructSigma * uStructSigma);
   vec3 A; float lA, gA; mat3 SA;
-  if (uFrom < 0.5) { A = webPos; lA = logWeb; SA = Sweb; gA = 1.0; }
+  if (uFrom < 0.5) { A = webPos; lA = logWeb; SA = Sweb; gA = uWebGain; }
   else if (uFrom < 1.5) { A = aNeural.xyz; lA = aNeural.w * 3.0 - 0.6; SA = Sstruct; gA = uStructGain; }
   else { A = aMyc.xyz; lA = aMyc.w * 3.0 - 0.6; SA = Sstruct; gA = uStructGain; }
   vec3 P = A; float l = lA, s = 0.0, gain = gA;
@@ -114,7 +115,7 @@ void main() {
   float wN = uFrom > 0.5 && uFrom < 1.5 ? 1.0 : 0.0, wM = uFrom > 1.5 ? 1.0 : 0.0;
   if (uM > 0.0) {
     vec3 B; float lB, gB; mat3 SB;
-    if (uTo < 0.5) { B = webPos; lB = logWeb; SB = Sweb; gB = 1.0; }
+    if (uTo < 0.5) { B = webPos; lB = logWeb; SB = Sweb; gB = uWebGain; }
     else if (uTo < 1.5) { B = aNeural.xyz; lB = aNeural.w * 3.0 - 0.6; SB = Sstruct; gB = uStructGain; }
     else { B = aMyc.xyz; lB = aMyc.w * 3.0 - 0.6; SB = Sstruct; gB = uStructGain; }
     // The front sweeps outward from uCenter through the lattice, so neighbouring particles leave together.

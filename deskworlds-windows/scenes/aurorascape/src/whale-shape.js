@@ -15,11 +15,11 @@ export function radial(t) {
   const grow = sstep(0, 0.32, t);
   const rad = 0.52 + 0.48 * Math.pow(grow, 0.75);
   const taper = Math.pow(1 - sstep(0.38, 1.0, t), 0.9);
-  return cap * rad * (0.13 + 0.87 * taper);
+  return cap * rad * (0.16 + 0.84 * taper);
 }
-export const halfWidth = (t) => 1.30 * radial(t) * (1 + 0.10 * (1 - sstep(0.02, 0.22, t)));
-export const topAt = (t) => 0.94 * radial(t) * (0.8 + 0.2 * sstep(0, 0.2, t));
-export const bottomAt = (t) => -1.10 * radial(t);
+export const halfWidth = (t) => 1.62 * radial(t) * (1 + 0.10 * (1 - sstep(0.02, 0.22, t)));
+export const topAt = (t) => 1.12 * radial(t) * (0.8 + 0.2 * sstep(0, 0.2, t));
+export const bottomAt = (t) => -1.30 * radial(t);
 // The dorsal fin hump and the knuckled ridge behind it, a function of the position along the
 // body and the lateral offset z; added to the upper half only.
 export function dorsal(t, z) {

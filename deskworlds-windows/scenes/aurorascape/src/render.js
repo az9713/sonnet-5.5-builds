@@ -23,8 +23,8 @@ export const TIERS = {
 export const tierName = (q) => (Object.hasOwn(TIERS, q) ? q : 'balanced');
 
 const EXPOSURE = 1.0;
-const PITCH = 0.115;         // rad the camera looks above the horizon
-const HFOV = 78 * Math.PI / 180;
+const PITCH = 0.07;         // rad the camera looks above the horizon
+const HFOV = 84 * Math.PI / 180;
 
 function noiseTexture() {
   const n = 256, data = new Uint8Array(n * n * 4);
@@ -161,6 +161,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   }
   // A slow drift of the viewpoint, as if a small boat rode the swell.
   let debugCam = null;
+  const hide = {};
   function poseCamera(time) {
     if (debugCam) {
       camera.position.set(debugCam[0], debugCam[1], debugCam[2]);
@@ -254,10 +255,10 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     renderer.setRenderTarget(hdr); renderer.clear();
     renderer.render(waterPass.scene, screenCamera);
     renderer.clearDepth();
-    renderer.render(mirrorScene, camera);
+    if (!hide.mirror) renderer.render(mirrorScene, camera);
     renderer.clearDepth();
-    renderer.render(whaleScene, camera);
-    renderer.render(partScene, camera);
+    if (!hide.whales) renderer.render(whaleScene, camera);
+    if (!hide.particles) renderer.render(partScene, camera);
     // 4. bloom pyramid and the grade
     let src = hdr.texture, w = size.x, h = size.y;
     for (let k = 1; k < tier.levels; k++) {
@@ -309,6 +310,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   return {
     renderer, camera, render, resize, dispose, simStep, screenToWater, tier, hasFloat,
     setCameraYaw(v) { camYaw = v; },
+    hide,
     setAuroraSteps(n) { aurPass.u.uSteps.value = n; },
     // Development stills only: a free camera, [px, py, pz, tx, ty, tz, fov?].
     setDebugCamera(v) { debugCam = v; },

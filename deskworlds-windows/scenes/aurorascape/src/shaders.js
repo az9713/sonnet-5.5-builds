@@ -83,7 +83,7 @@ void main(){
   float rho = 0.0, hard = 0.0, ray = 0.0;
   for (int k = 0; k < 3; k++){
     float fk = float(k);
-    float zc = -300.0 - 230.0*fk - uExpand*(75.0 + 35.0*fk)
+    float zc = -250.0 - 190.0*fk - uExpand*(75.0 + 35.0*fk)
       + (46.0 - 8.0*fk)*sin(p.x*(0.0062 + 0.0012*fk) + fk*1.9 + t*0.019)
       + (21.0 + 6.0*fk)*sin(p.x*(0.0151 - 0.0013*fk) + fk*0.7 - t*0.027)
       + 8.0*sin(p.x*0.034 + t*0.06 + fk);
@@ -760,10 +760,10 @@ void main(){
     float flank = smoothstep(0.64, 0.8, tfbm3(vec2(vRest.x*0.28 + uSeed*3.0, vRest.y*0.8 + vRest.z*0.5)))*(1.0 - smoothstep(0.1, -0.3, vRestN.y))*smoothstep(0.35, 0.6, t);
     white = clamp(bellyM + 0.55*flank, 0.0, 1.0);
     // ventral pleats: long grooves from the chin toward the navel
-    float groove = 0.5 + 0.5*cos(vRest.z*PI/0.115);
+    float groove = 0.5 + 0.5*cos(vRest.z*PI/0.14);
     float pl = smoothstep(-0.35, -0.8, vRestN.y)*smoothstep(0.02, 0.1, t)*(1.0 - smoothstep(0.38, 0.55, t));
-    bump += pl*(groove - 0.5)*0.9;
-    albedo *= 1.0 - 0.35*pl*(1.0 - groove);
+    bump += pl*(groove - 0.5)*0.6;
+    albedo *= 1.0 - 0.18*pl*(1.0 - groove);
     // tubercles on the head and a knobbly rostrum
     float head = 1.0 - smoothstep(0.04, 0.22, t);
     vec2 hp = vec2(vRest.x*2.6, vRest.z*2.6 + vRest.y*1.4);
@@ -910,11 +910,13 @@ void main(){
   vec3 col = vec3(0.0);
   float k = 0.0;
   if (kind < 0.5){        // mist: a soft, lumpy puff, lit from the aurora side (above and behind)
-    float n = tfbm3(vC*2.2 + vP.z*3.0 + uTime*0.15);
-    float body = pow(1.0 - r, 1.7)*(0.55 + 0.9*n);
-    float lit = 0.45 + 0.55*smoothstep(-0.8, 0.9, vC.y + 0.3);
-    col = (uAmb*2.2 + uAurG*0.05 + uAurM*0.02 + vec3(0.004, 0.0055, 0.007))*lit;
-    k = body*a;
+    vec2 q = vC*1.7 + vP.z*3.0 + vec2(uTime*0.07, -uTime*0.05);
+    float n = tfbm3(q)*0.65 + 0.35*tn(q*3.1 + 5.0);
+    float d = r + (n - 0.5)*0.95;
+    float body = pow(1.0 - smoothstep(0.05, 0.95, d), 1.4);
+    float lit = 0.4 + 0.6*smoothstep(-0.9, 0.9, vC.y + 0.35 + (n - 0.5)*0.6);
+    col = (uAmb*2.4 + uAurG*0.055 + uAurM*0.022 + vec3(0.004, 0.0055, 0.007))*lit;
+    k = body*a*(0.65 + 0.7*n);
   } else if (kind < 1.5){ // bubble: a glinting rim and a bright speck
     float rim = smoothstep(0.5, 0.9, r)*(1.0 - smoothstep(0.9, 1.0, r));
     float spec = exp(-dot(vC - vec2(-0.35, 0.38), vC - vec2(-0.35, 0.38))*14.0);

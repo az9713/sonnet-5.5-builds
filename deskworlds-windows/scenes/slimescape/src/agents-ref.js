@@ -70,11 +70,9 @@ export function foodAt(foods, x, y, scale = 1) {
   return f * scale;
 }
 
-// Agents on a moderate trail lay more (tube reinforcement); the bump peaks at the reference value and fades above
-// it, so a trunk widens instead of piling up without limit.
+// Agents on trail lay more (tube reinforcement), up to a cap, so busy tubes thicken and quiet ones fade.
 export function reinforcement(m, trail) {
-  const x = Math.min(6, trail / m.reinforceScale);
-  return 1 + m.reinforce * x * Math.exp(1 - x);
+  return 1 + m.reinforce * Math.min(3, trail / m.reinforceScale);
 }
 
 export function createAgentSim({ width, height, count, random, model = MODEL, cellsPerUnit = height, foods = [], light = null }) {

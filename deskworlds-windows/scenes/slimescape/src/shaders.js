@@ -74,8 +74,9 @@ void main() {
   vec4 a = texture2D(uAgents, position.xy);
   vec2 uv = a.xy / uWorld;
   vec4 here = texture2D(uTrail, uv);
-  vDep = uDeposit.x * (1.0 + uDeposit.y * min(here.g, 1.0)) * (1.0 + uDeposit.z * (min(6.0, here.r / uReinforce.x) * exp(1.0 - min(6.0, here.r / uReinforce.x))));
+  vDep = uDeposit.x * (1.0 + uDeposit.y * min(here.g, 1.0)) * (1.0 + uDeposit.z * min(3.0, here.r / uReinforce.x));
   gl_Position = vec4(uv * 2.0 - 1.0, 0.0, 1.0);
+  vDep = min(vDep, 40.0);
   gl_PointSize = 2.0;
 }
 `;
@@ -120,6 +121,9 @@ void main() {
     float d2 = dot(d, d);
     food += f.z * (0.35 * exp(-d2 / (2.0 * f.w * f.w)) + 0.4 * exp(-d2 / (2.0 * 0.09 * f.w * f.w)) + 0.25 / (1.0 + d2 / (0.64 * f.w * f.w)));
   }
+  // a numerical accident must never spread: one bad texel would blur across the whole plate
+  if (isnan(r) || isinf(r)) r = 0.0;
+  if (isnan(b) || isinf(b)) b = 0.0;
   gl_FragColor = vec4(r, food, b, 1.0);
 }
 `;

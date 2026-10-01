@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { POINT_VERT, POINT_FRAG, GALAXY_VERT, GALAXY_FRAG, POST_VERT, DOWN_FRAG, UP_FRAG, OUTPUT_FRAG } from './shaders.js';
 import { dustIndices, buildGalaxies } from './particles.js';
+import { GROWTH } from './schedule.js';
 
 const V3 = THREE.Vector3;
 export const FOV = 46;
@@ -50,7 +51,7 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
     uRes: { value: new THREE.Vector2(1, 1) }, uCam: { value: new V3() }, uD: { value: 1 },
     uFrom: { value: 0 }, uTo: { value: 0 }, uM: { value: 0 }, uSpread: { value: LOOK.spread }, uSwirlAmp: { value: LOOK.swirl }, uStreak: { value: LOOK.streak }, uTime: { value: 0 },
     uCenter: { value: new V3() }, uRay: { value: new V3(0, 0, -1) }, uPull: { value: new V3(0, 0.16, 0.2) }, uFocus: { value: new THREE.Vector2(0.2, 20) },
-    uH: { value: 1 / data.lattice }, uSize: { value: LOOK.size }, uEps: { value: LOOK.eps }, uStructSigma: { value: LOOK.structSigma }, uStructGain: { value: LOOK.structGain },
+    uH: { value: 1 / data.lattice }, uSize: { value: LOOK.size }, uEps: { value: LOOK.eps }, uStructSigma: { value: LOOK.structSigma }, uStructGain: { value: LOOK.structGain }, uWebGain: { value: 1 },
     uGain: { value: LOOK.gain * 110592 / data.count }, uCap: { value: 40 }, uMinSigma: { value: LOOK.minSigma }, uSoft: { value: LOOK.soft },
     uLens: { value: new THREE.Vector4(0, 0, 0, 1) }, uLensDepth: { value: 0.16 },
     uDustPass: { value: 0 }, uDustSize: { value: LOOK.dustSize }, uDustGain: { value: LOOK.dustGain },
@@ -132,6 +133,9 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
     shared.uCam.value.fromArray(pose.pos);
     shared.uD.value = cycle.growth;
+    // The young web has little contrast, so its light is lifted (a stand-in for the eye adapting) as it sharpens.
+    const age = Math.min(1, Math.max(0, (cycle.growth - GROWTH.early) / (GROWTH.late - GROWTH.early)));
+    shared.uWebGain.value = 1 + 1.6 * Math.pow(1 - age, 1.5);
     shared.uFrom.value = cycle.from; shared.uTo.value = cycle.to; shared.uM.value = cycle.m; shared.uTime.value = time;
     center.fromArray(f.frontCenter);
     shared.uCenter.value.copy(center);
@@ -146,7 +150,7 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
     shared.uLens.value.set((0.5 + (f.cursorX - 0.5) / OVERSCAN) * size.x, (0.5 + (0.5 - f.cursorY) / OVERSCAN) * size.y, E, Math.max(0.45 * E, 1));
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
     shared.uRay.value.set((f.cursorX * 2 - 1) * tanHalf * camera.aspect, (1 - f.cursorY * 2) * tanHalf, -1).normalize();
-    shared.uPull.value.set(pull * 0.55, 0.16, pose.focus);
+    shared.uPull.value.set(pull * 0.95, 0.2, pose.focus);
     output.u.uLensOut.value.set(f.cursorX, 1 - f.cursorY, E * outSize.y / screenH, s);
     dustMaterial.uniforms.uDustPass.value = 1;
     const dustCount = Math.floor(dustIndex.length * tier.dust);

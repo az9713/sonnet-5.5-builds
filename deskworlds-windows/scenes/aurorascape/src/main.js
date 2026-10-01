@@ -30,6 +30,7 @@ async function start() {
   const rend = createRenderer(canvas, world, { quality: tierName(activeQuality(quality, false)) });
   const { renderer, resize: sizeTargets, dispose } = rend;
   if (capture && params.has('steps')) rend.setAuroraSteps(Math.min(64, Number(params.get('steps')) || 16));
+  if (capture) for (const k of (params.get('hide') || '').split(',')) if (k) rend.hide[k] = true;
   const camParam = (params.get('cam') || '').split(',').map(Number);
   if (capture && camParam.length >= 6 && camParam.every(Number.isFinite)) rend.setDebugCamera(camParam);
   let loop = null, accumulator = 0, frames = 0, zeroSize = false;
