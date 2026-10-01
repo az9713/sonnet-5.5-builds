@@ -74,7 +74,7 @@ void main() {
   vec4 a = texture2D(uAgents, position.xy);
   vec2 uv = a.xy / uWorld;
   vec4 here = texture2D(uTrail, uv);
-  vDep = uDeposit.x * (1.0 + uDeposit.y * min(here.g, 1.0)) * (1.0 + uDeposit.z * min(3.0, here.r / uReinforce.x));
+  vDep = uDeposit.x * (1.0 + uDeposit.y * min(here.g, 1.0)) * (1.0 + uDeposit.z * (min(6.0, here.r / uReinforce.x) * exp(1.0 - min(6.0, here.r / uReinforce.x))));
   gl_Position = vec4(uv * 2.0 - 1.0, 0.0, 1.0);
   gl_PointSize = 2.0;
 }
@@ -110,7 +110,7 @@ void main() {
   vec2 Q = vUv * uWorld;
   vec2 dl = Q - uCursor.xy;
   float lit = uCursor.w * exp(-dot(dl, dl) / (uCursor.z * uCursor.z));
-  float r = mix(c.r, s.r, uDiffuse.x) * (uDiffuse.y - uDiffuse.z * min(lit, 1.0));
+  float r = min(mix(c.r, s.r, uDiffuse.x) * (uDiffuse.y - uDiffuse.z * min(lit, 1.0)), 6000.0);
   float b = mix(s.b, s.r, uDiffuse.w);
   float food = 0.0;
   for (int i = 0; i < 12; i++) {

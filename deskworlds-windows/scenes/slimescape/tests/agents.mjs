@@ -31,8 +31,8 @@ const hash = sim => { let h = 0; for (const v of sim.agents) h = (Math.imul(h, 3
   let min = Infinity, max = -Infinity, total = 0;
   for (const v of sim.trail) { assert.ok(Number.isFinite(v)); min = Math.min(min, v); max = Math.max(max, v); total += v; }
   assert.ok(min >= 0, 'Trail is never negative');
-  // Deposit per agent per step is at most deposit * (1 + food boost) * (1 + 3 * reinforce); with decay d the standing total stays below that / (1 - d)
-  const cap = sim.count * MODEL.deposit * (1 + MODEL.foodBoost) * (1 + 3 * MODEL.reinforce) / (1 - MODEL.decay);
+  // Deposit per agent per step is at most deposit * (1 + food boost) * (1 + reinforce); with decay d the standing total stays below that / (1 - d)
+  const cap = sim.count * MODEL.deposit * (1 + MODEL.foodBoost) * (1 + MODEL.reinforce) / (1 - MODEL.decay);
   assert.ok(total < cap, `Trail mass is bounded by deposit / (1 - decay) (${total.toFixed(0)} < ${cap.toFixed(0)})`);
   assert.ok(total > sim.count * 2, 'Agents do leave a trail');
 }

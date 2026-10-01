@@ -24,7 +24,7 @@ export const MODEL = Object.freeze({
   lostThreshold: 0.8,   // agents on less trail than this count as lost
   lostMax: 60,         // after this many lost steps an agent is re-seeded on the colony
   foodBoost: 2.5,       // agents on food deposit this much more
-  reinforce: 2,         // agents on strong trail deposit more (tube reinforcement): trunks thicken, side branches fade
+  reinforce: 2.5,       // agents on moderate trail deposit more (tube reinforcement): trunks thicken, side branches fade
   reinforceScale: 30,   // trail value at which the reinforcement reaches 1
 });
 
@@ -68,6 +68,13 @@ export function foodAt(foods, x, y, scale = 1) {
     f += o.amp * (0.35 * Math.exp(-d2 / (2 * s * s)) + 0.4 * Math.exp(-d2 / (2 * (s * 0.3) ** 2)) + 0.25 / (1 + d2 / (0.64 * s * s)));
   }
   return f * scale;
+}
+
+// Agents on a moderate trail lay more (tube reinforcement); the bump peaks at the reference value and fades above
+// it, so a trunk widens instead of piling up without limit.
+export function reinforcement(m, trail) {
+  const x = Math.min(6, trail / m.reinforceScale);
+  return 1 + m.reinforce * x * Math.exp(1 - x);
 }
 
 export function createAgentSim({ width, height, count, random, model = MODEL, cellsPerUnit = height, foods = [], light = null }) {
@@ -138,7 +145,7 @@ export function createAgentSim({ width, height, count, random, model = MODEL, ce
       const x = agents[i * 4] - 0.5, y = agents[i * 4 + 1] - 0.5;
       const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
       const xa = wrapX(x0), xb = wrapX(x0 + 1), ya = wrapY(y0), yb = wrapY(y0 + 1);
-      const d = m.deposit * (1 + m.foodBoost * Math.min(1, sample(food, agents[i * 4], agents[i * 4 + 1]))) * (1 + m.reinforce * Math.min(3, sample(prev, agents[i * 4], agents[i * 4 + 1]) / m.reinforceScale));
+      const d = m.deposit * (1 + m.foodBoost * Math.min(1, sample(food, agents[i * 4], agents[i * 4 + 1]))) * reinforcement(m, sample(prev, agents[i * 4], agents[i * 4 + 1]));
       dep[ya * width + xa] += d * (1 - fx) * (1 - fy); dep[ya * width + xb] += d * fx * (1 - fy);
       dep[yb * width + xa] += d * (1 - fx) * fy; dep[yb * width + xb] += d * fx * fy;
     }

@@ -328,6 +328,7 @@ uniform float uExposure;
 uniform float uBloomGain;
 uniform float uFrame;
 uniform vec2 uOutRes;
+uniform float uOverscan;
 uniform vec4 uLensOut;   // centre in 0..1 uv (xy), Einstein radius in output px (z), strength 0..1 (w)
 varying vec2 vUv;
 vec3 filmic(vec3 x) {
@@ -340,8 +341,9 @@ float hash(vec2 p) {
   return fract((q.x + q.y) * q.z);
 }
 void main() {
-  vec3 beauty = texture2D(uBeauty, vUv).rgb;
-  vec3 bloom = texture2D(uBloom, vUv).rgb * uHalo * uBloomGain;
+  vec2 huv = (vUv - 0.5) / uOverscan + 0.5;   // the particle target spans a little more than the screen
+  vec3 beauty = texture2D(uBeauty, huv).rgb;
+  vec3 bloom = texture2D(uBloom, huv).rgb * uHalo * uBloomGain;
   vec3 hdr = beauty + bloom;
   // The Einstein ring: the faint image of everything behind the mass smeared into a thin glowing circle.
   if (uLensOut.w > 0.002) {

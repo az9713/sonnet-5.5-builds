@@ -13,13 +13,16 @@ export const RENDER_TIERS = Object.freeze({
   native: { scale: 1, cap: 280, dust: 1, levels: 6, size: 1, galaxies: 5200 },
 });
 const MAX_LEVELS = 6;
+// The particle target covers this much more of the view than the screen shows on each axis: a point sprite is clipped by its
+// centre on many GPUs, so large soft sprites would otherwise pop out as they cross the screen edge.
+const OVERSCAN = 1.1;
 const BLOOM = { weights: [0.55, 0.45, 0.28, 0.14, 0.07], gain: 0.5, halo: new V3(0.85, 0.95, 1.2) };
 const LOOK_DEFAULT = {
   size: 0.55,          // kernel sigma of a web particle, in local spacings
   eps: 0.14, soft: 0.08,
   structSigma: 0.0021, structGain: 0.1,   // kernel sigma of a neural / mycelial point, box units
   dustSize: 0.03,
-  gain: 10, dustGain: 0.4, galaxyGain: 0.8,
+  gain: 6.5, dustGain: 0.4, galaxyGain: 0.8,
   minSigma: 0.65, aperture: 0.016,   // circle of confusion at unit relative defocus, as a share of the frame height
   lensE: 0.11,         // Einstein radius as a share of the frame height at full strength
   exposure: 1.0,
@@ -115,7 +118,7 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
   const up = postPass(UP_FRAG, { uSrc: { value: null }, uBase: { value: null }, uTexel: { value: new THREE.Vector2() }, uWeight: { value: 1 } });
   const output = postPass(OUTPUT_FRAG, {
     uBeauty: { value: hdr.texture }, uBloom: { value: ups[1].texture }, uHalo: { value: BLOOM.halo }, uExposure: { value: LOOK.exposure }, uBloomGain: { value: BLOOM.gain },
-    uFrame: { value: 0 }, uOutRes: { value: new THREE.Vector2(1, 1) }, uLensOut: { value: new THREE.Vector4(0.5, 0.5, 0, 0) },
+    uFrame: { value: 0 }, uOverscan: { value: OVERSCAN }, uOutRes: { value: new THREE.Vector2(1, 1) }, uLensOut: { value: new THREE.Vector4(0.5, 0.5, 0, 0) },
   });
   const size = new THREE.Vector2(1, 1), outSize = new THREE.Vector2(1, 1);
   const right = new V3(), upv = new V3(), back = new V3(), center = new V3();
@@ -132,18 +135,19 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
     shared.uFrom.value = cycle.from; shared.uTo.value = cycle.to; shared.uM.value = cycle.m; shared.uTime.value = time;
     center.fromArray(f.frontCenter);
     shared.uCenter.value.copy(center);
-    shared.uFocus.value.set(pose.focus, LOOK.aperture * size.y);
+    const screenH = size.y / OVERSCAN;   // the screen's height in particle-target pixels
+    shared.uFocus.value.set(pose.focus, LOOK.aperture * screenH);
     shared.uLensDepth.value = pose.focus * 0.85;
-    shared.uCap.value = Math.max(12, Math.min(maxPoint, tier.cap * size.y / 900));
+    shared.uCap.value = Math.max(12, Math.min(maxPoint, tier.cap * screenH / 900));
     shared.uStructSigma.value = LOOK.structSigma * tier.size;
     // Cursor: lens centre in target pixels, ray in view space.
     const s = lens * lens * (3 - 2 * lens);
-    const E = LOOK.lensE * size.y * s;
-    shared.uLens.value.set(f.cursorX * size.x, (1 - f.cursorY) * size.y, E, Math.max(0.45 * E, 1));
+    const E = LOOK.lensE * screenH * s;
+    shared.uLens.value.set((0.5 + (f.cursorX - 0.5) / OVERSCAN) * size.x, (0.5 + (0.5 - f.cursorY) / OVERSCAN) * size.y, E, Math.max(0.45 * E, 1));
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
     shared.uRay.value.set((f.cursorX * 2 - 1) * tanHalf * camera.aspect, (1 - f.cursorY * 2) * tanHalf, -1).normalize();
     shared.uPull.value.set(pull * 0.55, 0.16, pose.focus);
-    output.u.uLensOut.value.set(f.cursorX, 1 - f.cursorY, E * outSize.y / size.y, s);
+    output.u.uLensOut.value.set(f.cursorX, 1 - f.cursorY, E * outSize.y / screenH, s);
     dustMaterial.uniforms.uDustPass.value = 1;
     const dustCount = Math.floor(dustIndex.length * tier.dust);
     dust.visible = dustCount > 0;
@@ -190,7 +194,7 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
     renderer.setSize(w, h, false);
     outSize.set(w, h);
     output.u.uOutRes.value.set(w, h);
-    const pw = Math.max(2, Math.round(w * tier.scale)), ph = Math.max(2, Math.round(h * tier.scale));
+    const pw = Math.max(2, Math.round(w * tier.scale * OVERSCAN)), ph = Math.max(2, Math.round(h * tier.scale * OVERSCAN));
     size.set(pw, ph);
     hdr.setSize(pw, ph);
     for (let k = 1; k < MAX_LEVELS; k++) {
@@ -199,6 +203,7 @@ export function createRenderer(canvas, data, tierName = 'balanced', overrides = 
       ups[k].setSize(lw, lh);
     }
     camera.aspect = cssWidth / cssHeight;
+    camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * OVERSCAN));
     camera.updateProjectionMatrix();
   }
 
