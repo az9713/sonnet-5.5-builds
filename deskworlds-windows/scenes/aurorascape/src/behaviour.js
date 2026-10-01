@@ -90,6 +90,8 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     ws.push(makeWhale(i, { ...s, x: s.x + rand(-6, 6), z: s.z + rand(-8, 8), yaw: s.yaw + rand(-0.2, 0.2) }));
   }
   ws[1].submergedFor = rand(5, 9);
+  // settle each rig into its starting pose so the first steps carry no jump
+  for (const w of ws) for (let k = 0; k < 4; k++) w.rig.step(FIXED_STEP, { x: w.x, y: w.y, z: w.z, yaw: w.yaw, pitch: 0, roll: 0, speed: w.speed, beat: 0.3 });
 
   function pickWaypoint(w) {
     let best = null, bestScore = -1e9;
