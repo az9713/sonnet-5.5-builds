@@ -606,6 +606,8 @@ void main(){
   vec2 gj = vec2(tn(gl_FragCoord.xy*vec2(0.09, 0.03) + vec2(uTime*0.5, 0.0)), tn(gl_FragCoord.xy*vec2(0.07, 0.05) + vec2(3.0, uTime*0.7))) - 0.5;
   vec3 rg = normalize(r + vec3(gj.x*0.010, gj.y*0.020, gj.x*0.004)*(0.5 + 0.5*length(slope)*8.0));
   refl += stars(rg, 1.3)*0.55;
+  // glints of the aurora itself on the fine ripples
+  refl *= 0.86 + 0.28*tn(gl_FragCoord.xy*vec2(0.11, 0.035) + vec2(uTime*0.35, uTime*0.2));
 
   vec3 body = vec3(0.00100, 0.00280, 0.00420) + uAmb*vec3(0.16, 0.42, 0.36)*0.20;
   // agitation and foam, lit by the aurora
