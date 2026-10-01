@@ -294,10 +294,10 @@ void main() {
     vec3 fn = normalize(vec3(-dir * 0.5 + (vec2(vn(q * 260.0), vn(q * 260.0 + 9.0)) - 0.5) * 0.35, 1.0));
     float grain = 0.62 * vn(q * 120.0 + fb.z * 30.0) + 0.38 * vn(q * 310.0);
     float edge = smoothstep(0.45, 1.0, rr);
-    vec3 cream = vec3(0.64, 0.52, 0.31) * (0.70 + 0.55 * grain);
+    vec3 cream = vec3(0.48, 0.38, 0.22) * (0.70 + 0.55 * grain);
     float fd = max(dot(fn, Lk), 0.0);
-    vec3 fcol = cream * (0.15 + 0.95 * lightMul * fd / Lk.z) + vec3(0.30, 0.20, 0.06) * (0.2 + 0.8 * edge) * (0.4 + lightMul);
-    fcol += vec3(1.0, 0.9, 0.7) * pow(max(dot(fn, Hh), 0.0), 40.0) * 0.5 * lightMul * (0.3 + 0.7 * w);
+    vec3 fcol = cream * (0.15 + 0.95 * lightMul * fd / Lk.z) + vec3(0.22, 0.14, 0.04) * (0.2 + 0.8 * edge) * (0.4 + lightMul);
+    fcol += vec3(1.0, 0.9, 0.7) * pow(max(dot(fn, Hh), 0.0), 40.0) * 0.3 * lightMul * (0.3 + 0.7 * w);
     float alpha = inside * smoothstep(0.0, 0.3, w) * (0.5 + 0.45 * w);
     // a dark soft contact shadow and a bright wet meniscus at the rim
     float shd = 1.0 - smoothstep(0.9, 1.5, length(rot(d + vec2(0.006, -0.008), fb.x) * vec2(1.0, 1.0 / fb.y)) / size);

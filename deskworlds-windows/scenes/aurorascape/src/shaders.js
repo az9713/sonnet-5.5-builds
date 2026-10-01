@@ -922,16 +922,16 @@ void main(){
   vec3 Rv = reflect(-V, N);
   float Fs = 0.03 + 0.97*pow(1.0 - NV, 5.0);
   float gloss = 0.25 + 0.75*wet + film;
-  col += envSky(Rv)*Fs*gloss*1.5;
+  col += envSky(Rv)*Fs*gloss*0.95;
   vec3 H1 = normalize(V + Lg), H2 = normalize(V + Lm);
   float sh = mix(60.0, 380.0, clamp(wet, 0.0, 1.0));
   col += uAurG*pow(max(dot(N, H1), 0.0), sh)*(0.05 + 0.5*gloss)*0.9;
   col += uAurM*pow(max(dot(N, H2), 0.0), sh*0.8)*(0.04 + 0.4*gloss)*0.55;
   // rim: green on one side, magenta on the other
   float rim = pow(1.0 - NV, 2.6)*(0.25 + 0.75*up);
-  col += rim*mix(uAurG*1.1, uAurM*1.7, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*1.1;
+  col += rim*mix(uAurG*1.1, uAurM*1.7, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*0.75;
   // the thin bright film draining off the skin
-  col += film*(uAurG*0.30 + uAmb*2.0)*(0.3 + Fs);
+  col += film*(uAurG*0.16 + uAmb*1.1)*(0.3 + Fs);
 
   // ---- the waterline ----
   float dB = clamp(d, 0.0, 40.0);

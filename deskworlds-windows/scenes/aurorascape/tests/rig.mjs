@@ -100,6 +100,25 @@ const pose = (t, o = {}) => ({ x: 0, y: -1, z: -80 - t * 0, yaw: Math.PI / 2, pi
   assert.ok(flips >= 1, 'underdamped spring overshoots');
 }
 
+// The bend and the trailing are big enough to see: a steady turn swings the tail more than a metre sideways
+// of the head's line, and a dive pitch-over drags the fluke's tip behind its root by tens of centimetres.
+{
+  const rig = createRig({ scale: 1.2 });
+  for (let s = 0; s < 60 * 8; s++) rig.step(FIXED_STEP, pose(0, { beat: 0.3, speed: 1.6, yawRate: 0.14 }));
+  const tail = [rig.P[(NJ - 1) * 3] - rig.P[IP * 3], rig.P[(NJ - 1) * 3 + 1] - rig.P[IP * 3 + 1], rig.P[(NJ - 1) * 3 + 2] - rig.P[IP * 3 + 2]];
+  const side = tail[0] * rig.S[0] + tail[1] * rig.S[1] + tail[2] * rig.S[2];
+  assert.ok(Math.abs(side) > 1.0, `the tail bends ${Math.abs(side).toFixed(2)} m off the head line in a turn`);
+  const r2 = createRig({ scale: 1.2 });
+  for (let s = 0; s < 240; s++) r2.step(FIXED_STEP, pose(0, { beat: 0.3, speed: 1.9 }));
+  let tipMax = 0, rootMax = 0;
+  for (let s = 0; s < 60 * 3; s++) {
+    r2.step(FIXED_STEP, pose(0, { beat: 0.35, speed: 1.9, pitchRate: s < 90 ? -0.5 : 0, arch: 0.9 }));
+    tipMax = Math.max(tipMax, Math.hypot(r2.lag[0 * 3 + 9], r2.lag[0 * 3 + 10], r2.lag[0 * 3 + 11]));
+    rootMax = Math.max(rootMax, Math.hypot(r2.lag[0], r2.lag[1], r2.lag[2]));
+  }
+  assert.ok(tipMax > 0.3, `the fluke trails ${tipMax.toFixed(2)} m on a dive`);
+}
+
 // Blowhole is on the top of the head, ahead of the pivot.
 {
   const rig = createRig({ scale: 1 });

@@ -155,4 +155,28 @@ for (const seed of [1, 2, 3]) {
   assert.ok(world.log.some((e) => e.type === 'exit') && world.log.some((e) => e.type === 'splashdown'), 'splash on the way out and back');
   assert.ok(NET.radius > 3);
 }
+// Framing: the near whale (id 0) surfaces and blows within 15 s whatever the seed, stays close and in view,
+// and the first bubble net is under way (spiral) by 40 s.
+{
+  let nearest = 0;
+  for (let seed = 1; seed <= 24; seed++) {
+    const world = make(seed * 7);
+    let blow = null, spiral = null, zMin = 0, zMax = -1e9, wide = 0;
+    run(world, 45, (w) => {
+      const h = w.whales[0];
+      if (blow === null && w.log.some((e) => e.type === 'blow' && e.i === 0)) blow = w.time;
+      if (spiral === null && w.whales.some((q) => q.mode === 'spiral')) spiral = w.time;
+      zMax = Math.max(zMax, h.z); zMin = Math.min(zMin, h.z);
+      assert.ok(Math.abs(h.x) < 0.62 * -h.z + 12, 'the near whale stays in the visible wedge');
+      // apparent width as a fraction of a 78 degree frame: body length over 2 d tan(39)
+      if (h.y > -1.8) wide = Math.max(wide, 16.4 / (2 * -h.z * Math.tan(39 * Math.PI / 180)));
+    });
+    assert.ok(blow !== null && blow < 15, `seed ${seed}: the near whale blows by ${blow} s`);
+    assert.ok(spiral !== null && spiral < 40, `seed ${seed}: the net spiral starts by ${spiral} s`);
+    assert.ok(zMax <= BOUNDS.maxZ + 0.01 && zMin > -75, `near whale z ${zMin.toFixed(0)}..${zMax.toFixed(0)}`);
+    nearest = Math.max(nearest, wide);
+    assert.ok(wide > 0.24, `seed ${seed}: broadside it would span ${(wide * 100).toFixed(0)} percent of the frame`);
+  }
+  assert.ok(nearest > 0.3);
+}
 console.log('ok behaviour');

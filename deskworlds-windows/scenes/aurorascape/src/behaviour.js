@@ -85,7 +85,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   const ws = [];
   const specs = [
     // the near whale: close to the camera and broadside to it, so its arched back and bending body fill a third of the frame
-    { x: -4, y: -1.15, z: -40, yaw: 0.1, scale: 1.26, mode: 'travel', travelFor: 1.2, breaths: 4, hero: true, zNear: -36, zFar: -54, view: 0.42 },
+    { x: -4, y: -1.15, z: -40, yaw: 0.1, scale: 1.3, mode: 'travel', travelFor: 1.2, breaths: 4, hero: true, zNear: -33, zFar: -46, view: 0.4 },
     { x: 34, y: -6.5, z: -100, yaw: Math.PI / 2 - 0.3, scale: 1.08, mode: 'submerged', breaths: 4, zNear: -64, zFar: -120, view: 0.62 },
     { x: 52, y: -1.15, z: -74, yaw: Math.PI / 2 + 0.7, scale: 1.18, mode: 'travel', travelFor: 8, breaths: 2, zNear: -62, zFar: -112, view: 0.62 },
   ];
@@ -446,7 +446,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       let foam = Math.abs(vy) > 1.8 ? clamp(Math.abs(vy) * 0.03, 0, 0.35) * g : 0;
       if (i >= 21 && Math.abs(vy) > 4.4 && depth < reach) { slap = Math.max(slap, Math.abs(vy)); foam = 0.6; amt = clamp(vy * DT * 0.2, -0.004, 0.004); }
       // a collar of foam where the body cuts the surface
-      if (depth < r && depth > -r * 0.6 && w.speed > 0.3) foam = Math.max(foam, 0.12);
+      if (depth < r && depth > -r * 0.6 && w.speed > 0.3) foam = Math.max(foam, 0.05);
       if (Math.abs(amt) > 2e-5 || foam > 0) addDisturbance(x, z, -(r * 0.9 + 1.0), amt, foam);
     }
     // the bow wave and the wake of a swimmer at the surface
