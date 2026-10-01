@@ -179,7 +179,7 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
     uTrail: { value: null }, uSoft: { value: null }, uView: { value: new V4(WORLD_W / 2, 0.5, WORLD_W / 2, 0.5) }, uWorld: { value: new THREE.Vector2(WORLD_W, 1) },
     uMapSize: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 }, uCursor: { value: cursorView }, uLamp: { value: new V4(0.8, 0.55, 1, 0) },
     uFlakeA: { value: foodA }, uFlakeB: { value: foodB }, uFlakeCount: { value: 0 },
-    uTune: { value: new V4(tune.ks, tune.bump, tune.grain, tune.wave) }, uTune2: { value: new V4(tune.flow, tune.glow, tune.shadow, 1) },
+    uTune: { value: new V4(tune.ks, tune.bump, tune.grain, tune.wave) }, uTune2: { value: new V4(tune.flow, tune.glow, tune.shadow, 1) }, uSoftTexel: { value: new THREE.Vector2(1, 1) },
   };
   const plate = pass(material({ vertexShader: POST_VERT, fragmentShader: SCENE_FRAG, uniforms: plateU }));
   const overlay = new THREE.Scene(), topOverlay = new THREE.Scene();
@@ -295,6 +295,7 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
     s.softMat.uniforms.uTrail.value = cur.texture;
     run(s.softScene, s.soft);
     plateU.uSoft.value = s.soft.texture;
+    plateU.uSoftTexel.value.set(1 / s.soft.width, 1 / s.soft.height);
     // CPU-driven things
     w.slugs.pack(slugData); slugTex.needsUpdate = true;
     for (let k = 0; k < slugCount; k++) {

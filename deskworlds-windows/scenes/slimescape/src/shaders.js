@@ -138,12 +138,12 @@ void main() {
 export const SOFT_FRAG = /* glsl */`
 precision highp float;
 uniform sampler2D uTrail;
-uniform vec2 uTexel;
+uniform vec2 uTexel;          // one texel of the trail map
 varying vec2 vUv;
 void main() {
   vec4 s = vec4(0.0);
-  for (int j = 0; j < 4; j++) for (int i = 0; i < 4; i++) s += texture2D(uTrail, vUv + (vec2(float(i), float(j)) - 1.5) * 2.0 * uTexel);
-  gl_FragColor = s * (1.0 / 16.0);
+  for (int j = 0; j < 8; j++) for (int i = 0; i < 8; i++) s += texture2D(uTrail, vUv + (vec2(float(i), float(j)) - 3.5) * uTexel);
+  gl_FragColor = s * (1.0 / 64.0);
 }
 `;
 export const PROBE_FRAG = /* glsl */`
@@ -180,6 +180,7 @@ export const SCENE_FRAG = COMMON + /* glsl */`
 precision highp float;
 uniform sampler2D uTrail;
 uniform sampler2D uSoft;
+uniform vec2 uSoftTexel;      // one texel of the coarse map in uv
 uniform vec4 uView;           // centre xy, half extents xy, in plate units
 uniform vec2 uWorld;
 uniform vec2 uMapSize;
@@ -257,7 +258,9 @@ void main() {
 
   // ----- slime shadow on the agar and a faint yellow bleed of light around the network, from rings of taps at a few radii
   float shadow = 0.0, halo = 0.0;
-  {
+  // the coarse map says whether any slime is near enough to cast a shadow or glow here: most of the plate is bare
+  float nearSlime = max(max(texture2D(uSoft, tuv).r, texture2D(uSoft, tuv + vec2(uSoftTexel.x, 0.0)).r), max(max(texture2D(uSoft, tuv - vec2(uSoftTexel.x, 0.0)).r, texture2D(uSoft, tuv + vec2(0.0, uSoftTexel.y)).r), texture2D(uSoft, tuv - vec2(0.0, uSoftTexel.y)).r));
+  if (nearSlime > 0.25) {
     int ring = uTune2.w > 0.5 ? 8 : 5;
     float fr = 1.0 / float(ring);
     for (int k = 0; k < 8; k++) {
@@ -602,7 +605,7 @@ void main() {
     for (int i = 0; i < 28; i++) {
       if (i >= taps) break;
       float fi = (float(i) + 0.5) / uDof.w;
-      float ang = fi * 17.3 + rot0;            // golden-ish spiral
+      float ang = float(i) * 2.399963 + rot0;   // golden-angle spiral
       float rad = sqrt(fi) * coc;
       vec2 o = vec2(cos(ang), sin(ang)) * rad * uTexel;
       vec3 s = texture2D(uSrc, vUv + o).rgb;
