@@ -15,7 +15,7 @@ const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 // What each quality buys. The aurora march steps, the plan-map and march resolutions, the water
 // simulation size, the star density and the reflection taps all scale; eco is built to be cheap.
 export const TIERS = {
-  eco: { steps: 16, auroraScale: 0.5, map: [320, 184], simN: 192, starCell: 0.030, bisect: 8, ss: 2, taps: 1, msaa: 0, levels: 5, landMax: 1920 },
+  eco: { steps: 20, auroraScale: 0.5, map: [320, 184], simN: 192, starCell: 0.030, bisect: 8, ss: 2, taps: 1, msaa: 0, levels: 5, landMax: 1920 },
   balanced: { steps: 24, auroraScale: 0.6, map: [512, 288], simN: 256, starCell: 0.022, bisect: 10, ss: 2, taps: 2, msaa: 4, levels: 6, landMax: 2560 },
   detail: { steps: 32, auroraScale: 0.75, map: [640, 360], simN: 384, starCell: 0.018, bisect: 12, ss: 3, taps: 3, msaa: 4, levels: 6, landMax: 3072 },
   native: { steps: 40, auroraScale: 0.8, map: [768, 432], simN: 512, starCell: 0.015, bisect: 12, ss: 3, taps: 4, msaa: 2, levels: 6, landMax: 3072 },

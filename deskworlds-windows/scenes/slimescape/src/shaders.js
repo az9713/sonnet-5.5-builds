@@ -255,11 +255,21 @@ void main() {
   vec4 bb = b1 + b2 * 0.9 + b3 * 0.7;
   plate = plate * (1.0 - 0.55 * clamp(bb.y, 0.0, 1.0)) + vec3(0.95, 0.9, 0.7) * (bb.x * 0.03 + bb.z * 0.30) * (0.4 + lightMul);
 
-  // ----- the soft map: slime shadow on the agar and a faint yellow bleed of light around the network
-  vec4 sA = texture2D(uSoft, tuv + vec2(0.0075, -0.009) / uWorld);
-  vec4 sC = texture2D(uSoft, tuv);
-  float shadow = 1.0 - exp(-sA.r / (uTune.x * 0.9));
-  float halo = 1.0 - exp(-sC.r / (uTune.x * 1.4));
+  // ----- slime shadow on the agar and a faint yellow bleed of light around the network, from rings of taps at a few radii
+  float shadow = 0.0, halo = 0.0;
+  {
+    int ring = uTune2.w > 0.5 ? 8 : 5;
+    float fr = 1.0 / float(ring);
+    for (int k = 0; k < 8; k++) {
+      if (k >= ring) break;
+      float ang = (float(k) + 0.5) * 6.2831853 * fr;
+      vec2 dir = vec2(cos(ang), sin(ang)) / uWorld;
+      shadow += dens(tuv + vec2(0.0075, -0.009) / uWorld + dir * 0.010);
+      halo += 0.55 * dens(tuv + dir * 0.016) + 0.45 * dens(tuv + dir * 0.038);
+    }
+    shadow *= fr; halo *= fr;
+    shadow = smoothstep(0.0, 0.7, shadow);
+  }
   plate *= 1.0 - uTune2.z * shadow;
   plate += vec3(0.30, 0.20, 0.035) * halo * uTune2.y * (0.4 + 0.6 * lightMul);
 
@@ -351,7 +361,7 @@ void main() {
     vec3 H2 = normalize(vec3(0.5, -0.45, 0.75) + vec3(0.0, 0.0, 1.0));
     float spec2 = pow(max(dot(N, H2), 0.0), 40.0) * 0.5;
     vec3 body = alb * (keyCol * dif2 * (0.35 + 0.65 * lightMul) + vec3(0.10, 0.12, 0.08)) * 0.40;
-    vec3 slime = emis + body + vec3(1.0, 0.92, 0.74) * spec * (0.4 + lightMul) * 0.7 + rimCol * rim * (0.35 + 0.5 * wv) * 0.30 + vec3(0.5, 0.75, 0.9) * spec2 * 0.12;
+    vec3 slime = emis + body + vec3(1.0, 0.92, 0.74) * spec * (0.4 + lightMul) * 0.7 + rimCol * rim * (0.35 + 0.5 * wv) * 0.22 + vec3(0.5, 0.75, 0.9) * spec2 * 0.12;
     // soft translucent edges: the plate shows through thin parts
     col = mix(plate * (1.0 - 0.35 * cover), slime, cover * mix(0.92, 0.985, ts));
     // light scattered in the thin sheet around the veins
@@ -518,7 +528,7 @@ void main() {
   // shading: slate-purple body with a wet highlight
   vec2 n2 = normalize(p + 1e-5);
   float hi = exp(-160000.0 * dot(p - vec2(0.0022, 0.0018), p - vec2(0.0022, 0.0018)));
-  vec3 col = vec3(0.060, 0.050, 0.075) * (0.6 + 0.5 * clamp(0.5 + 0.5 * dot(n2, vec2(-0.5, 0.6)), 0.0, 1.0)) + vec3(0.9, 0.85, 0.75) * hi * 0.45 + vec3(0.06, 0.08, 0.12) * (1.0 - clamp(-body / 0.002, 0.0, 1.0)) * 0.25;
+  vec3 col = vec3(0.050, 0.042, 0.036) * (0.6 + 0.5 * clamp(0.5 + 0.5 * dot(n2, vec2(-0.5, 0.6)), 0.0, 1.0)) + vec3(0.9, 0.85, 0.75) * hi * 0.40;
   // contact shadow: offset away from the key, sharper on the plate and wider and fainter in the air
   vec2 sp = rot(d + vec2(0.0035, -0.0042) * (1.0 + z * 18.0), vA.w);
   float sh = sdEll(sp, vec2(0.0125, 0.0058) * (1.0 + z * 6.0));

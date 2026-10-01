@@ -142,7 +142,7 @@ void main(){
       vec2 q = rd.xz*t;
       vec2 uv = (q - vec2(${MAP.x0.toFixed(1)}, ${MAP.z0.toFixed(1)}))/vec2(${(MAP.x1 - MAP.x0).toFixed(1)}, ${(MAP.z1 - MAP.z0).toFixed(1)});
       if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0){
-        float lod = clamp(log2(max(dt*rxz*2.2/uTexKm, 1.0)), 0.0, 6.0);
+        float lod = clamp(log2(max(dt*rxz*(0.16*dH)/uTexKm, 1.0)), 0.0, 6.0);
         vec4 m = textureLod(uMap, uv, lod);
         if (m.r > 0.004){
           float xp = q.x + m.g;
@@ -426,16 +426,21 @@ varying vec3 vRay;
 varying vec2 vUv;
 void main(){
   vec3 rd = normalize(vRay);
-  vec2 suv = gl_FragCoord.xy/uRes;
-  vec3 col = nightSky(rd, 1.0);
-  col += texture2D(uAurora, suv).rgb;
-  col += textureLod(uAurora, suv, 4.0).rgb*0.09 + textureLod(uAurora, suv, 6.0).rgb*0.16;
   // the land, from the rest-pose images, through the camera's small rotation
   vec4 c = uBakeVP*vec4(rd, 0.0);
   vec2 buv = clamp(c.xy/max(c.w, 1e-4)*0.5 + 0.5, 0.0005, 0.9995);
   vec4 W = texture2D(uLandW, buv), C = texture2D(uLandC, buv);
-  col = col*(1.0 - W.a) + W.rgb*uAmb + C.rgb;
-  gl_FragColor = vec4(col, C.a > 0.5 ? 0.0 : 1.0);
+  bool water = C.a > 0.5;
+  // water pixels are shaded by the water pass; solid land needs no sky
+  if (water && W.a < 0.01){ gl_FragColor = vec4(0.0); return; }
+  vec3 landCol = W.rgb*uAmb + C.rgb;
+  if (W.a > 0.995){ gl_FragColor = vec4(landCol, water ? 0.0 : 1.0); return; }
+  vec2 suv = gl_FragCoord.xy/uRes;
+  vec3 col = nightSky(rd, 1.0);
+  col += texture2D(uAurora, suv).rgb;
+  col += textureLod(uAurora, suv, 4.0).rgb*0.09 + textureLod(uAurora, suv, 6.0).rgb*0.16;
+  col = col*(1.0 - W.a) + landCol;
+  gl_FragColor = vec4(col, water ? 0.0 : 1.0);
 }
 `;
 
@@ -933,7 +938,7 @@ void main(){
   col = col*trans*(1.0 - 0.6*(1.0 - exp(-dB*0.5))) + deep*(1.0 - exp(-dB*0.5))*0.6;
   float meniscus = exp(-pow(d/0.07, 2.0));
   col += meniscus*(uAurG*0.07 + uAmb*0.5);
-  float alpha = d > 0.0 ? exp(-dB*0.19)*0.82 : 1.0;
+  float alpha = mix(1.0, exp(-dB*0.26)*0.72, smoothstep(0.0, 0.4, d));
   if (uMirror > 0.5){
     // the reflected whale: only what is above the water, faint and dim
     float refl = 0.62*smoothstep(-0.3, 0.25, origY - wh);
@@ -979,14 +984,16 @@ void main(){
   float kind = vP.y, a = vP.x;
   vec3 col = vec3(0.0);
   float k = 0.0;
-  if (kind < 0.5){        // mist: a soft, lumpy puff, lit from the aurora side (above and behind)
-    vec2 q = vC*1.7 + vP.z*3.0 + vec2(uTime*0.07, -uTime*0.05);
-    float n = tfbm3(q)*0.55 + 0.25*tn(q*3.1 + 5.0) + 0.2*tn(q*7.3 + 1.0);
-    float d = r + (n - 0.5)*0.95;
-    float body = pow(1.0 - smoothstep(0.05, 0.95, d), 1.4);
-    float lit = 0.4 + 0.6*smoothstep(-0.9, 0.9, vC.y + 0.35 + (n - 0.5)*0.6);
-    col = (uAmb*2.4 + uAurG*0.055 + uAurM*0.022 + vec3(0.004, 0.0055, 0.007))*lit;
-    k = body*a*(0.65 + 0.7*n);
+  if (kind < 0.5){        // mist: a ragged, lumpy puff, lit from the aurora side (above and behind)
+    vec2 q = vC*1.9 + vP.z*3.0 + vec2(uTime*0.09, -uTime*0.06);
+    float n = tfbm3(q)*0.5 + 0.3*tn(q*3.3 + 5.0) + 0.2*tn(q*7.1 + 1.0);
+    float age = vP.w;                                    // 0 young .. 1 old: wisps break up as the puff thins
+    float d = r*(0.85 + 0.5*age) + (0.5 - n)*(0.7 + 0.5*age);
+    float body = smoothstep(1.0, 0.1, d);
+    body = body*body;
+    float lit = 0.35 + 0.65*smoothstep(-0.9, 0.9, vC.y + 0.35 + (n - 0.5)*0.8);
+    col = (uAmb*2.2 + uAurG*0.05 + uAurM*0.02 + vec3(0.004, 0.0055, 0.007))*lit*(0.7 + 0.6*n);
+    k = body*a;
   } else if (kind < 1.5){ // bubble: a glinting rim and a bright speck
     float rim = smoothstep(0.5, 0.9, r)*(1.0 - smoothstep(0.9, 1.0, r));
     float spec = exp(-dot(vC - vec2(-0.35, 0.38), vC - vec2(-0.35, 0.38))*14.0);
