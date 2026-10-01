@@ -38,9 +38,9 @@ async function start() {
   const world = createWorld({ random, bounds: view.bounds(0.09), slugCount: 4, springtailCount: 7 });
   const gpu = createRenderer(canvas, { random: randomGenerator(seed ^ 0x5bd1e995), world, quality: activeQuality(quality, onBattery), overrides: capture ? { model: overrides('m', KEYS), tune: overrides('t') } : {} });
   const { renderer } = gpu;
-  let loop = null, accumulator = 0, frames = 0, zeroSize = false, simTick = 0;
+  let loop = null, accumulator = 0, frames = 0, zeroSize = false, simTick = 0, ready = false;
   let cpuEMA = 0, slowSamples = 0, autoScale = 1, ratio = 1, simQuality = gpu.quality;
-  const running = () => !disposed && !paused && !document.hidden && !contextLost && !zeroSize && hostRate > 0;
+  const running = () => ready && !disposed && !paused && !document.hidden && !contextLost && !zeroSize && hostRate > 0;
   const fps = () => frameRate(quality, hostRate, onBattery);
   const rect = { left: 0, top: 0, width: 1, height: 1 };
   const here = { x: 0, y: 0 };
@@ -53,7 +53,7 @@ async function start() {
     if (++simTick % 20 === 0) { world.setBounds(view.bounds(0.09)); gpu.probe(world, capture); }
   }
   function render() {
-    if (contextLost || disposed || document.hidden) return;
+    if (!ready || contextLost || disposed || document.hidden) return;
     gpu.draw(world, view);
     frames++;
     if (!loading.hidden) loading.hidden = true;
@@ -86,7 +86,7 @@ async function start() {
   function applyQuality() {
     const wanted = activeQuality(quality, onBattery);
     if (wanted === simQuality) return;
-    simQuality = wanted; gpu.configure(wanted); gpu.warmup(world);
+    simQuality = wanted; ready = false; gpu.configure(wanted); gpu.warmup(world).then(() => { ready = true; resize(false); render(); });
   }
   changePower = () => { applyQuality(); resize(); restart(); };
   function resize(redrawNow = true) {
@@ -135,28 +135,33 @@ async function start() {
   canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); contextLost = true; restart(); loading.hidden = false; });
   canvas.addEventListener('webglcontextrestored', () => {
     // The colony lived in GPU memory: grow a new one.
-    contextLost = false; gpu.configure(simQuality); gpu.warmup(world); resize(false); render(); restart();
+    contextLost = false; ready = false; gpu.configure(simQuality); resize(false); gpu.warmup(world).then(() => { ready = true; render(); restart(); });
   });
   if (navigator.getBattery && !isHost) {
     navigator.getBattery().then(battery => { function update() { onBattery = !battery.charging; changePower(); } battery.addEventListener('chargingchange', update); update(); }).catch(() => {});
   }
 
   // The colony starts already established, and a few slugs have already left trails.
-  gpu.warmup(world, capture && params.has('warm') ? Math.max(0, Number(params.get('warm')) || 0) : undefined);
+  await gpu.warmup(world, capture && params.has('warm') ? Math.max(0, Number(params.get('warm')) || 0) : undefined);
   world.slugs.relocate(view.bounds(0.09), world.env.field);
   for (let i = 0; i < 60 * 14; i++) { world.step(FIXED_STEP); if (i % 20 === 0) view.update(world.time); }
   // Capture mode advances the actual simulation, then renders the actual WebGL scene.
-  const advance = seconds => { for (let i = 0; i < Math.round(seconds / FIXED_STEP); i++) tick(); };
+  // Time advances in slices with a breath between them (software GL runs these captures, and a single multi-second task upsets it).
+  const advance = async seconds => {
+    const n = Math.round(seconds / FIXED_STEP);
+    for (let i = 0; i < n; i++) { tick(); if ((i + 1) % 60 === 0) await new Promise(r => setTimeout(r, 0)); }
+  };
   const fraction = name => { const v = (params.get(name) || '').split(',').map(Number); return v.length === 2 && v.every(Number.isFinite) ? v : null; };
   if (capture) {
     if (params.has('feed')) feed = () => world.food.feedRandom(view.bounds(0.14));
     if (params.has('feed')) feed();
     const c = fraction('cursor');
     if (c) { view.project(c[0], c[1], here); world.point(here.x, here.y); }
-    advance(Math.min(120, Math.max(0, Number(params.get('time')) || 0)));
-    if (params.has('drop')) { const d = fraction('drop'); if (d) { view.project(d[0], d[1], here); world.food.drop(here.x, here.y); advance(Math.min(60, Number(params.get('dropwait')) || 0)); } }
+    await advance(Math.min(120, Math.max(0, Number(params.get('time')) || 0)));
+    if (params.has('drop')) { const d = fraction('drop'); if (d) { view.project(d[0], d[1], here); world.food.drop(here.x, here.y); await advance(Math.min(60, Number(params.get('dropwait')) || 0)); } }
   }
   gpu.probe(world, true);
+  ready = true;
   render();
   loop = createFrameLoop(renderFrame, { fps: fps(), paused, hidden: document.hidden || contextLost || zeroSize });
   restart();
@@ -174,10 +179,10 @@ async function start() {
     drop(x, y) { view.project(x, y, here); world.food.drop(here.x, here.y); render(); },
     stats: () => gpu.stats(),
     pause(value = true) { paused = Boolean(value); restart(); },
-    advance(seconds) {
+    async advance(seconds) {
       if (!paused) throw new Error('Pause before advancing deterministic capture time.');
       if (!Number.isFinite(seconds) || seconds < 0 || seconds > 120) throw new RangeError('Advance must be 0-120 seconds.');
-      advance(seconds); render();
+      await advance(seconds); gpu.probe(world, true); render();
     },
   };
   window.sceneStats = window.slimeScape.diagnostics;

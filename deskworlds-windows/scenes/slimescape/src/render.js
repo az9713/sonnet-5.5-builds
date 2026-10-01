@@ -169,8 +169,13 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
     renderer.readRenderTargetPixelsAsync(sim.probe, 0, 0, PROBE.w, PROBE.h, probeBuf).then(() => { fillProbe(w); }).catch(() => {}).finally(() => { probing = false; });
   }
 
-  function warmup(w, steps = cfg.warmup) {
-    for (let i = 0; i < steps; i++) step(w);
+  // Grows the colony before the first frame. Done in slices so the page (and, in software GL, the GPU watchdog) never
+  // sees one enormous task.
+  async function warmup(w, steps = cfg.warmup, slice = 60) {
+    for (let i = 0; i < steps; i++) {
+      step(w);
+      if ((i + 1) % slice === 0) { probe(w, true); await new Promise(r => setTimeout(r, 0)); }
+    }
     probe(w, true);
   }
 

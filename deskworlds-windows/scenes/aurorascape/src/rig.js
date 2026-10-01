@@ -168,7 +168,7 @@ export function createRig({ scale = 1, phase = 0 } = {}) {
     for (let i = 0; i < NJ; i++) {
       const y = P[i * 3 + 1], top = 0.9 * scale * (0.3 + 0.7 * Math.sin(Math.PI * clamp(i / (NJ - 1) * 1.05, 0, 1)));
       if (y + top * 0.55 < 0.05) wet[i] = 1;
-      else wet[i] = Math.max(0, wet[i] - dt / 5.5);
+      else wet[i] = Math.max(0, wet[i] - dt / 8);
     }
   };
 
