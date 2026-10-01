@@ -166,7 +166,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
 
   // ---- camera
   const size = new THREE.Vector2(1, 1);
-  const dir = new V3(), tmp = new V3();
+  const tmp = new V3();
   let camYaw = 0, vfov = 52;
   function frameCamera(aspect, heightPx) {
     vfov = clamp(2 * Math.atan(Math.tan(HFOV / 2) / aspect) * 180 / Math.PI, 44, 74);

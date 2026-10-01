@@ -34,6 +34,7 @@ internal static class Worlds
         World.Reefscape => Color.FromArgb(11, 24, 37),
         World.Pelagicscape => Color.FromArgb(0, 3, 8),
         World.Cosmoscape => Color.FromArgb(1, 2, 5),
+        World.Aurorascape => Color.FromArgb(1, 4, 10),
         _ => Color.Black,
     };
 }
