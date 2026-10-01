@@ -1,3 +1,8 @@
+// Slime mould: a glowing Physarum plasmodium, Dictyostelium slugs and springtails on a dark agar plate, seen in macro.
+// Capture URLs (paused, deterministic, seed 1):  ?capture&time=N&quality=eco|balanced|detail|native
+//   &feed=1            drop a pinch of oat flakes before the clock runs      &cursor=x,y   hold the cursor lamp at canvas fractions
+//   &drop=x,y[&dropwait=s]   drop one flake after `time`, wait s seconds     &warm=N       override the pre-growth steps
+//   &m=sa:0.6,so:0.03  &t=ks:80   override model / look constants while tuning
 import { QUALITY_PRESETS as presets, qualityName, activeQuality, frameRate, framebufferSize, renderScale } from '../../shared/render-policy.js';
 import { installControls, reportSceneError, preferredQuality } from '../../shared/controls.js';
 import { createFrameLoop } from '../../shared/frame-loop.js';

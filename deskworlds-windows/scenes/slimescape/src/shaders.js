@@ -346,9 +346,9 @@ void main() {
     float g1 = vn(qg * 150.0), g2 = vn((qg - disp * 0.6) * 330.0 + 7.3);
     float grainv = 0.62 * g1 + 0.38 * g2 - 0.5;
     // --- colour: lemon fronts, amber trunks, pale hot cores on the wave crest
-    vec3 thinC = vec3(1.0, 0.86, 0.26), midC = vec3(0.98, 0.64, 0.10), thickC = vec3(0.86, 0.38, 0.03);
+    vec3 thinC = vec3(1.0, 0.91, 0.42), midC = vec3(1.0, 0.76, 0.20), thickC = vec3(0.92, 0.52, 0.07);
     vec3 alb = mix(mix(thinC, midC, smoothstep(0.08, 0.5, ab)), thickC, smoothstep(0.5, 1.0, ab));
-    alb = mix(alb, vec3(1.0, 0.95, 0.66), 0.38 * wv * (1.0 - ts));
+    alb = mix(alb, vec3(1.0, 0.96, 0.72), 0.5 * wv * (1.0 - 0.6 * ts));
     float trans = 1.25 - 0.38 * ab;                              // thin parts transmit more light
     vec3 emis = alb * (0.22 + 0.55 * uTune.w * wv) * trans * (1.0 + uTune.z * grainv * 2.0);
     // --- the surface: a soft tube cross-section lit by the key, wet specular, cool rim
