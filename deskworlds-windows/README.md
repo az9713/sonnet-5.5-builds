@@ -34,7 +34,7 @@ Images of the first four are the original author's screenshots from [chaseleantj
 
 ## How the worlds work
 
-**[Read the live page](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)**: the rendering and simulation layers the original four worlds share, then the specific technique behind each one (Riverbed, Coral reef, Betta, Plasma globe), with charts and the real numbers from the code. The page does not cover the four newer worlds yet.
+**[Read the live page](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)**: the rendering and simulation layers all eight worlds share, then the specific technique behind each one (Riverbed, Coral reef, Betta, Plasma globe, Slime mould, Pelagic, Aurora fjord, Cosmic web), with charts and the real numbers from the code.
 
 [![Preview of the "How the worlds work" page. Click to open the live page.](docs/images/how-the-worlds-work-preview.jpg)](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)
 

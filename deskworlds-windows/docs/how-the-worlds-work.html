@@ -113,11 +113,11 @@ footer { font-size: 0.92rem; color: var(--muted); border-top: 1px solid var(--li
 <main class="wrap">
 
 <header>
-  <div class="eyebrow">Computer graphics / simulation / four case studies</div>
+  <div class="eyebrow">Computer graphics / simulation / eight case studies</div>
   <h1>How a few thousand lines of code become a living world</h1>
-  <p class="lead">Riverbed, Coral reef, Betta and Plasma globe look like footage, but they are equations evaluated 30 to 60 times a second on your graphics card. There are almost no 3D models and very few photographs in them. This page shows the layers all four share, then the specific trick each one is built around. Every number below was read from the source, and the key ones were re-checked against it.</p>
+  <p class="lead">Riverbed, Coral reef, Betta and Plasma globe look like footage, and so do the four worlds added in this port: Slime mould, Pelagic, Aurora fjord and Cosmic web. All eight are equations evaluated 30 to 60 times a second on your graphics card. There are almost no 3D models and very few photographs in them, and the four newer worlds load no image, model or data files at all. This page shows the layers they share, then the specific trick each one is built around. Every number below was read from the source, and the key ones were re-checked against it.</p>
   <nav class="jump" aria-label="Sections">
-    <a href="#principle">The principle</a><a href="#common">Shared layers</a><a href="#river">Riverbed</a><a href="#reef">Coral reef</a><a href="#betta">Betta</a><a href="#plasma">Plasma globe</a><a href="#further">Go further</a>
+    <a href="#principle">The principle</a><a href="#common">Shared layers</a><a href="#river">Riverbed</a><a href="#reef">Coral reef</a><a href="#betta">Betta</a><a href="#plasma">Plasma globe</a><a href="#slime">Slime mould</a><a href="#pelagic">Pelagic</a><a href="#aurora">Aurora fjord</a><a href="#cosmos">Cosmic web</a><a href="#further">Go further</a>
   </nav>
 </header>
 
@@ -127,61 +127,61 @@ footer { font-size: 0.92rem; color: var(--muted); border-top: 1px solid var(--li
   <p>The pattern repeats everywhere: take a real law, keep its shape, drop what the eye cannot tell apart. Water dims red first, so use <code>exp(-k·distance)</code>. Light focuses where a wavy surface curves, so compute curvature instead of tracing rays. A lens blurs by depth, so use the thin-lens formula on each primitive. The results are approximations, and the code usually says so in its comments.</p>
   <div class="figure" role="group" aria-label="The frame pipeline">
     <div class="pipe">
-      <div><b>Simulate</b><small>Fixed 1/60 s steps: fish steering, plasma channels, food.</small></div>
-      <div><b>Geometry</b><small>Generated or bent on the GPU: bodies, fins, plants, tentacles.</small></div>
+      <div><b>Simulate</b><small>Fixed 1/60 s steps: fish steering, plasma channels, whales, slugs, tentacle chains, a wave-equation water surface.</small></div>
+      <div><b>Geometry</b><small>Generated or bent on the GPU: bodies, fins, plants, bells, tentacles, whale spines.</small></div>
       <div><b>Materials</b><small>Custom shaders: scales, skin, rock, glass, plasma glow.</small></div>
       <div><b>Light &amp; medium</b><small>Absorption, caustics, shafts, reflections, fog.</small></div>
       <div><b>Camera</b><small>Depth of field, bloom, chromatic aberration, grain.</small></div>
       <div><b>Tone map</b><small>HDR to screen with a filmic curve and dither.</small></div>
     </div>
-    <p class="cap">Every frame runs this chain. Steps 3 to 6 run on the GPU, and step 2 is generated at startup or bent by vertex shaders each frame. Step 1 runs in JavaScript and is kept separate so it behaves identically at any frame rate.</p>
+    <p class="cap">Every frame runs this chain. Steps 3 to 6 run on the GPU, and step 2 is generated at startup or bent by vertex shaders each frame. Step 1 runs in JavaScript (in Slime mould and Aurora fjord part of it also runs as GPU passes on textures) and is kept separate so it behaves identically at any frame rate.</p>
   </div>
 </section>
 
 <section id="common">
-  <h2>The layers all four scenes share</h2>
-  <p>Seven ideas appear in all four scenes, even though the scenes look nothing alike.</p>
+  <h2>The layers all eight scenes share</h2>
+  <p>Seven ideas appear in all eight scenes, even though they look nothing alike. The older four (Riverbed, Coral reef, Betta, Plasma globe) are the original author's code. The newer four (Slime mould, Pelagic, Aurora fjord, Cosmic web) were written for this port to the same contract, so they share the host hooks, the quality governor and the fixed-step loop, and each picked its own rendering tricks.</p>
 
   <div class="layer"><div class="n">1</div><div>
     <h3>The world is generated, not modelled</h3>
-    <p>No scene loads a 3D model file. Bodies, plants, corals and rocks are built from formulas at startup. Where a scene does use image data, it is small and bounded: Riverbed loads rock, wood and sand textures (three JPG diffuse and normal pairs); Coral reef loads textures and two binary files that were themselves computed offline by Python scripts; Betta and Plasma load nothing at all.</p>
+    <p>No scene loads a 3D model file. Bodies, plants, corals and rocks are built from formulas at startup. Where a scene does use image data, it is small and bounded: Riverbed loads rock, wood and sand textures (three JPG diffuse and normal pairs); Coral reef loads textures and two binary files that were themselves computed offline by Python scripts; Betta and Plasma load nothing at all, and neither do the four newer scenes: their images, noise, targets and meshes are all computed at start-up.</p>
     <p>Randomness is seeded. <code>scenes/shared/random.js</code> is a 32-bit generator (mulberry32 family, default seed 7731), so a given seed always builds the same world. That is what allows tests to assert things like "fish never overlap" without a GPU.</p>
   </div></div>
 
   <div class="layer"><div class="n">2</div><div>
     <h3>Three.js is a thin wrapper; the look is hand-written GLSL</h3>
-    <p>Three.js 0.180 supplies vectors, cameras and the WebGL2 plumbing. The appearance comes from shader code, small programs that run once per vertex or per pixel. Across all four scenes, three things always appear: custom <code>ShaderMaterial</code> programs, a hand-written noise function, and half-float HDR render targets. Everything else varies.</p>
+    <p>Three.js 0.180 supplies vectors, cameras and the WebGL2 plumbing. The appearance comes from shader code, small programs that run once per vertex or per pixel. Across all eight scenes, three things appear: custom <code>ShaderMaterial</code> programs, a hand-written hash or noise function (in Cosmic web only a hash, for dither), and half-float HDR render targets. Everything else varies.</p>
     <div class="scroll"><table>
-      <thead><tr><th>Technique</th><th class="c">River</th><th class="c">Reef</th><th class="c">Betta</th><th class="c">Plasma</th></tr></thead>
+      <thead><tr><th>Technique</th><th class="c">River</th><th class="c">Reef</th><th class="c">Betta</th><th class="c">Plasma</th><th class="c">Slime</th><th class="c">Pelagic</th><th class="c">Aurora</th><th class="c">Cosmos</th></tr></thead>
       <tbody>
-        <tr><td>Custom GLSL shaders</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td></tr>
-        <tr><td>Hand-rolled noise / hash in GLSL</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td></tr>
-        <tr><td>HDR half-float render target</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td></tr>
-        <tr><td>GPU instancing</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">pellets</td><td class="c yes">segments</td></tr>
-        <tr><td>Stock PBR material patched with shader hooks</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td></tr>
-        <tr><td>Shadow maps</td><td class="c yes">yes</td><td class="c yes">static only</td><td class="c no">no</td><td class="c no">no</td></tr>
-        <tr><td>Three.js fog</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td></tr>
-        <tr><td>Shared post-processing module</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">own chain</td><td class="c no">own chain</td></tr>
-        <tr><td>Volumetric ray-march</td><td class="c no">no</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td></tr>
-        <tr><td>Depth of field</td><td class="c no">no</td><td class="c no">no</td><td class="c yes">full pass</td><td class="c yes">per primitive</td></tr>
-        <tr><td>Bloom / glow</td><td class="c no">no</td><td class="c no">no</td><td class="c yes">glow</td><td class="c yes">6-level pyramid</td></tr>
+        <tr><td>Custom GLSL shaders</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td></tr>
+        <tr><td>Hand-rolled noise / hash in GLSL</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">hash only</td></tr>
+        <tr><td>HDR half-float render target</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td></tr>
+        <tr><td>GPU instancing</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">pellets</td><td class="c yes">segments</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">particles</td><td class="c no">no</td></tr>
+        <tr><td>Stock PBR material patched with shader hooks</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td></tr>
+        <tr><td>Shadow maps</td><td class="c yes">yes</td><td class="c yes">static only</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td></tr>
+        <tr><td>Three.js fog</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td></tr>
+        <tr><td>Shared post-processing module</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">own chain</td><td class="c no">own chain</td><td class="c no">own chain</td><td class="c no">own chain</td><td class="c no">own chain</td><td class="c no">own chain</td></tr>
+        <tr><td>Volumetric ray-march</td><td class="c no">no</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c no">no</td><td class="c yes">yes</td><td class="c no">no</td></tr>
+        <tr><td>Depth of field</td><td class="c no">no</td><td class="c no">no</td><td class="c yes">full pass</td><td class="c yes">per primitive</td><td class="c yes">full pass</td><td class="c yes">full pass</td><td class="c no">no</td><td class="c yes">per sprite</td></tr>
+        <tr><td>Bloom / glow</td><td class="c no">no</td><td class="c no">no</td><td class="c yes">glow</td><td class="c yes">6-level pyramid</td><td class="c yes">pyramid</td><td class="c yes">6-level pyramid</td><td class="c yes">pyramid</td><td class="c yes">6-level pyramid</td></tr>
       </tbody>
     </table></div>
-    <p class="src">Source: a feature-by-scene read of each scene's src/ folder; see the per-scene sections for line references.</p>
+    <p class="src">Source: a feature-by-scene read of each scene's src/ folder; see the per-scene sections for line references. "Own chain" means the scene has its own depth-of-field, bloom and output passes and does not import <code>scenes/shared/postprocessing.js</code>. Slime mould and Aurora fjord also run a GPU simulation on ping-pong textures; none of the older four do.</p>
   </div></div>
 
   <div class="layer"><div class="n">3</div><div>
     <h3>Light is computed in linear HDR, then compressed once</h3>
     <p>Lighting is done in linear, high-dynamic-range values where a highlight can be 10 times brighter than white. A final pass squeezes that into what a monitor can show using a filmic curve. This is why sunlit edges roll off smoothly instead of clipping.</p>
-    <p>Riverbed and Coral reef use Three.js's ACES filmic tone mapping (exposures 1.17 and 1.08). Betta and Plasma do it in their own output shader. Plasma uses the well-known ACES fit:</p>
+    <p>Riverbed and Coral reef use Three.js's ACES filmic tone mapping (exposures 1.17 and 1.08). Betta, Plasma and all four newer scenes do it in their own output shader. Plasma uses the well-known ACES fit, and the newer scenes use the same fit:</p>
     <div class="formula">f(x) = (x·(2.51x + 0.03)) / (x·(2.43x + 0.59) + 0.14)</div>
-    <p>Both families then apply a gamma of about 1/2.2 and a small dither (plus or minus 1/255) so dark gradients do not show banding.</p>
+    <p>All of them then apply a gamma of about 1/2.2 and a small dither (plus or minus 1/255) so dark gradients do not show banding.</p>
     <p class="src">river/src/main.js:73, reef/src/main.js:35, plasma/src/shaders.js:346-375, betta/src/shaders.js:138-145</p>
   </div></div>
 
   <div class="layer"><div class="n">4</div><div>
     <h3>Simulation and drawing are separate loops</h3>
-    <p>Three scenes advance their simulation in fixed 1/60 second steps (at most 6 catch-up steps per frame), independent of how often they draw. Riverbed splits elapsed time into equal sub-steps of about 1/60 s instead. Either way, a fish behaves the same at 20, 30 or 60 fps, and a test can run 120 seconds of fish behaviour with no graphics at all.</p>
+    <p>Seven scenes (three of the older four, and all four newer ones) advance their simulation in fixed 1/60 second steps, at most 6 catch-up steps per frame, independent of how often they draw. Riverbed splits elapsed time into equal sub-steps of about 1/60 s instead. Either way, a fish behaves the same at 20, 30 or 60 fps, and a test can run 120 seconds of fish behaviour with no graphics at all.</p>
     <p>The drawing loop (<code>shared/frame-loop.js</code>) is demand-driven. When a scene is paused or hidden there is no animation callback at all, so it costs essentially nothing. Below the screen's refresh rate it sleeps on a timer until about 3 ms before the next deadline, instead of waking 60 times a second to throw frames away. Elapsed time per frame is capped at 0.1 s so a stall cannot teleport the simulation.</p>
   </div></div>
 
@@ -196,13 +196,15 @@ footer { font-size: 0.92rem; color: var(--muted); border-top: 1px solid var(--li
         <tr><td><code>native</code> (the wallpaper)</td><td>60 fps</td><td>16 million</td><td>none; falls back to balanced on battery</td></tr>
       </tbody>
     </table></div>
-    <p>On battery the frame rate is capped at 30 and the resolution scaled by 0.9. Reef, Betta and Plasma also watch themselves: if a smoothed CPU cost per frame exceeds 85% of the frame budget (or a frame takes more than 1.65 times its budget) for over 80 samples, resolution steps down by 0.1, to a floor of 0.72. It never steps back up. The scenes render to their own target at a computed size, so hardware antialiasing and browser pixel-ratio scaling are switched off.</p>
-    <p class="src">shared/render-policy.js:12-41; reef/src/main.js:129-133; betta/src/main.js:79-83; plasma/src/main.js:59-63</p>
+    <p>On battery the frame rate is capped at 30 and the resolution scaled by 0.9. Reef, Betta, Plasma and all four newer scenes also watch themselves: if a smoothed CPU cost per frame exceeds 85% of the frame budget (or a frame takes more than 1.65 times its budget) for over 80 samples, resolution steps down by 0.1, to a floor of 0.72. It never steps back up. The scenes render to their own target at a computed size, so hardware antialiasing and browser pixel-ratio scaling are switched off.</p>
+    <p>The newer scenes also change what they compute, not just how many pixels. On battery, <code>native</code> falls back to the <code>balanced</code> tier, and each of the four adapts to the tier (Pelagic's particle counts, Aurora fjord's water-simulation size and ray-march steps, Cosmic web's sprite sizes and bloom depth; Slime mould regrows its colony at the new size). Their sections give the per-tier numbers.</p>
+    <p class="src">shared/render-policy.js:12-41; reef/src/main.js:129-133; betta/src/main.js:79-83; plasma/src/main.js:59-63; slimescape/src/main.js:76-79; pelagicscape/src/main.js:58-60; aurorascape/src/main.js:82-84; cosmoscape/src/main.js:90-92</p>
   </div></div>
 
   <div class="layer"><div class="n">6</div><div>
     <h3>The cursor is a physical object in the scene</h3>
     <p>Every scene turns a 2D mouse position into a 3D ray and intersects it with something: a plane in front of the tank glass (Riverbed at z = 2.6, Reef at z = 2.4), a camera-facing plane (Betta), or a sphere just outside the glass (Plasma, radius 1.16 = glass 1 + fingertip 0.16). That 3D point goes into the simulation, where it frightens fish, attracts a betta's gaze, or acts as a grounded conductor. Pointer speed matters: fast motion scares fish, slow motion only makes them give way.</p>
+    <p>The newer scenes use the cursor the same way, as something that disturbs a field and not an individual object: a lamp that the slime avoids and the slugs approach (Slime mould), a probe whose shear lights up plankton (Pelagic), a source of ripples that a curious whale may swim toward (Aurora fjord), and a point mass that bends light (Cosmic web).</p>
   </div></div>
 
   <div class="layer"><div class="n">7</div><div>
@@ -560,6 +562,541 @@ footer { font-size: 0.92rem; color: var(--muted); border-top: 1px solid var(--li
   </div>
 </section>
 
+<section id="slime">
+  <h2>Slime mould: simple agents leaving trails, lit like a macro photograph</h2>
+  <div class="scene">
+    <img src="images/thumbs/slimescape.jpg" alt="A yellow slime mould network of branching veins and closed loops spread over a dark olive agar plate. Four pale cream oat flakes lie along the veins, small bubbles dot the surface, and the corners are softly out of focus." width="960" height="500" loading="lazy">
+    <div class="body">
+      <div class="tags"><span class="tag">1,946 lines JS</span><span class="tag">160,000 agents at Balanced</span><span class="tag">1024 x 576 half-float trail map</span><span class="tag art">part biology, part art direction</span></div>
+
+      <div class="tech">
+        <h4>Technique 1</h4>
+        <h3>A colony of agents that each look at three spots</h3>
+        <p>The core is the agent rule from Jones (2010), cited in the code comment. Each agent is one texel in an N by N float texture that holds x, y, heading and a "lost" counter. N is 400 at Balanced, so 160,000 agents. Eco uses 256 (65,536) and Detail and Native use 512 (262,144). One full-screen pass over that texture is one simulation step: every texel runs the same fragment shader, so all agents move at once. There are no compute shaders; the "GPU simulation" is ordinary rendering into textures.</p>
+        <p>Each agent reads the trail map at three points 0.04 plate-heights ahead: straight on, and at plus and minus 0.7 rad (about 40 degrees). The plate is one unit tall and 16/9 wide. If the centre reading is highest, the agent goes straight. If the centre is lowest, it turns 0.9 rad (about 52 degrees) left or right at random. Otherwise it turns 0.9 rad toward the stronger side. It then adds heading noise of plus or minus 0.08 rad and moves 0.0032, which is 0.19 plate-heights per second at 60 steps per second. The map wraps at its edges, so the plate is a torus. GLSL has no random function, so random numbers come from an integer hash of the texel index and a frame counter.</p>
+        <p>The code adds three things that are not in Jones. Only one agent in three is a "forager" and smells food, weighted 100 times against trail. Light counts as negative trail, weighted 160. And each agent keeps a lost counter: it grows by 1 per step off the trail (trail below 0.8), shrinks by 3 per step on it, and above 60 the agent is re-seeded within 0.05 of a random agent that is itself healthy and out of the light. That last rule prunes dead ends and makes fronts grow outward from the established colony.</p>
+        <p class="src">slimescape/src/agents-ref.js:13-34,118-143; shaders.js:12-68; render.js:13-18,57-77</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 2</h4>
+        <h3>One texture holds the chemistry: deposit, blur, decay</h3>
+        <p>The trail map is a half-float RGBA texture, 1024 by 576 cells at Balanced, kept as two copies that swap every step. Red is the slime trail, green is the food attractant, blue is a slow average of the trail (it is written, but no shader in this scene reads it). Each step is three draws. First the agent pass writes the new agent texture. Then the diffuse pass reads the old map and writes the new one. Finally every agent is drawn as one GL point, 2 pixels wide, with additive blending and a tent weight, which is a bilinear deposit. The points carry no vertex data except their own address in the agent texture; the vertex shader looks up the position itself.</p>
+        <div class="formula">T' = 0.915 · ( T + 0.6 · (blur(T) − T) ) + deposits
+blur = 3×3 kernel with weights 4, 2, 1 over 16</div>
+        <p>Deposit is not constant. An agent lays more where the trail is already strong, which is how busy tubes thicken and quiet ones fade:</p>
+        <div class="formula">deposit = 1 · (1 + 2.5·min(food, 1)) · (1 + 1.5·min(2, T/20))     capped at 40</div>
+        <p>So an agent on a trail of 40 or more lays 4 times the base amount, and one on food up to 3.5 times. Decay alone halves an unreinforced trail in under 8 steps (ln 0.5 / ln 0.915 = 7.8), about 0.13 s. The sensing then pulls more agents onto the stronger trail, which is the positive feedback that carves a network out of a blur. To keep the look similar across quality tiers, deposit per agent is scaled by (160,000 / agents) × (map width / 1024)², and the diffuse blend by (map width / 1024)², capped at 0.95. The table in Technique 7 lists the results.</p>
+        <div class="callout warn"><b>Physics versus art</b>The reinforcement stands in for the way real Physarum tubes widen where flow is high. There is no fluid flow, no pressure and no conservation of cytoplasm anywhere in the code; the trail is a pheromone-like field, not a mass. The numbers 1.5, 20 and 2 are tuning values. The clamp of 40 on a single deposit, the clamp of 6,000 on the trail and the NaN guard in the diffuse pass are protection against numerical blow-ups, not biology.</div>
+        <p class="src">slimescape/src/shaders.js:71-135; render.js:61-67,132-149; agents-ref.js:78-81,145-168</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 3</h4>
+        <h3>From trail value to a lit, translucent tube</h3>
+        <p>The plate shader treats the trail as a height field. It smooths the red channel with a 3×3 kernel (weights sum to 1), then squashes it: <code>a = 1 − exp(−T / 60)</code>. That saturation is why a trunk with twice the trail is only a little taller. The tube edge is a threshold on that profile, <code>cover = smoothstep(0.13, 0.55, a)</code>. Because the deposits are blurred every step, a stronger trail has a wider skirt above the threshold, so busy tubes look both brighter and thicker. The surface normal comes from the gradient of the saturated density, multiplied by 5, so each tube is lit like a rounded cylinder.</p>
+        <div class="figure">
+          <svg viewBox="0 0 420 260" role="img" aria-label="Density and cover as functions of trail value: density rises smoothly toward 1, cover switches from 0 to 1 between trail values of about 8 and 48" class="chart">
+<line x1="62" x2="406" y1="218.0" y2="218.0" class="grid"/>
+<text x="56" y="222.0" class="tick" text-anchor="end">0</text>
+<line x1="62" x2="406" y1="167.0" y2="167.0" class="grid"/>
+<text x="56" y="171.0" class="tick" text-anchor="end">0.25</text>
+<line x1="62" x2="406" y1="116.0" y2="116.0" class="grid"/>
+<text x="56" y="120.0" class="tick" text-anchor="end">0.5</text>
+<line x1="62" x2="406" y1="65.0" y2="65.0" class="grid"/>
+<text x="56" y="69.0" class="tick" text-anchor="end">0.75</text>
+<line x1="62" x2="406" y1="14.0" y2="14.0" class="grid"/>
+<text x="56" y="18.0" class="tick" text-anchor="end">1</text>
+<line x1="62.0" x2="62.0" y1="14" y2="218" class="grid"/>
+<text x="62.0" y="234" class="tick" text-anchor="middle">0</text>
+<line x1="119.3" x2="119.3" y1="14" y2="218" class="grid"/>
+<text x="119.3" y="234" class="tick" text-anchor="middle">40</text>
+<line x1="176.7" x2="176.7" y1="14" y2="218" class="grid"/>
+<text x="176.7" y="234" class="tick" text-anchor="middle">80</text>
+<line x1="234.0" x2="234.0" y1="14" y2="218" class="grid"/>
+<text x="234.0" y="234" class="tick" text-anchor="middle">120</text>
+<line x1="291.3" x2="291.3" y1="14" y2="218" class="grid"/>
+<text x="291.3" y="234" class="tick" text-anchor="middle">160</text>
+<line x1="348.7" x2="348.7" y1="14" y2="218" class="grid"/>
+<text x="348.7" y="234" class="tick" text-anchor="middle">200</text>
+<line x1="406.0" x2="406.0" y1="14" y2="218" class="grid"/>
+<text x="406.0" y="234" class="tick" text-anchor="middle">240</text>
+<line x1="119.3" x2="119.3" y1="14" y2="218" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
+<text x="125.3" y="208" class="lab" style="fill:var(--muted)">T = 40: deposit boost capped</text>
+<polyline points="62.0,218.0 66.3,208.1 70.6,198.6 74.9,189.6 79.2,181.0 83.5,172.9 87.8,165.1 92.1,157.8 96.4,150.7 100.7,144.1 105.0,137.7 109.3,131.7 113.6,126.0 117.9,120.5 122.2,115.3 126.5,110.4 130.8,105.7 135.1,101.2 139.4,96.9 143.7,92.9 148.0,89.0 152.3,85.4 156.6,81.9 160.9,78.6 165.2,75.4 169.5,72.4 173.8,69.6 178.1,66.9 182.4,64.3 186.7,61.9 191.0,59.5 195.3,57.3 199.6,55.2 203.9,53.2 208.2,51.3 212.5,49.4 216.8,47.7 221.1,46.1 225.4,44.5 229.7,43.0 234.0,41.6 238.3,40.3 242.6,39.0 246.9,37.8 251.2,36.6 255.5,35.5 259.8,34.5 264.1,33.5 268.4,32.5 272.7,31.6 277.0,30.7 281.3,29.9 285.6,29.2 289.9,28.4 294.2,27.7 298.5,27.0 302.8,26.4 307.1,25.8 311.4,25.2 315.7,24.7 320.0,24.2 324.3,23.7 328.6,23.2 332.9,22.7 337.2,22.3 341.5,21.9 345.8,21.5 350.1,21.2 354.4,20.8 358.7,20.5 363.0,20.2 367.3,19.9 371.6,19.6 375.9,19.3 380.2,19.0 384.5,18.8 388.8,18.6 393.1,18.3 397.4,18.1 401.7,17.9 406.0,17.7" class="curve" style="stroke:var(--accent)"/>
+<polyline points="62.0,218.0 66.3,218.0 70.6,218.0 74.9,217.7 79.2,209.6 83.5,193.3 87.8,172.0 92.1,148.1 96.4,123.5 100.7,99.8 105.0,77.9 109.3,58.6 113.6,42.6 117.9,29.9 122.2,21.0 126.5,15.7 130.8,14.0 135.1,14.0 139.4,14.0 143.7,14.0 148.0,14.0 152.3,14.0 156.6,14.0 160.9,14.0 165.2,14.0 169.5,14.0 173.8,14.0 178.1,14.0 182.4,14.0 186.7,14.0 191.0,14.0 195.3,14.0 199.6,14.0 203.9,14.0 208.2,14.0 212.5,14.0 216.8,14.0 221.1,14.0 225.4,14.0 229.7,14.0 234.0,14.0 238.3,14.0 242.6,14.0 246.9,14.0 251.2,14.0 255.5,14.0 259.8,14.0 264.1,14.0 268.4,14.0 272.7,14.0 277.0,14.0 281.3,14.0 285.6,14.0 289.9,14.0 294.2,14.0 298.5,14.0 302.8,14.0 307.1,14.0 311.4,14.0 315.7,14.0 320.0,14.0 324.3,14.0 328.6,14.0 332.9,14.0 337.2,14.0 341.5,14.0 345.8,14.0 350.1,14.0 354.4,14.0 358.7,14.0 363.0,14.0 367.3,14.0 371.6,14.0 375.9,14.0 380.2,14.0 384.5,14.0 388.8,14.0 393.1,14.0 397.4,14.0 401.7,14.0 406.0,14.0" class="curve" style="stroke:var(--warn)"/>
+<line x1="228" x2="248" y1="112" y2="112" class="curve" style="stroke:var(--accent)"/>
+<text x="254" y="116" class="lab" style="fill:var(--accent)">density a</text>
+<line x1="228" x2="248" y1="128" y2="128" class="curve" style="stroke:var(--warn)"/>
+<text x="254" y="132" class="lab" style="fill:var(--warn)">cover (tube edge)</text>
+<text x="234" y="254" class="axl" text-anchor="middle">trail value T in one map cell</text>
+<text x="11" y="116" class="axl" text-anchor="middle" transform="rotate(-90 11 116)">fraction (0 to 1)</text>
+</svg>
+          <p class="cap">Trail value T in one map cell against the two functions above, with the wave term at its middle value. Density is <code>1 − exp(−T/60)</code>. Cover goes from 0 at T = 8.4 to 1 at T = 47.9. The dashed line is where the deposit reinforcement stops growing (T = 20 × 2 = 40). Generated from the constants in the source.</p>
+        </div>
+        <p>Colour follows thickness: lemon where thin, amber in the middle, orange-brown where thick, with a pale core on each wave crest. Thin parts are made brighter (<code>1.25 − 0.38·a</code>) to suggest light passing through. The shuttle streaming is a pair of travelling waves, one with a 7.6 s period and 0.42 wavelength and one with 13.2 s and 0.6, blended by thickness so thick tubes pulse slowly. Their direction drifts with slow noise. The wave changes tube width by plus or minus 10 percent, modulates brightness, and slides the fine grain texture back and forth along the vein tangent by about 0.02 plate units.</p>
+        <div class="callout warn"><b>Physics versus art</b>Shuttle streaming is real: cytoplasm in Physarum veins flows back and forth, usually reported on a timescale of minutes. Here the periods are seconds, and the wave is only drawn. It never feeds back into the agents or the trail. The colours, the cool rim light and the "translucency" (a blend with the plate behind plus an emissive term) are hand-tuned. No subsurface scattering is computed.</div>
+        <p class="src">slimescape/src/shaders.js:179-199,309-372; render.js:20</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 4</h4>
+        <h3>Oat flakes attract, the lamp repels</h3>
+        <p>A flake is a source of attractant. Each step the diffuse pass sums every source into the green channel from scratch, using a wide Gaussian, a narrow core (0.3 of the width) and a long Lorentzian tail: <code>0.35·G(σ) + 0.4·G(0.3σ) + 0.25 / (1 + d² / (0.64σ²))</code>, where G is a Gaussian; the sum equals 1 at the centre. The tail is there so a far-off colony can still smell it. A feed drops 3 to 5 flakes, at most 12 can lie on the plate, each lasts 40 to 60 s and ramps in over 1.4 s. The attractant is the square root of how much flake is left. Foragers on food (above 0.25) grow their lost counter by only 0.12 per step, so they linger about 500 steps (8 s) before they are recalled, and every agent on food deposits up to 3.5 times as much. Two invisible "scent" sources (peak 0.4, one new every 12 to 26 s) keep an unfed colony exploring. The <code>sceneFeed</code> hook and the Feed button drop a pinch; in a browser a click drops one flake under the cursor.</p>
+        <p>The cursor is a lamp. It eases toward the pointer, and its presence fades in at a rate of 5 per second and out at 1.6 per second. Physarum avoids light, so the lamp acts on the colony in three places: sensing subtracts <code>160 · presence · exp(−d² / 0.16²)</code> from every reading, so agents turn away; the lost counter gains 6 times the light per step, so agents inside it are re-seeded elsewhere within roughly 9 to 20 steps; and decay in the diffuse pass drops from 0.915 to 0.795 at full light, so the trail there is erased. The visible pool of light on the plate uses a wider radius (0.26), so you see light before the slime reacts to it.</p>
+        <div class="callout warn"><b>Physics versus art</b>Light avoidance by Physarum is real. The weights 160, 6 and 0.12 are tuned until the effect looks right. The flake is not eaten: no agent removes attractant or flake. Its size and scent shrink on a timer (<code>whole</code>), and a test checks that it reaches exactly zero at the end of its 40 to 60 s life.</div>
+        <p class="src">slimescape/src/food.js:3-13,64-98; shaders.js:99-135,279-307; agents-ref.js:69-76; world.js:33-44; main.js:23-27,114-132</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 5</h4>
+        <h3>Slugs that follow the light, springtails that flee it</h3>
+        <p>Four Dictyostelium slugs run on the CPU as chains of 10 segments. The head steers: a wander term (three sines, 0.55 rad/s) is blended with other desires and clamped to 1 rad/s, and the turn rate eases at 3.5 per second so the body swings round. The same lamp that repels the slime attracts the slugs, which is positive phototaxis. Inside 0.6 plate units the head turns toward it at gain 2.2, speeds up by up to 60 percent, and slows to a stop near it. Slugs also veer from other slugs within 0.12, and look ahead at plus and minus 0.75 rad and straight on, 0.075 away, to avoid dense slime. For that, the CPU reads a 64 by 36 density map back from the GPU every 20 ticks (one third of a second), using an asynchronous readback so nothing stalls. Every segment behind the head is a damped spring toward a point one gap behind the previous segment (ω = 15 rad/s falling toward the tail, ζ = 0.55), with a bending-resistance term and a hard clamp on spacing. A peristaltic wave swells the body radius by 17 percent as it runs head to tail.</p>
+        <p>The body is drawn without geometry: one quad per slug, and the fragment shader sums ten Gaussian blobs read from a small float texture and thresholds the sum, a metaball. A ribbon of 150 points records the slime left behind and fades over 34 s. Seven springtails are a four-state machine: REST, CROUCH (0.09 s, body squashes and turns away), AIR (0.28 to 0.4 s) and SETTLE (0.35 s). A cursor within 0.125 triggers a hop 0.1 to 0.2 long, directed away with 0.45 rad of jitter; otherwise one hops unprovoked every 7 to 24 s. The flight is a parabola with vertical speed 4·peak/T and gravity 2·vz/T, which makes the apex exactly 0.03. Height scales the sprite by 1 + 5z and softens its shadow.</p>
+        <div class="callout warn"><b>Physics versus art</b>Dictyostelium slugs really are phototactic and springtails really do jump, but putting both on one plate with a Physarum, and having slugs steer around its network, is staging. The slug is a spring chain that looks like a slug, not a model of thousands of amoebae. Speeds, hop lengths, gains and ranges are tuned.</div>
+        <p class="src">slimescape/src/slugs.js:5-18,50-168; springtails.js:3-91; world.js:10-27; render.js:151-170; shaders.js:380-543</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 6</h4>
+        <h3>A macro lens on a flat plate</h3>
+        <p>Nothing here uses Three.js lights, shadow maps or stock materials; every surface is a hand-written shader. The agar is a dark albedo lit by one warm key light from the upper left, with a slowly drifting pool of light, a surface normal from value noise and a four-octave fractal noise (<code>fbm</code>), wet Blinn-Phong highlights, fine scratches and bubbles placed on three cell grids. The slime casts a soft shadow on the agar and a yellow halo, both found by ring taps (8, or 5 at Eco) at fixed radii, skipped wherever the coarse map says there is no slime nearby. The plate is drawn into a half-float HDR target together with the slugs, trails and springtails.</p>
+        <p>Depth of field is a full-screen gather. The plate is flat and there is no depth buffer, so the blur radius is a function of screen position: distance from a focus ring (radius about 0.36 that drifts slowly) sets a circle of confusion, and the corners are blurred a further 45 percent. The gather uses 8 to 24 golden-angle taps (by tier), rotated per pixel with interleaved-gradient noise. The maximum radius is 0.0095 of the screen height at Balanced, about 10 px on a 1080-pixel-tall frame. Floating specks are drawn after this pass with their own blur. Then a bloom pyramid of 13-tap downsamples and 9-tap tent upsamples (4 to 6 levels, per-level weights from 0.6 down to 0.08) adds a warm-tinted glow.</p>
+        <p>The output pass applies a small red/blue fringe toward the edges, vignette, exposure 1.05, the same ACES fit used elsewhere on this page, a chroma boost of 1.22 to win back saturation the curve takes from yellow, gamma 1/2.2 and a plus or minus 1/255 dither. Tone mapping is done in this shader, so the renderer itself is set to linear output.</p>
+        <div class="callout warn"><b>Physics versus art</b>This is a stylised macro look, not optics. Real depth of field depends on distance from the focal plane; here it depends on distance from the screen centre, as a stand-in for a lens with field curvature. Bloom tint, vignette, fringe and the drifting lamp are art direction. The ACES curve is a standard film-style fit, not a model of the plate.</div>
+        <p class="src">slimescape/src/shaders.js:163-174,179-307,586-683; render.js:182-356</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 7</h4>
+        <h3>Fixed steps, quality tiers and tests that need no GPU</h3>
+        <p>The simulation ticks at a fixed 1/60 s. Each tick steps the CPU world (flakes, slugs, springtails, lamp) and then runs the three GPU passes. The draw loop accumulates elapsed time, runs at most 6 ticks per frame and drops the remainder, so the colony grows at the same speed at 20, 30 or 60 frames per second. Before the first frame the colony is pre-grown (the warm-up column below), and the CPU world, slugs included, is run for 14 s. Pausing or hiding the page stops all of it. If the WebGL context is lost, the colony lived only in GPU memory, so a new one is grown. On battery, Native falls back to Balanced and rebuilds the colony; any tier is capped at 30 fps and renders at 0.9 scale. As in the other scenes, the render scale steps down by 0.1 to a floor of 0.72 when the CPU frame cost stays high, and never back up.</p>
+        <div class="scroll"><table>
+          <thead><tr><th>Tier</th><th>Agents</th><th>Trail map</th><th>Warm-up steps</th><th>Deposit scale</th><th>Diffuse blend</th><th>DoF taps</th></tr></thead>
+          <tbody>
+            <tr><td><code>eco</code></td><td>65,536</td><td>640 × 360</td><td>600</td><td>0.954</td><td>0.234</td><td>8</td></tr>
+            <tr><td><code>balanced</code></td><td>160,000</td><td>1024 × 576</td><td>900</td><td>1.000</td><td>0.600</td><td>14</td></tr>
+            <tr><td><code>detail</code></td><td>262,144</td><td>1280 × 720</td><td>1100</td><td>0.954</td><td>0.938</td><td>20</td></tr>
+            <tr><td><code>native</code></td><td>262,144</td><td>1536 × 864</td><td>1200</td><td>1.373</td><td>0.950 (capped)</td><td>24</td></tr>
+          </tbody>
+        </table></div>
+        <p>Five Node test files run the CPU side with no GPU, and all pass. The agent test runs the JavaScript reference of the rule on a 96 by 54 grid with 1400 agents, and checks that it is deterministic per seed, finite and bounded; that agents scattered at random gather onto a bright ridge (they start below 20 percent within 3.5 cells of it and must end above 45 percent after 120 steps); that foragers move toward food more than a control colony and more than non-foragers do; that a light empties its pool (under 70 percent of the dark control's agents inside it); and that the reinforcement is monotone and capped. The slug test checks that segment spacing stays within 0.6 to 1.4 of rest over two minutes, the body bends in a turn, a slug closes on a light in range and ignores one out of range, and a wall of dense slime is never crossed. The food, springtail and world tests check the flake lifecycle and cap, the hop parabola (constant second difference), landing exactly on the plate, fleeing the light, the camera fit, and the lamp easing.</p>
+        <div class="callout warn"><b>What the tests do not cover</b>They test the JavaScript reference and the CPU behaviours, not the GLSL. The two paths share constants but not code, and they differ in places: the reference lowers decay by 0.1 in light where the shader uses 0.12, and it does not scale deposit or diffusion by tier. Nothing in these five files compares GPU output with the reference or runs a shader. This page quotes no frame times: none were measured on a real GPU.</div>
+        <p class="src">slimescape/src/main.js:54-95,145-147; world.js:9-10,35-44; render.js:13-18,61-63; ../shared/render-policy.js:12-41; tests/agents.mjs:26-103; tests/slugs.mjs:10-136; tests/food.mjs; tests/springtails.mjs; tests/world.mjs</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pelagic">
+  <h2>Pelagic: a pulse, a stirred current, and plankton that flash when sheared</h2>
+  <div class="scene">
+    <img src="images/thumbs/pelagicscape.jpg" alt="Translucent jellyfish in near-black blue water. A large violet bell with a pink oral-arm column and beaded tentacles fills the lower left. Smaller cyan, rose and pale bells recede behind it, and two or three comb jellies with rainbow stripes sit at right. Faint light shafts fall from the top and tiny blue specks cling to the tentacles." width="960" height="500" loading="lazy">
+    <div class="body">
+      <div class="tags"><span class="tag">2,078 lines JS</span><span class="tag">164 Verlet filaments</span><span class="tag">4,000 to 24,000 plankton by tier</span><span class="tag">no textures, no model files</span><span class="tag art">part physics, part art direction</span></div>
+
+      <div class="tech">
+        <h4>Technique 1</h4>
+        <h3>A bell rebuilt every frame from one number</h3>
+        <p>The CPU keeps a pulse phase <code>p</code> in [0, 1) and an amplitude for each jellyfish. It stores nothing about the bell's shape. The vertex shader rebuilds the bell from those two numbers each frame. The cycle is a fast power stroke over the first 0.34 of the phase, then a slow relaxation over the other 0.66, a ratio of about 1 : 1.9. Both halves are smoothstep curves. Contraction starts at the margin, where the pacemakers sit, and travels to the apex: a point at arc position <code>s</code> (0 at the apex, 1 at the margin) lags the margin by <code>(1 − s) · 0.11</code> of a cycle.</p>
+        <div class="formula">c(p)      = smoothstep(p / 0.34)             p &lt; 0.34
+c(p)      = 1 − smoothstep((p − 0.34) / 0.66)   otherwise
+c(p, s)   = c(p − (1 − s) · 0.11)
+r(s, c)   = sin(1.5 s) / sin(1.5) · (1 + 0.1 s⁵) · (1 − 0.34 c (0.3 + 0.7 s²))
+y(s, c)   = 0.64 · yy(s) · (1 + 0.5 c (1 − s)) − 0.2 c s³ − 0.34 · 0.64</div>
+        <p>The shape is a surface of revolution. <code>yy(s)</code> is the cosine form <code>(cos(1.5 s) − cos 1.5) / (1 − cos 1.5)</code>, so 1.5 rad of arc gives an almost hemispherical dome. At full contraction the margin is 34% narrower and 0.2 bell radii lower, and the dome near the apex is 50% taller. The wall is 0.19 radii thick at the apex and 0.012 at the margin, and it thickens by 45% when squeezed. One 60 by 64 grid (3,965 vertices, 7,680 triangles) serves all five bells. The outer and inner surfaces are the same grid walked out and back, with the inner one pushed inward by the wall thickness. Normals come from finite differences of the same displaced function inside the vertex shader. The shader also adds an oval wobble, 12 or 16 scalloped lobes on the margin and a slow ripple, which are display-only. The JS and GLSL versions of the profile print their constants from the same table, so they cannot drift apart.</p>
+        <div class="figure">
+          <svg viewBox="0 0 420 260" role="img" aria-label="Local bell contraction over one pulse cycle at the margin and at the apex. The margin curve rises from 0 to 1 over the first 0.34 of the cycle and relaxes slowly back to 0. The apex curve is the same shape delayed by 0.11 of a cycle." class="chart">
+<line x1="62" x2="406" y1="218.0" y2="218.0" class="grid"/>
+<text x="56" y="222.0" class="tick" text-anchor="end">0</text>
+<line x1="62" x2="406" y1="167.0" y2="167.0" class="grid"/>
+<text x="56" y="171.0" class="tick" text-anchor="end">0.25</text>
+<line x1="62" x2="406" y1="116.0" y2="116.0" class="grid"/>
+<text x="56" y="120.0" class="tick" text-anchor="end">0.5</text>
+<line x1="62" x2="406" y1="65.0" y2="65.0" class="grid"/>
+<text x="56" y="69.0" class="tick" text-anchor="end">0.75</text>
+<line x1="62" x2="406" y1="14.0" y2="14.0" class="grid"/>
+<text x="56" y="18.0" class="tick" text-anchor="end">1</text>
+<line x1="62.0" x2="62.0" y1="14" y2="218" class="grid"/>
+<text x="62.0" y="234" class="tick" text-anchor="middle">0</text>
+<line x1="148.0" x2="148.0" y1="14" y2="218" class="grid"/>
+<text x="148.0" y="234" class="tick" text-anchor="middle">0.25</text>
+<line x1="234.0" x2="234.0" y1="14" y2="218" class="grid"/>
+<text x="234.0" y="234" class="tick" text-anchor="middle">0.5</text>
+<line x1="320.0" x2="320.0" y1="14" y2="218" class="grid"/>
+<text x="320.0" y="234" class="tick" text-anchor="middle">0.75</text>
+<line x1="406.0" x2="406.0" y1="14" y2="218" class="grid"/>
+<text x="406.0" y="234" class="tick" text-anchor="middle">1</text>
+<line x1="179.0" x2="179.0" y1="14" y2="218" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
+<text x="185.0" y="210" class="lab" style="fill:var(--muted)">end of power stroke (0.34)</text>
+<polyline points="62.0,218.0 65.4,217.5 68.9,216.0 72.3,213.5 75.8,210.2 79.2,206.1 82.6,201.2 86.1,195.6 89.5,189.4 93.0,182.7 96.4,175.4 99.8,167.8 103.3,159.7 106.7,151.3 110.2,142.7 113.6,133.9 117.0,125.0 120.5,116.0 123.9,107.0 127.4,98.1 130.8,89.3 134.2,80.7 137.7,72.3 141.1,64.2 144.6,56.6 148.0,49.3 151.4,42.6 154.9,36.4 158.3,30.8 161.8,25.9 165.2,21.8 168.6,18.5 172.1,16.0 175.5,14.5 179.0,14.0 182.4,14.1 185.8,14.6 189.3,15.2 192.7,16.2 196.2,17.3 199.6,18.8 203.0,20.4 206.5,22.3 209.9,24.3 213.4,26.6 216.8,29.1 220.2,31.8 223.7,34.6 227.1,37.6 230.6,40.8 234.0,44.2 237.4,47.6 240.9,51.2 244.3,55.0 247.8,58.8 251.2,62.8 254.6,66.9 258.1,71.1 261.5,75.3 265.0,79.6 268.4,84.0 271.8,88.5 275.3,93.0 278.7,97.5 282.2,102.1 285.6,106.7 289.0,111.4 292.5,116.0 295.9,120.6 299.4,125.3 302.8,129.9 306.2,134.5 309.7,139.0 313.1,143.5 316.6,148.0 320.0,152.4 323.4,156.7 326.9,160.9 330.3,165.1 333.8,169.2 337.2,173.2 340.6,177.0 344.1,180.8 347.5,184.4 351.0,187.8 354.4,191.2 357.8,194.4 361.3,197.4 364.7,200.2 368.2,202.9 371.6,205.4 375.0,207.7 378.5,209.7 381.9,211.6 385.4,213.2 388.8,214.7 392.2,215.8 395.7,216.8 399.1,217.4 402.6,217.9 406.0,218.0" class="curve" style="stroke:var(--accent)"/>
+<polyline points="62.0,202.9 65.4,205.4 68.9,207.7 72.3,209.7 75.8,211.6 79.2,213.2 82.6,214.7 86.1,215.8 89.5,216.8 93.0,217.4 96.4,217.9 99.8,218.0 103.3,217.5 106.7,216.0 110.2,213.5 113.6,210.2 117.0,206.1 120.5,201.2 123.9,195.6 127.4,189.4 130.8,182.7 134.2,175.4 137.7,167.8 141.1,159.7 144.6,151.3 148.0,142.7 151.4,133.9 154.9,125.0 158.3,116.0 161.8,107.0 165.2,98.1 168.6,89.3 172.1,80.7 175.5,72.3 179.0,64.2 182.4,56.6 185.8,49.3 189.3,42.6 192.7,36.4 196.2,30.8 199.6,25.9 203.0,21.8 206.5,18.5 209.9,16.0 213.4,14.5 216.8,14.0 220.2,14.1 223.7,14.6 227.1,15.2 230.6,16.2 234.0,17.3 237.4,18.8 240.9,20.4 244.3,22.3 247.8,24.3 251.2,26.6 254.6,29.1 258.1,31.8 261.5,34.6 265.0,37.6 268.4,40.8 271.8,44.2 275.3,47.6 278.7,51.2 282.2,55.0 285.6,58.8 289.0,62.8 292.5,66.9 295.9,71.1 299.4,75.3 302.8,79.6 306.2,84.0 309.7,88.5 313.1,93.0 316.6,97.5 320.0,102.1 323.4,106.7 326.9,111.4 330.3,116.0 333.8,120.6 337.2,125.3 340.6,129.9 344.1,134.5 347.5,139.0 351.0,143.5 354.4,148.0 357.8,152.4 361.3,156.7 364.7,160.9 368.2,165.1 371.6,169.2 375.0,173.2 378.5,177.0 381.9,180.8 385.4,184.4 388.8,187.8 392.2,191.2 395.7,194.4 399.1,197.4 402.6,200.2 406.0,202.9" class="curve" style="stroke:var(--warn);stroke-dasharray:6 4"/>
+<line x1="250" x2="270" y1="30" y2="30" class="curve" style="stroke:var(--accent)"/>
+<text x="276" y="34" class="lab" style="fill:var(--accent)">margin (s = 1)</text>
+<line x1="250" x2="270" y1="46" y2="46" class="curve" style="stroke:var(--warn);stroke-dasharray:6 4"/>
+<text x="276" y="50" class="lab" style="fill:var(--warn)">apex (s = 0)</text>
+<text x="234" y="254" class="axl" text-anchor="middle">pulse phase p (one cycle)</text>
+<text x="11" y="116" class="axl" text-anchor="middle" transform="rotate(-90 11 116)">local contraction c</text>
+          </svg>
+          <p class="cap">Local contraction c over one pulse cycle, from <code>localContraction(p, s)</code> in <code>pulse.js</code> evaluated at the margin and at the apex with amplitude 1. The apex curve is the margin curve delayed by 0.11 of a cycle, so the margin is already squeezing while the apex has barely moved.</p>
+        </div>
+        <div class="callout warn"><b>Physics versus art</b>This is kinematics, not mechanics. There is no elastic shell, no muscle model and no fluid pressure on the bell. The 1 : 1.9 timing and the lag follow the qualitative behaviour the comments describe for a moon jelly. Every shape constant (0.34, 0.5, 0.2, 0.45, the wall profile) is chosen by eye. One more approximation: the tentacle roots on the CPU sit on the smooth margin curve, while the shader adds oval, lobe and ripple terms of a few hundredths of a bell radius, so a root can sit slightly off the drawn rim. No test compares the JS profile with the GLSL one.</div>
+        <p class="src">pelagicscape/src/pulse.js:11-23,30-38,54-67,84-101; shaders.js:44-84; render.js:22-32,79; tests/pulse.mjs:4-39</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 2</h4>
+        <h3>Swimming by recoil, with a three-state steering machine</h3>
+        <p>A jellyfish cannot steer directly. It pulses, and each power stroke adds a velocity impulse along the bell axis. The impulse is <code>0.85 · √size · vigor</code>, spread over the stroke by the profile <code>6x(1 − x)/0.34</code>, which integrates to exactly 1. Drag then pulls the velocity toward 0.75 of the local current at 1.3 per second, with a constant downward acceleration of 0.07 units per second squared. To go sideways the animal must first tilt its axis. The axis follows a heading through a spring and damper: acceleration is <code>7 · (target − axis) − 3.6 · axisVelocity</code>. That is a natural frequency of about 2.6 rad/s and a damping ratio of 3.6 / (2 · √7) = 0.68, so the axis overshoots a little and the bell rocks. Each stroke also nudges the axis sideways at random.</p>
+        <p>A small state machine picks the heading. In <b>drift</b> it follows the current and a slow wobble for 1 to 4 s (or 5 to 17 s after a trip). In <b>travel</b> it heads for a goal picked inside its own patch of water, whose preferred height drifts slowly up and down, for up to 10 to 24 s or until it is within <code>0.6 + size</code> of the goal. The travel heading keeps an upward component, and a comment says the bell never swims apex-down. In <b>avoid</b>, which starts when a smoothed <code>disturbed</code> value exceeds 0.25, the heading points away from the cursor and upward, vigor rises to <code>1.1 + 0.4 · disturbed</code>, and the pulse rate scales by <code>0.78 + 0.5 · vigor + 0.55 · disturbed</code>. So it retreats because it turns away and pulses harder. The disturbance value is the larger of a decayed copy of itself (time constant 1.8 s) and an influence that falls linearly from 1 at the cursor ray to 0 at <code>0.9 + 1.8 · size</code> from it, measured at the animal's own depth and weighted to zero 6.5 units from the cursor plane. Soft walls follow the camera frustum. Soft repulsion starts inside <code>1.9 · (r₁ + r₂) + 0.7</code> and a hard position correction keeps centres at least <code>1.15 · (r₁ + r₂)</code> apart.</p>
+        <div class="callout warn"><b>Physics versus art</b>A fixed impulse per stroke plus linear drag is a cartoon of jet propulsion. Each stroke does shed a vortex ring (radius 0.95 of the margin radius, speed decaying with a 1.1 s time constant, gone after 4 s), but the ring only stirs the water for plankton and tentacles. It does not push the animal. Avoidance adds a direct velocity push of <code>1.8 · influence</code> away from the cursor that has no physical source. The jellyfish do not feel the cursor's wake at all: they read only the exact ambient current. Every gain here (7, 3.6, 1.3, 0.75, 0.25, 1.8) is tuned to look right.</div>
+        <p class="src">pelagicscape/src/jelly.js:94-104,115-134,136-181,183-197,239-246; pulse.js:41-51; tests/behaviour.mjs:30-47,49-61</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 3</h4>
+        <h3>Tentacles as Verlet chains dragged by the bell margin</h3>
+        <p>Every tentacle (16 nodes) and oral arm (20 nodes) is a position-based Verlet chain. Per fixed step each node keeps its own velocity, lightly damped (0.955 to 0.96 per 1/60 s). It is accelerated toward the local water velocity with a drag of 5 to 8 that grows from 0.6 times at the root to 1.4 times at the tip. It is pulled slightly toward continuing straight on from its parent (bend 0.09 to 0.12) and toward trailing along a hang direction (0.015 to 0.025). Then distance constraints restore the length: three mass-weighted Gauss-Seidel sweeps, where nodes near the root are heavier, <code>1 + 2.2 (1 − i/(n−1))²</code>, followed by one exact follow-the-leader pass so lengths never drift. The root is pinned to a point on the bell margin (or under the apex for the arms) and is moved by the pulse, so the tip responds a beat later. A kick at each stroke start gives the free end extra velocity, scaled toward the tip, about 0.9 times the stroke impulse, give or take 20%. There are 164 chains in all (24, 36, 44, 28 and 32 per jellyfish, including four arms each), and two feeding tentacles on each comb jelly.</p>
+        <p>The water is sampled every third node and interpolated. Chains read the shared flow field, but only 30% of the wake velocity, capped at 0.48 units per second, so a stirred wake sways them instead of tying knots. For drawing, the CPU writes node positions and cumulative arc length into a float texture each frame (24 by rows by RGBA). The vertex shader fetches four neighbours, evaluates a Catmull-Rom spline through them and expands it into a camera-facing ribbon. The ribbon has a minimum width of 0.75 px, and alpha shrinks by the width ratio so thin threads fade instead of aliasing. Beads and their twinkle are hashed along arc length.</p>
+        <div class="callout warn"><b>Physics versus art</b>Position-based dynamics keeps the chain stable but it is not a rod model. There is no real elasticity, and the "mass" is only a weighting for the constraint sweeps. Drag is linear in relative velocity, with no Reynolds-number dependence. The beads along the threads are decoration, not a model of nematocyst batteries.</div>
+        <p class="src">pelagicscape/src/chain.js:13-31,37-92,99-105; jelly.js:47-58,88-92,174,209-217,248-260; world.js:49-55; shaders.js:184-264; render.js:35-53,91-99; tests/chain.mjs:12-31,33-56,78-91</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 4</h4>
+        <h3>One water, two fields, and plankton that read the shear</h3>
+        <p><b>The ambient current</b> is <code>u = curl A</code>. Each component of the vector potential <code>A</code> is a sum of three travelling cosines with incommensurate wave vectors and drift speeds, nine waves in all. The curl is taken analytically, so the field is divergence-free by construction. A finite-difference check at 2,000 random points gave divergence near 1e-9, which is rounding error. Amplitudes are scaled once so the rms speed is 0.095 units per second. Wavelengths computed from the table (2π / |k|) run from 7.8 to 11.5 units; the comment in the file says 9 to 25. The cursor does not touch this field. The same table is printed as GLSL, but no shader in the scene calls it. Nine cosines for thousands of plankton per step is wasteful, so a 25 by 14 by 17 lattice at 1.5-unit spacing is refilled every 0.2 s and read back with trilinear interpolation. Jellyfish steer on the exact function. Plankton, filaments and comb jellies use the lattice.</p>
+        <p><b>The disturbance field</b> is a second, sparse velocity grid of 38 by 24 by 33 cells, 0.6 units apart, 30,096 in all. Only cells that were touched are kept in a list and visited. Anything moving through the water calls <code>splat</code>, which relaxes the velocity of nearby cells toward the mover's velocity with a Gaussian weight, and the grid decays with a time constant of 0.55 s. The cursor is a hand at depth 7.4 with sigma 0.34 laterally and 1.1 along depth. Its speed is capped at 14 units per second, and up to 10 splats per step are laid along its path so a fast move leaves no gaps. Jellyfish stir in turn. The body drags water when faster than 0.12, six splats ring the margin on every other step during a stroke, and six more follow each live vortex ring. <b>Shear</b> is then computed per active cell as the size of the whole velocity gradient, by central differences with spacing 0.6:</p>
+        <div class="formula">shear = sqrt( Σ over u_x, u_y, u_z  of  (∂/∂x)² + (∂/∂y)² + (∂/∂z)² )      units 1/s</div>
+        <p><b>Flash.</b> Each plankton cell re-reads the field every fourth step and coasts in between. It flashes when shear exceeds 2.2 per second and it is neither rising nor refractory. Peak energy is <code>min(1.4, 0.55 + 0.45 · shear / 2.2)</code>, which is exactly 1 at threshold. Energy rises over 0.09 s, then decays exponentially with a time constant of 0.40 to 0.85 s drawn per particle. A refractory period of 1.4 to 3.2 s, counted from the flash start, blocks the next flash. In the shader the brightness is energy squared, and the colour goes from deep blue to white-hot between energy 0.75 and 1.3. A probe run of the simulation, which is not one of the tests, moved the cursor at several speeds across the focal plane, where the frame is 8.3 units wide. It gave a peak grid shear of 1.9 per second at 1 unit/s, 2.3 at 2, 3.8 at 4 and 6.8 at 8. So a slow drag stays below the threshold, and a one-second sweep across the frame reaches about three times it.</p>
+        <div class="callout warn"><b>Physics versus art</b>The idea is physical: dinoflagellates flash when the water around them deforms them, and calm water stays dark. The numbers are not measured values. The threshold of 2.2 per second, the 0.09 s rise, the decay and refractory times are tuned for the look. The "shear" is the Frobenius norm of the whole gradient, so it counts rotation as well as strain, while a cell responds to deformation. The disturbance grid is not Navier-Stokes. It has no pressure, no incompressibility and no self-advection. It only relaxes toward the movers and decays. The look is also composed: 25% of the plankton are born near a jellyfish and 80% of the rest within ±1.3 units of the cursor plane (60% overall), so that stirring is visible.</div>
+        <p class="src">pelagicscape/src/flow.js:11-63,81-110; bio.js:14-18,22-100,102,106-170; world.js:49-55,109-123,126-155,169-194; shaders.js:346-394; tests/bio.mjs:12-39,60-84</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 5</h4>
+        <h3>Comb jellies: a metachronal wave drawn as moving colour</h3>
+        <p>A comb jelly has 8 rows of 30 comb plates. Plate <code>i</code> has phase <code>fract(2.6 · t − 0.05 · i + rowOffset)</code>. Because the phase falls linearly with <code>i</code>, each plate repeats its neighbour's beat one lag later, and the wave travels along the row at 2.6 / 0.05 = 52 plates per second. A 30-plate row spans 1.5 cycles, so about one and a half wavelengths show at once. The glint is <code>sin(πx)³</code>, where x rises over the first 30% of the phase and falls over the other 70%. That is a short bright power stroke and a long dim recovery, with a mean of about 0.42. The shader runs the same maths from constants printed out of the JS. Its per-row offset comes from a hash of the row id (0 to 0.12). The <code>rowOffsets</code> array that <code>createComb</code> fills (±0.04) is never read by any shader.</p>
+        <p>Plate colour is <code>rainbow(0.6 · phase + 0.25 · position + 0.45 · |N·V| + a view-azimuth term)</code>, mixed 28% toward pale blue. So the colour of a plate changes with its beat phase and the angle you see it from, a loose imitation of the way diffraction colour shifts with angle. The body is almost invisible: a cool rim, a faint inner glow and a bright apical organ. The animal swims oral end first at a target speed of 0.07 to 0.12 units per second, scaled by a slow surge factor between 0.1 and 1. Its axis wanders, is held loosely upright, and is turned by the local water velocity. Two feeding tentacles use the same chain code and slowly retract and extend. All six comb jellies are simulated at every tier, and the tier only decides how many are drawn.</p>
+        <div class="callout warn"><b>Physics versus art</b>The metachronal wave is a real feature of ctenophores, but the timing here is slowed. The code comment says real rows beat at 10 to 30 Hz and this beats at 2.6 Hz so a display can resolve it. The iridescence is a cosine palette keyed to phase and view angle, not a computed optical response. The lag of 0.05 and the 30 plates are tuned. The comment on <code>stepComb</code> says the axis is turned by shear, but the code adds components of the water velocity.</div>
+        <p class="src">pelagicscape/src/comb.js:8-36,43-85; shaders.js:267-343; world.js:63-74,161-167,180-191; tests/comb.mjs:6-28,30-47</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 6</h4>
+        <h3>Light through a thin wall, depth fog, focus and bloom</h3>
+        <p><b>Translucency.</b> Nothing is ray traced. For each bell pixel the shader takes the wall thickness <code>th</code> at that point and a slanted path through it, <code>path = th · 0.5 / max(|N·V|, 0.16)</code>. Density is <code>1 − exp(−13 · path)</code>, which is Beer-Lambert absorption along that path, so grazing rims and the thick apex look denser than the thin sides. A factor <code>exp(−26 · th)</code> sets pale versus deep tint, and a rim term <code>(1 − |N·V|)³</code> adds the glassy edge. Lighting is one fixed direction and a wrap term. Gonads and radial canals are painted on the inner surface and seen through the wall. Each bell is drawn twice, back-facing pass first, then its tentacles and arms, then the front-facing pass, with premultiplied "over" blending. That is why filaments appear through the front wall. There is no depth buffer. Items are sorted far to near by hand, and the plankton buffer is drawn six times, once per slice of depth between the bells, with the vertex shader moving points outside its slice off screen.</p>
+        <p><b>Absorption, emission and background.</b> Transmittance is <code>exp(−k · distance)</code> with a separate k per channel. Plankton use <code>(0.13, 0.058, 0.040)</code>, so red dies first. Animals use a gentler <code>(0.075, 0.040, 0.032)</code>, because, as the comment says, otherwise every red or pink animal would turn blue. Three.js fog is not used. The water itself is a function in the output pass: a vertical gradient and a few faint light shafts from a point above the frame, built from three octaves of angular noise and faded with height. It shows only where scene alpha does not cover it, and there is no ray-march.</p>
+        <p><b>Depth of field and bloom.</b> Every material also writes a circle of confusion, <code>min(max, 17 px · |depth − 8.6| / depth)</code>, where 17 px is for a 720-pixel-tall frame and scales with height. That has the <code>|d − focus| / d</code> shape of the thin-lens relation, with its constants folded into one tuned pixel number. The focus distance of 8.6 puts the middle jellyfish in focus. The DOF pass widens the circle of confusion using blurred copies of itself, then reads the colour mip chain at <code>log2(coc) + 0.35</code>, blending two neighbouring levels. Plankton points grow with their circle of confusion and their intensity is divided by <code>(size / base)^1.6</code>. A strictly energy-conserving disc would use an exponent of 2, so defocused flashes stay a little brighter. Bloom is a 6-level pyramid (5 on eco): a 13-tap downsample, a tent-filter upsample, weights 0.55, 0.38, 0.22 and 0.10, gain 0.5 and a blue-green tint. A fifth weight of 0.05 is listed but six levels never read it. The output pass adds small chromatic aberration (0.004), a vignette, ACES tone mapping at exposure 1.35, a saturation lift of 1.16, gamma 1/2.2 and dither. The colour targets are half-float.</p>
+        <div class="callout warn"><b>Physics versus art</b>Beer-Lambert absorption and the <code>|d − f| / d</code> blur are real laws. Their coefficients (13, 26, 0.16, the transmittance triples, the Fresnel-like power of 3) are hand-tuned, and the animal and water tables deliberately disagree. There is no scattering and no light transport, and the shafts are decoration. DOF is a blur from mip levels, so it has no lens-shaped bokeh.</div>
+        <p class="src">pelagicscape/src/shaders.js:13-29,87-181,346-408,416-519; render.js:9-18,79-103,123-177,204-257,259-272</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 7</h4>
+        <h3>Fixed steps, tiers that switch in place, and tests with no GPU</h3>
+        <p>The simulation advances in fixed 1/60 s steps: elapsed time is added to an accumulator, up to 6 steps run per drawn frame, and if it still cannot catch up the remainder is dropped. A visit uses a random seed. <code>?capture</code> uses seed 1, so frames are repeatable. The quality tier sets how much is simulated and drawn:</p>
+        <ul class="tight">
+          <li><b>eco:</b> 4,000 plankton, 350 marine snow, 4 comb jellies, 5 mip levels.</li>
+          <li><b>balanced:</b> 12,000 plankton, 900 snow, 5 comb jellies, 6 levels.</li>
+          <li><b>detail</b> and <b>native:</b> 24,000 plankton, 1,600 snow, 6 comb jellies, 6 levels.</li>
+        </ul>
+        <p>Add 800 ring markers at every tier (5 jellyfish times 4 rings times 40), so the point buffer holds 5,150, 13,700 or 26,400 points. The brightness per plankton is <code>4.2 · min(1, 1.15 · √(12000 / n))</code>, which is 4.2, 4.2 and 3.42 for the three counts, so more particles are each a little dimmer. Of the four presets, only <code>native</code> carries a battery fallback, and it falls back to <code>balanced</code>. Either the browser's Battery API (when not in host mode) or the wallpaper host's <code>scenePower</code> call ends in <code>applyTier</code>. If the tier name changed, it calls <code>sim.setTier</code>, then <code>renderer.setTier</code>. The world rebuilds its plankton buffers with <code>resizePlankton</code>, which keeps the position, velocity and flash timers of every surviving particle, so a glow in progress does not blink out. The respawn lifetime is not copied, and new particles start fresh. The comb jellies beyond the count fade by 0.02 per drawn frame, about 50 frames. The renderer builds new point buffers, disposes the old ones, recomputes the gain and picks 5 or 6 mip levels. Jellyfish, filaments and the water are untouched, and plankton use their own random stream, so a tier change never alters the animals. Resolution is a separate path: the preset's pixel budget and pixel-ratio cap, a 0.9 scale on battery and a 30 fps cap. A one-way downshift to a floor of 0.72 follows after 80 slow samples.</p>
+        <p>The six scripts in <code>tests/</code> all printed <code>ok</code> when run. They test the CPU simulation only. <b>pulse</b> checks that contraction is bounded, monotone through each half and periodic, that the margin leads the apex by 0.11, that thrust integrates to 1, and, in a small inline model, that velocity decays to zero after the last stroke. <b>chain</b> runs 120 s of random root impulses in a 4 times stronger current and requires segment lengths within 2% of rest and the tip never farther than the chain is long. It also checks that the tip lags the middle, that a current deflects the tip, and that a kick flicks the tip furthest and then settles. <b>bio</b> requires no flash at 0.95 times the threshold and flashes at 1.5 times it. It checks the refractory gap of at least 1.4 s, a peak within 0.25 s of the flash and energy decay, and that a fast stirrer shears above the threshold, a slow one does not, and the wake dies out. <b>comb</b> checks a constant plate lag, a wave speed between 10 and 100 plates per second (it is 52) and a glint peak above 0.99 with mean below 0.5. <b>behaviour</b> runs 240 s on eco and requires every jellyfish to stay in the tank, never overlap, keep pulsing and visit drift and travel. With a moving cursor they must also enter avoid and pulse more. <b>tier</b> cycles balanced, native and balanced and requires exact counts, kept state for the first 50 particles, and jellyfish identical to an uninterrupted run. Not covered: every shader, DOF, bloom, the renderer's <code>setTier</code>, and the battery wiring in <code>main.js</code>. One assertion in <code>bio.mjs</code> (line 48) is vacuous, and the line after it carries the real check.</p>
+        <p class="src">pelagicscape/src/main.js:18,48-53,56-60,70-77,108-110; world.js:15-22,233-240; bio.js:172-187; render.js:9,137,196-199,275-282; ../shared/render-policy.js:12-41; tests/tier.mjs:5-44; tests/behaviour.mjs:30-47</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="aurora">
+  <h2>Aurora fjord: an emission integral overhead, a wave equation underneath</h2>
+  <div class="scene">
+    <img src="images/thumbs/aurorascape.jpg" alt="Green and pink aurora over a dark fjord between two steep mountain walls, mirrored in still water; a small dark whale back with a thin glowing rim and a puff of spray sits at the waterline left of centre" width="960" height="500" loading="lazy">
+    <div class="body">
+      <div class="tags"><span class="tag">2,941 lines JS</span><span class="tag">3 whales, 24-joint spines</span><span class="tag">20 to 40 march steps per pixel</span><span class="tag art">part physics, part art direction</span></div>
+
+      <div class="tech">
+        <h4>Technique 1</h4>
+        <h3>The aurora is marched per pixel through a map of the sky seen from above</h3>
+        <p>Two passes. The first redraws a plan map every frame: a 2D field covering 1,600 km by 870 km (x from -800 to 800, z from -950 to -80), at 320x184, 512x288, 640x360 or 768x432 texels depending on the quality tier. Each texel stores a density, a horizontal warp, a "hardness" value for the electrons and a ray-activity value. The density comes from three ribbons whose centrelines wobble with sums of sines and whose cross-section is a Gaussian 3.4 to 6.4 km wide (wider when the sky is active) plus a faint wide skirt. Before that, the coordinates are displaced three times by a curl-noise flow, at scales 360, 125 and 46 km. The flow's stream function is a sum of seven travelling sines and its velocity is the curl, so it is divergence-free.</p>
+        <p>The second pass runs once per pixel of a target that is 0.5 to 0.8 of the screen size per axis. It takes the view ray and steps 20, 24, 32 or 40 times between 80 and 300 km altitude on an Earth of radius 6,371 km. For altitude <code>h</code> and ray height component <code>y</code>, the distance along the ray to that shell is:</p>
+        <div class="formula">t(h) = sqrt((R·y)² + 2·R·h + h²) − R·y</div>
+        <p>Each step reads the plan map once at the ground position under the ray and accumulates <code>col += T · colour(h) · ρ · rays · dt · 0.024</code>, then <code>T *= exp(−ρ · dt · 0.0006)</code>. The absorption is tiny, so the sky is close to a pure emission integral. Steps are jittered per pixel by a blue-noise-like texture channel (white noise with low frequencies removed and the values rank-normalised) plus a golden-ratio offset each frame. The map is read at a mip level chosen from the step footprint, so a grazing ray averages the ribbons it crosses. Vertical rays are 1D noise across the curtain at 1.7, 4 and 15 km, faded out when narrower than a pixel. A 9-tap tent blur then removes the residual jitter, and the sky pass adds two coarse mips of the result as glow.</p>
+        <p class="src">aurorascape/src/shaders.js:54-109,116-168,450-462; render.js:22-44,101-103,296-298; tiers.js:6-9</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 2</h4>
+        <h3>Green low, red high: colour as a function of altitude, and an aperiodic storm clock</h3>
+        <p>Colour is not stored in the map. It is a function of altitude alone, a sum of four weighted emission lines. With <code>e = h + 22·(hard − 0.5)</code>, the weights are:</p>
+        <div class="formula">green = exp(−((e − 125)/σ)²),  σ = 15 below 125 km, 48 above
+red   = 0.75 · smoothstep(196, 270, e) · (1.15 − 0.9·hard) · exp(−(max(e − 275, 0)/55)²)
+blue  = 0.38 · exp(−((e − 108)/22)²)
+pink  = (0.2 + 0.7·hard) · exp(−((e − 94)/8.5)²)</div>
+        <p>The code's reasoning is atomic physics. Green (557.7 nm, atomic oxygen) peaks at 125 km. Red (630.0 nm, same atom) has a 110 s lifetime, so collisions quench it lower down and it shows only above about 200 km. Molecular nitrogen emits blue-violet (427.8 nm) and a pink lower fringe at 90 to 100 km. <code>hard</code> is how energetic the electrons are, and it slides the whole profile: the green peak sits at 133.75 km for hardness 0.1 and 116.25 km for 0.9 (measured by running the function). The map supplies hardness per pixel, so a curtain's bottom edge turns pink where the electrons are hard.</p>
+        <div class="figure">
+          <svg viewBox="0 0 420 260" role="img" aria-label="Aurora emission weights by altitude from 80 to 300 kilometres at hardness 0.5: green peaks near 125 km, blue near 108 km, pink near 94 km, red rises above 200 km" class="chart">
+<line x1="62" x2="406" y1="218.0" y2="218.0" class="grid"/>
+<text x="56" y="222.0" class="tick" text-anchor="end">0</text>
+<line x1="62" x2="406" y1="167.0" y2="167.0" class="grid"/>
+<text x="56" y="171.0" class="tick" text-anchor="end">0.25</text>
+<line x1="62" x2="406" y1="116.0" y2="116.0" class="grid"/>
+<text x="56" y="120.0" class="tick" text-anchor="end">0.5</text>
+<line x1="62" x2="406" y1="65.0" y2="65.0" class="grid"/>
+<text x="56" y="69.0" class="tick" text-anchor="end">0.75</text>
+<line x1="62" x2="406" y1="14.0" y2="14.0" class="grid"/>
+<text x="56" y="18.0" class="tick" text-anchor="end">1</text>
+<line x1="62.0" x2="62.0" y1="14" y2="218" class="grid"/>
+<text x="62.0" y="234" class="tick" text-anchor="middle">80</text>
+<line x1="124.5" x2="124.5" y1="14" y2="218" class="grid"/>
+<text x="124.5" y="234" class="tick" text-anchor="middle">120</text>
+<line x1="187.1" x2="187.1" y1="14" y2="218" class="grid"/>
+<text x="187.1" y="234" class="tick" text-anchor="middle">160</text>
+<line x1="249.6" x2="249.6" y1="14" y2="218" class="grid"/>
+<text x="249.6" y="234" class="tick" text-anchor="middle">200</text>
+<line x1="312.2" x2="312.2" y1="14" y2="218" class="grid"/>
+<text x="312.2" y="234" class="tick" text-anchor="middle">240</text>
+<line x1="374.7" x2="374.7" y1="14" y2="218" class="grid"/>
+<text x="374.7" y="234" class="tick" text-anchor="middle">280</text>
+<line x1="406.0" x2="406.0" y1="14" y2="218" class="grid"/>
+<text x="406.0" y="234" class="tick" text-anchor="middle">300</text>
+<polyline points="62.0,218.0 65.1,217.9 68.3,217.9 71.4,217.8 74.5,217.5 77.6,217.1 80.8,216.4 83.9,215.2 87.0,213.1 90.1,210.0 93.3,205.3 96.4,198.6 99.5,189.3 102.7,177.0 105.8,161.5 108.9,143.0 112.0,121.7 115.2,98.9 118.3,75.7 121.4,53.9 124.5,35.5 127.7,22.0 130.8,14.9 133.9,14.1 137.1,14.8 140.2,16.2 143.3,18.3 146.4,21.0 149.6,24.4 152.7,28.4 155.8,33.0 158.9,38.0 162.1,43.6 165.2,49.5 168.3,55.9 171.5,62.5 174.6,69.3 177.7,76.4 180.8,83.6 184.0,90.8 187.1,98.1 190.2,105.4 193.3,112.6 196.5,119.7 199.6,126.6 202.7,133.3 205.9,139.8 209.0,146.0 212.1,152.0 215.2,157.7 218.4,163.1 221.5,168.2 224.6,173.0 227.7,177.4 230.9,181.6 234.0,185.4 237.1,188.9 240.3,192.2 243.4,195.1 246.5,197.8 249.6,200.2 252.8,202.4 255.9,204.4 259.0,206.2 262.1,207.7 265.3,209.1 268.4,210.4 271.5,211.4 274.7,212.4 277.8,213.2 280.9,213.9 284.0,214.6 287.2,215.1 290.3,215.6 293.4,216.0 296.5,216.3 299.7,216.6 302.8,216.8 305.9,217.0 309.1,217.2 312.2,217.3 315.3,217.5 318.4,217.6 321.6,217.6 324.7,217.7 327.8,217.8 330.9,217.8 334.1,217.9 337.2,217.9 340.3,217.9 343.5,217.9 346.6,217.9 349.7,218.0 352.8,218.0 356.0,218.0 359.1,218.0 362.2,218.0 365.3,218.0 368.5,218.0 371.6,218.0 374.7,218.0 377.9,218.0 381.0,218.0 384.1,218.0 387.2,218.0 390.4,218.0 393.5,218.0 396.6,218.0 399.7,218.0 402.9,218.0 406.0,218.0" class="curve cg"/>
+<line x1="228" x2="248" y1="30" y2="30" class="curve cg"/>
+<text x="254" y="34" class="lab cgt">G  557.7 nm O</text>
+<polyline points="62.0,218.0 65.1,218.0 68.3,218.0 71.4,218.0 74.5,218.0 77.6,218.0 80.8,218.0 83.9,218.0 87.0,218.0 90.1,218.0 93.3,218.0 96.4,218.0 99.5,218.0 102.7,218.0 105.8,218.0 108.9,218.0 112.0,218.0 115.2,218.0 118.3,218.0 121.4,218.0 124.5,218.0 127.7,218.0 130.8,218.0 133.9,218.0 137.1,218.0 140.2,218.0 143.3,218.0 146.4,218.0 149.6,218.0 152.7,218.0 155.8,218.0 158.9,218.0 162.1,218.0 165.2,218.0 168.3,218.0 171.5,218.0 174.6,218.0 177.7,218.0 180.8,218.0 184.0,218.0 187.1,218.0 190.2,218.0 193.3,218.0 196.5,218.0 199.6,218.0 202.7,218.0 205.9,218.0 209.0,218.0 212.1,218.0 215.2,218.0 218.4,218.0 221.5,218.0 224.6,218.0 227.7,218.0 230.9,218.0 234.0,218.0 237.1,218.0 240.3,218.0 243.4,218.0 246.5,217.8 249.6,217.1 252.8,216.0 255.9,214.5 259.0,212.7 262.1,210.5 265.3,208.0 268.4,205.1 271.5,202.1 274.7,198.8 277.8,195.2 280.9,191.5 284.0,187.6 287.2,183.6 290.3,179.5 293.4,175.2 296.5,170.9 299.7,166.6 302.8,162.3 305.9,158.0 309.1,153.7 312.2,149.4 315.3,145.3 318.4,141.3 321.6,137.4 324.7,133.7 327.8,130.1 330.9,126.8 334.1,123.8 337.2,120.9 340.3,118.4 343.5,116.2 346.6,114.4 349.7,112.9 352.8,111.8 356.0,111.1 359.1,110.9 362.2,110.9 365.3,110.9 368.5,110.9 371.6,111.2 374.7,111.8 377.9,112.6 381.0,113.7 384.1,115.1 387.2,116.7 390.4,118.6 393.5,120.7 396.6,122.9 399.7,125.4 402.9,128.1 406.0,130.9" class="curve cr"/>
+<line x1="228" x2="248" y1="46" y2="46" class="curve cr"/>
+<text x="254" y="50" class="lab crt">R  630.0 nm O</text>
+<polyline points="62.0,202.7 65.1,198.8 68.3,194.4 71.4,189.5 74.5,184.1 77.6,178.3 80.8,172.3 83.9,166.3 87.0,160.4 90.1,155.0 93.3,150.1 96.4,146.0 99.5,143.0 102.7,141.1 105.8,140.5 108.9,141.1 112.0,143.0 115.2,146.0 118.3,150.1 121.4,155.0 124.5,160.4 127.7,166.3 130.8,172.3 133.9,178.3 137.1,184.1 140.2,189.5 143.3,194.4 146.4,198.8 149.6,202.7 152.7,205.9 155.8,208.7 158.9,210.9 162.1,212.7 165.2,214.1 168.3,215.2 171.5,216.0 174.6,216.6 177.7,217.0 180.8,217.3 184.0,217.6 187.1,217.7 190.2,217.8 193.3,217.9 196.5,217.9 199.6,218.0 202.7,218.0 205.9,218.0 209.0,218.0 212.1,218.0 215.2,218.0 218.4,218.0 221.5,218.0 224.6,218.0 227.7,218.0 230.9,218.0 234.0,218.0 237.1,218.0 240.3,218.0 243.4,218.0 246.5,218.0 249.6,218.0 252.8,218.0 255.9,218.0 259.0,218.0 262.1,218.0 265.3,218.0 268.4,218.0 271.5,218.0 274.7,218.0 277.8,218.0 280.9,218.0 284.0,218.0 287.2,218.0 290.3,218.0 293.4,218.0 296.5,218.0 299.7,218.0 302.8,218.0 305.9,218.0 309.1,218.0 312.2,218.0 315.3,218.0 318.4,218.0 321.6,218.0 324.7,218.0 327.8,218.0 330.9,218.0 334.1,218.0 337.2,218.0 340.3,218.0 343.5,218.0 346.6,218.0 349.7,218.0 352.8,218.0 356.0,218.0 359.1,218.0 362.2,218.0 365.3,218.0 368.5,218.0 371.6,218.0 374.7,218.0 377.9,218.0 381.0,218.0 384.1,218.0 387.2,218.0 390.4,218.0 393.5,218.0 396.6,218.0 399.7,218.0 402.9,218.0 406.0,218.0" class="curve cb"/>
+<line x1="228" x2="248" y1="62" y2="62" class="curve cb"/>
+<text x="254" y="66" class="lab cbt">B  427.8 nm N2+</text>
+<polyline points="62.0,210.6 65.1,202.7 68.3,189.9 71.4,171.7 74.5,149.8 77.6,128.1 80.8,111.8 83.9,105.8 87.0,111.8 90.1,128.1 93.3,149.8 96.4,171.7 99.5,189.9 102.7,202.7 105.8,210.6 108.9,214.8 112.0,216.7 115.2,217.6 118.3,217.9 121.4,218.0 124.5,218.0 127.7,218.0 130.8,218.0 133.9,218.0 137.1,218.0 140.2,218.0 143.3,218.0 146.4,218.0 149.6,218.0 152.7,218.0 155.8,218.0 158.9,218.0 162.1,218.0 165.2,218.0 168.3,218.0 171.5,218.0 174.6,218.0 177.7,218.0 180.8,218.0 184.0,218.0 187.1,218.0 190.2,218.0 193.3,218.0 196.5,218.0 199.6,218.0 202.7,218.0 205.9,218.0 209.0,218.0 212.1,218.0 215.2,218.0 218.4,218.0 221.5,218.0 224.6,218.0 227.7,218.0 230.9,218.0 234.0,218.0 237.1,218.0 240.3,218.0 243.4,218.0 246.5,218.0 249.6,218.0 252.8,218.0 255.9,218.0 259.0,218.0 262.1,218.0 265.3,218.0 268.4,218.0 271.5,218.0 274.7,218.0 277.8,218.0 280.9,218.0 284.0,218.0 287.2,218.0 290.3,218.0 293.4,218.0 296.5,218.0 299.7,218.0 302.8,218.0 305.9,218.0 309.1,218.0 312.2,218.0 315.3,218.0 318.4,218.0 321.6,218.0 324.7,218.0 327.8,218.0 330.9,218.0 334.1,218.0 337.2,218.0 340.3,218.0 343.5,218.0 346.6,218.0 349.7,218.0 352.8,218.0 356.0,218.0 359.1,218.0 362.2,218.0 365.3,218.0 368.5,218.0 371.6,218.0 374.7,218.0 377.9,218.0 381.0,218.0 384.1,218.0 387.2,218.0 390.4,218.0 393.5,218.0 396.6,218.0 399.7,218.0 402.9,218.0 406.0,218.0" class="curve cr" style="stroke-dasharray:5 4"/>
+<line x1="228" x2="248" y1="78" y2="78" class="curve cr" style="stroke-dasharray:5 4"/>
+<text x="254" y="82" class="lab crt">pink  N2 bands, dashed</text>
+<text x="234" y="254" class="axl" text-anchor="middle">altitude (km)</text>
+<text x="11" y="116" class="axl" text-anchor="middle" transform="rotate(-90 11 116)">relative weight</text>
+</svg>
+          <p class="cap">The four emission weights from <code>emissionWeights()</code> at hardness 0.5, over the whole marched shell. Peaks are at 125 km (green, 1.0), 270 km (red, 0.525), 108 km (blue, 0.38) and 94 km (pink, 0.55). The pink curve is dashed. The curves are the code's weights before they are multiplied by their RGB colours.</p>
+        </div>
+        <p>Brightness over time follows a substorm model: a slow growth phase, a sudden onset that raises brightness within about 9 s and turns on fast travelling rays, a poleward expansion that shifts the ribbons by up to 75 to 145 km, then a recovery. Onsets are 150 to 290 s apart, fixed by a hash so any time can be queried, and three incommensurate sine pulsations ride on top. The first onset is two seconds after the scene starts.</p>
+        <div class="callout warn"><b>Physics versus art</b>The emission lines, the altitude ordering, the quenching story, the spherical shell and the hardness-to-depth link are physics-motivated. The Gaussian widths, the 0.75 and 0.38 amplitudes and the two march constants 0.024 and 0.0006 are tuned shapes: nothing computes electron energy deposition or collisional quenching. The RGB values are hand-picked display colours, not a spectrum run through colour-matching curves. The march treats field lines as exactly vertical, a simplification. The curl-noise warp, the ribbon wobble and the substorm clock, compressed to a few minutes to suit a viewing session, are decoration chosen to look alive. The GLSL copy of the profile is kept equal to the JavaScript copy by hand. The JavaScript copy is tested; the GLSL is not compiled by any test. For the blur term, the comment says dH²/12 and the shader passes dH²/7, so I read 1/7 as a tuned value.</div>
+        <p class="src">aurorascape/src/aurora-model.js:45-73,75-119,133-154; shaders.js:100-107,137-163; tests/aurora-model.mjs:5-40,42-66</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 3</h4>
+        <h3>Water as a damped wave equation on two swapped textures</h3>
+        <p>The surface is a 300 m square (x from -150 to 150, z from -312 to -12), held as height, velocity and foam in the red, green and blue channels of a half-float texture. The grid is 192, 256, 384 or 512 cells on a side by tier, so a cell is 1.56, 1.17, 0.78 or 0.59 m. Every fixed 1/60 s step a fragment shader reads one texture and writes the other, then they swap (ping-pong). The update, with a four-neighbour Laplacian:</p>
+        <div class="formula">k  = (c·Δt / Δx)²,  c = 6 m/s, Δt = 1/60 s
+v' = (v + k·∇²h + ν·∇²v) · e^(−γΔt) · (1 − edge)
+h' = (h + v') · e^(−λΔt)</div>
+        <p>Here ν = 0.045 diffuses velocity so ripples soften as they spread, γ = 0.40 per second is the damping, and λ = 0.20 per second drains the level back to rest so injected volume does not pile up. <code>edge</code> is a sponge: up to 0.10 extra loss per step over the outer 14 cells, ramped quadratically, so waves are absorbed at the border instead of bouncing. Foam is a third channel that decays at 0.72 per second and only affects shading. Over the four tiers <code>k</code> is 0.0041, 0.0073, 0.0164 and 0.0291 (computed from the constants). The GLSL is generated from the same constants as a CPU reference in <code>wave-sim.js</code>.</p>
+        <p>Everything that touches the water goes through one list of up to 48 Gaussian disturbances per step, passed to the shader as uniform arrays. A positive radius adds a velocity impulse. A negative radius pulls the local velocity up to 40% of the way toward a target, which is how a moving body pushes water and stays bounded however long it moves. The cursor ray is intersected with the water plane; a moving cursor leaves a 1.3 m disturbance per step scaled by distance travelled, and a resting cursor taps out three alternating pulses (+0.05, -0.04, +0.03, 0.17 s apart) every 1.5 s, which makes ring trains. Each whale feeds in through 13 sampled joints: vertical joint speed pushes water, tail slaps and the lunge's exit and splashdown add large rings with foam, a bow wave follows a swimmer at the surface, and bubbles surfacing or drops landing add small rings.</p>
+        <div class="callout warn"><b>Physics versus art</b>The equation is the real 2D wave equation, discretised, and it runs at a fixed rate so ripples travel at 6 m/s at any frame rate. But the speed is the same for every wavelength, while real surface waves are dispersive. Read as a shallow-water speed, <code>c² / g</code> is about 3.7 m of depth (derived, not a fjord depth). The viscous term is a rough stand-in for ripple damping. The injected amounts, 0.0002 to 0.05, are tuned values. The long swell and the fine ripples at shading time are summed sines and noise, not simulated.</div>
+        <p class="src">aurorascape/src/wave-sim.js:161-186,204-226,242-277; render.js:74,203-215,218-228,370-380; behaviour.js:435-483,535-548; tests/wave-sim.mjs:7-27,29-49,51-74; tests/water-coupling.mjs:8-30</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 4</h4>
+        <h3>One sky image feeds the screen and the water, with the land baked into it</h3>
+        <p>A frame runs in this order: plan map, aurora march, blur, then a sky pass that draws airglow, Milky Way, stars, aurora and land into one image. The water pass draws over it, then the whales' mirror images, the whales, and the particles. The land is not drawn per frame. A shader ray-traces analytic fjord walls once per size into two images: walls whose surface is <code>x = c(z) + s·(W(z) + g(y, z))</code> with noise-carved gullies, strata and snow, a closed fjord head and three far ridge silhouettes. Each pixel brackets the wall crossing with steps growing by 1.55 (at most 16), bisects 8, 10, 12 or 12 times by tier, finishes with a secant step, and is supersampled 2x2 or 3x3. Because the land is lit only by the aurora, the bake stores radiance as <code>W · ambient + C</code>, so aurora brightness changes without a re-bake. Each frame the sky pass reads the two images through the swaying camera's rotation: two fetches per pixel.</p>
+        <p>The water pass intersects the view ray with the plane y = 0 and takes the surface slope from central differences of the simulated height, scaled 1.7, plus three summed swell waves and noise ripples. Reflectance is Schlick's <code>F = 0.02 + 0.98·(1 − cosθ)⁵</code>. The reflected direction is rotated into the camera frame and looked up in the sky image, smeared vertically over 3, 5, 7 or 9 taps by tier, with the smear growing with slope. So the mirrored aurora and mountains are the same pixels drawn above, stretched by the ripples. Whales are not in that image, so each is drawn a second time with y negated, at most 35% alpha, darkened to 60%.</p>
+        <p>Stars are not particles. A shader maps the view direction to celestial coordinates and hashes a grid of cells (0.030 to 0.015 radians per cell by tier). A cell holds at most one star, 62% of cells hold one, and brightness follows a power law, many faint and a few bright, with twinkle and horizon extinction. The sky turns about a pole 69.0 degrees above the horizon (derived from the vector in the code) at 3e-4 rad/s, about four times the real rate by my arithmetic. The Milky Way is a band from a galactic-pole vector with fractal clouds and a dust lane.</p>
+        <p class="src">aurorascape/src/shaders.js:171-229,237-416,419-446,527-631; render.js:233-263,279-326</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 5</h4>
+        <h3>A whale is one static mesh, bent every frame from a 24-joint spine</h3>
+        <p>The CPU holds 24 joints, 0.626 m apart at scale 1, pivoting about joint 7. Each step the behaviour hands the rig a yaw, pitch, roll, speed, turn rates, a tail "beat" and an "arch". The rig turns these into a curvature per joint. A turn bend is <code>−yawRate / speed · 1.7</code> (clamped to 0.24), delayed more toward the tail with time constant <code>0.25 + 1.8·u^1.4</code> seconds. A dorsoventral wave, because cetaceans beat their flukes up and down, has amplitude growing toward the tail and wavelength 1.05 body lengths. Frequency is 0.22 + 0.36·beat hertz. An arch term <code>0.17·arch·sin(πu)^0.9</code> bends the back for a surfacing roll or a dive. Curvature integrates to angle and angle to position, so joint spacing is exact by construction. The vertex shader gets the 24 positions, tangents and up vectors, runs a Catmull-Rom spline through them and places every rest-pose vertex at <code>P(s) + U·y + S·z</code>. Nothing is a stored pose.</p>
+        <p>The mesh is built once from functions of the distance along the body. Sections are superellipses of exponent 2.6, scaled by a radius profile with a rounded nose, a girth about a third of the way back and a long taper to the tail stock, plus a dorsal fin and a ridge behind it. There are 104 rings of 40 segments, a fluke grid of 46 by 10 per side and flipper grids of 26 by 8 per side: 6,311 vertices and 11,824 triangles (measured). The flippers are 4.8 m, a third of the 14.4 m body, and the fluke spans 4.6 m. The fins have no bones. Three underdamped springs (damping ratio about 0.32 to 0.36) respond to acceleration, tail speed and turn rate, and each point along a fin reads that spring's history delayed by 0 to 0.46 s, growing toward the tip, so motion travels outward. The lower jaw swings 0.8·gape radians about a hinge and the throat pouch swells.</p>
+        <p>The skin shader is near black (albedo 0.020, 0.024, 0.032) with noise-built white belly, ventral pleat grooves, head tubercles, barnacles and scars, perturbed by derivatives of a procedural height. The aurora is the only lamp: two fixed directional lights plus ambient, specular exponents from 90 to 420 depending on wetness, and a thin rim, green on one side and magenta on the other. A per-joint wet film drains over about 8 s once a joint is out of the water, and submerged parts darken by <code>exp(−depth · (0.55, 0.32, 0.26))</code>, red fastest.</p>
+        <div class="callout warn"><b>Physics versus art</b>The whale is the weakest part of the scene. The anatomy is hand-tuned functions, and the tests check loose proportions only: girth peak between 25% and 42% of the way back, length 5 to 6.8 times depth, flippers a third of the body, normals pointing outward on more than 99.5% of body vertices. Nothing compares the shape to a real humpback. The rig is curve integration with yaw and pitch handled as separate angle integrals, not muscle or hydrodynamics, and the only buoyancy is a clamp. The skin is almost black by design, so in this page's still the whale is a small dark hump with a thin rim at the waterline and almost none of the detail described above can be seen. The reflected whale is a flipped copy, not a reflection. There is also dead code: the "denser at head and tail" ring spacing in the mesh builder is multiplied by zero.</div>
+        <p class="src">aurorascape/src/rig.js:12-21,61-173; whale-shape.js:282-322,325-379; shaders.js:636-792,794-954; tests/rig.mjs; tests/whale-shape.mjs:4-60</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 6</h4>
+        <h3>A small brain per whale: breathe, blow, dive, get curious, spin a bubble net</h3>
+        <p>Each of the three whales is a state machine with 11 modes and an explicit transition table. An illegal transition is refused and counted, and the test asserts the count stays zero over 420 s on three seeds. The usual cycle is travel, then breath for 8.2 s, then travel again, until the breath count runs out and the whale dives. In a breath the head lifts and the back arches. The blow fires after 1.1 to 1.7 s, but only if the blowhole is at least 0.04 m above the water, which the test also asserts. A blow throws about 160 mist puffs over half a second, 36 droplets and a ring on the water. A dive arches the body, pitches the nose down by up to 1.1 rad toward 9 m depth and lifts the flukes clear; the whale then stays submerged for 11 to 22 s and ascends somewhere in frame. Steering picks the best of 10 random waypoints, scored against distance, heading change and neighbours, and avoids the shore, the camera and other whales.</p>
+        <p>The cursor changes the plan. Speed is measured in screen widths per second. Below 0.4 and recent, the nearest whale within 150 m turns curious (40 s cooldown), stands off 12 m from the ripples and faces them. A fast swat, above 1.5, makes whales within 80 m flee at 3.4 m/s, diving toward 9 m. Tests check that the approach closes to under 45% of the starting distance yet stays beyond 5 m, and that a fast cursor sends the whale below 4 m and further away. The bubble net first starts 7 to 12 s in, then 95 to 160 s after the last one ends. One whale swims deep, spirals for 13 s at radius 8.5 m rising from 8.6 m to 2.6 m deep and releasing about 1.2 bubbles per step from its underside, swings under the centre for 5 s, then lunges for 5.6 s: up 11.1 m to 0.9 m above the surface with the mouth open, then falls back. Both ends splash and disturb the water. The tests assert this order, more than 150 live bubbles, foam at the surface, an open mouth above 0.8, and that for 24 seeds the near whale blows by 15 s and a spiral is under way by 40 s.</p>
+        <p>Particles are four kinds in typed-array ring buffers, 2,600 slots, with no allocation per step: mist (drag, a breeze of (0.9, 0, −0.35), turbulence), bubbles (rising toward 0.6 m/s with a wobble), droplets (9.8 m/s² gravity, a small ring where they land) and surface foam. They are drawn as one instanced draw of camera-facing soft quads. Mist covers what is behind it with premultiplied alpha, the rest only add light.</p>
+        <div class="callout warn"><b>Physics versus art</b>The spiral, the swing and the lunge are scripted paths with chosen durations, not dynamics. The rig then bends the body to follow, as it would for any turn. Bubble sprite half-sizes are about 6 to 56 cm, so each one stands for a cluster rather than a physical bubble. The ordering of stages follows how humpbacks are described feeding; the timings and radii are chosen for the picture.</div>
+        <p class="src">aurorascape/src/behaviour.js:29-47,100-149,197-312,314-417,420-426,494-514; particles.js:38-52,76-153; tests/behaviour.mjs:17-55,77-110,129-182; tests/particles.mjs</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 7</h4>
+        <h3>Grading, four quality tiers, a battery switch and tests with no GPU</h3>
+        <p>Everything shades in linear half-float HDR. Bloom keeps only what is brighter than 0.12 in the first level, then runs a 13-tap downsample chain and a tent upsample chain, 5 or 6 levels, weights 0.7, 0.55, 0.38, 0.25, 0.18, added at gain 0.45. The output pass applies chromatic aberration growing as 0.0025·r², the ACES fit used in the Plasma section blended 45% with a luminance-based version that keeps greens saturated, a vignette, gamma 1/2.2 and a triangular dither of plus or minus 1/255. The world and the GPU water step both advance in fixed 1/60 s steps, at most 6 per frame, so behaviour does not depend on frame rate. The quality names come from the shared presets (20, 30, 60, 60 fps), and a CPU-cost governor can lower resolution, never raise it.</p>
+        <div class="scroll"><table>
+          <thead><tr><th>Setting</th><th class="c">eco</th><th class="c">balanced</th><th class="c">detail</th><th class="c">native</th></tr></thead>
+          <tbody>
+            <tr><td>Aurora march steps</td><td class="c">20</td><td class="c">24</td><td class="c">32</td><td class="c">40</td></tr>
+            <tr><td>Aurora target, per-axis share of screen</td><td class="c">0.5</td><td class="c">0.6</td><td class="c">0.75</td><td class="c">0.8</td></tr>
+            <tr><td>Plan map texels</td><td class="c">320x184</td><td class="c">512x288</td><td class="c">640x360</td><td class="c">768x432</td></tr>
+            <tr><td>Water grid (cells per side)</td><td class="c">192</td><td class="c">256</td><td class="c">384</td><td class="c">512</td></tr>
+            <tr><td>Star cell (radians)</td><td class="c">0.030</td><td class="c">0.022</td><td class="c">0.018</td><td class="c">0.015</td></tr>
+            <tr><td>Land bake: bisections / samples per axis / max width</td><td class="c">8 / 2 / 1920</td><td class="c">10 / 2 / 2560</td><td class="c">12 / 3 / 3072</td><td class="c">12 / 3 / 3072</td></tr>
+            <tr><td>Reflection taps each side of centre</td><td class="c">1</td><td class="c">2</td><td class="c">3</td><td class="c">4</td></tr>
+            <tr><td>MSAA samples on the main target</td><td class="c">0</td><td class="c">4</td><td class="c">4</td><td class="c">2</td></tr>
+            <tr><td>Bloom levels</td><td class="c">5</td><td class="c">6</td><td class="c">6</td><td class="c">6</td></tr>
+          </tbody>
+        </table></div>
+        <p>The tier can change while the scene runs. The host calls <code>scenePower</code>, a browser reports charging state, or the page calls <code>setQuality</code>; each ends in <code>setTier</code>. Only the <code>native</code> preset names a battery fallback, <code>balanced</code>, so on battery native drops to the balanced column. The other presets keep their tier, but every preset still gets a 30 fps cap and 0.9 resolution scale on battery. <code>setTier</code> asks which settings differ and rebuilds only those: the plan-map target, the march uniforms, the main target's sample count, and a re-bake of the land. The water grid is resampled into new textures by a copy pass, so ripples carry over. The sizes that follow the tier are then recomputed. Whales, particles and time are never touched. The CPU-cost governor's resolution step is reset to 1 on a tier change.</p>
+        <p>Eight plain-Node test files, 691 lines, all pass when run (each as <code>node scenes/aurorascape/tests/&lt;file&gt;.mjs</code>). They assert, in short:</p>
+        <ul class="tight">
+          <li><b>aurora-model</b>: green peaks at 110 to 150 km, no red below about 185 to 195 km, pink under the green, harder electrons glow lower, colour continuous and bounded, onset gaps 149 to 292 s, no repetition at 60, 120, 200 or 240 s.</li>
+          <li><b>wave-sim</b>: energy never grows over 10,000 steps and ends below 5% of its start, a droplet ring is symmetric and its radius is 0.6 to 1.15 times c·t, a wall reflection returns 0.2 to 1.05 of a free pulse, foam fades.</li>
+          <li><b>water-coupling</b>: replaying the world's disturbance lists for 120 s keeps the surface below 0.6 m, finite, moving, and settled below 0.02 m after 40 quiet seconds.</li>
+          <li><b>rig, whale-shape, behaviour, particles</b>: the checks cited above, plus same seed gives the same result.</li>
+          <li><b>tiers</b>: native falls back to balanced on battery, every tier is complete and each is at least as large as the one below on march steps, grid size, map width, aurora scale and reflection taps, and a battery switch touches sim, map, aurora, land and MSAA but not bloom.</li>
+          <li><b>Not covered</b>: no test creates a GL context, compiles a shader or looks at a pixel. The GLSL is checked only by hand-mirroring and one substring test (the generated water shader contains the constant <code>k</code> and the text <code>uD[</code>). <code>setTier</code> itself is never run by a test. The tier test's "world is unchanged by switching" holds largely by construction, since <code>behaviour.js</code> never imports the tier table. This page makes no speed claims: the tiers are settings, and they were not timed on a real GPU.</li>
+        </ul>
+        <p class="src">aurorascape/src/shaders.js:465-520; render.js:309-326,350-380; tiers.js:5-31; main.js:21,69-77,83-84,93-96,127-129; ../shared/render-policy.js:12-41; tests/tiers.mjs</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cosmos">
+  <h2>Cosmic web: a Gaussian field, a first-order model, drawn as light</h2>
+  <div class="scene">
+    <img src="images/thumbs/cosmoscape.jpg" alt="A soft, slightly out-of-focus web of glowing blue-white filaments and brighter knots on a black background, with small orange and blue galaxy smudges scattered in the dark gaps" width="960" height="500" loading="lazy">
+    <div class="body">
+      <div class="tags"><span class="tag">1,903 lines JS</span><span class="tag">262,144 particles (110,592 on eco)</span><span class="tag">220 s cycle</span><span class="tag art">physics-motivated look, art-directed colour</span></div>
+
+      <div class="tech">
+        <h4>Technique 1</h4>
+        <h3>A Gaussian random field with a CDM-shaped spectrum, from a hand-written 3D FFT</h3>
+        <p>At start-up the scene builds a density contrast δ on a periodic lattice: 64³ points, or 32³ on the eco tier. It draws white Gaussian noise in real space (Box-Muller, from the shared seeded generator), takes a forward FFT, multiplies every mode by √P(m), and inverts. Starting from real noise makes the spectrum Hermitian, so the result is real by construction. The FFT is a radix-2 transform on <code>Float64Array</code>s with the 3D version done as x, y and z passes. One complex inverse transform returns two real fields at once, so one forward and five inverse 3D transforms produce the three displacement components and the six Hessian components.</p>
+        <div class="formula">P(m) = m^ns · T(m / γ)² · exp(−(m / m_c)²)
+ns = 1, γ = 4, m_c = 13, m = |k| / 2π in cycles per box
+T(q) = ln(1 + 2.34q) / (2.34q) · [1 + 3.89q + (16.1q)² + (5.46q)³ + (6.71q)⁴]^(−1/4)</div>
+        <div class="figure">
+          <svg class="chart" viewBox="0 0 640 300" role="img" aria-label="Log-log plot of the power spectrum P(m) used for the initial density field, for m from 1 to 32 cycles per box. The solid curve, with the Gaussian cutoff at 13, falls from 0.115 at m = 1 to 6.5e-7 at m = 32. The dashed curve without the cutoff stays far higher at small scales. Vertical markers show m = 13, the cutoff, m = 16, the highest mode of the 32 cubed lattice used on the eco tier, and m = 32, the highest mode of the 64 cubed lattice.">
+            <line class="grid" x1="58" x2="624" y1="256.0" y2="256.0"/>
+            <text class="tick" x="52" y="260.0" text-anchor="end">1e-7</text>
+            <line class="grid" x1="58" x2="624" y1="221.4" y2="221.4"/>
+            <text class="tick" x="52" y="225.4" text-anchor="end">1e-6</text>
+            <line class="grid" x1="58" x2="624" y1="186.9" y2="186.9"/>
+            <text class="tick" x="52" y="190.9" text-anchor="end">1e-5</text>
+            <line class="grid" x1="58" x2="624" y1="152.3" y2="152.3"/>
+            <text class="tick" x="52" y="156.3" text-anchor="end">1e-4</text>
+            <line class="grid" x1="58" x2="624" y1="117.7" y2="117.7"/>
+            <text class="tick" x="52" y="121.7" text-anchor="end">1e-3</text>
+            <line class="grid" x1="58" x2="624" y1="83.1" y2="83.1"/>
+            <text class="tick" x="52" y="87.1" text-anchor="end">1e-2</text>
+            <line class="grid" x1="58" x2="624" y1="48.6" y2="48.6"/>
+            <text class="tick" x="52" y="52.6" text-anchor="end">1e-1</text>
+            <line class="grid" x1="58" x2="624" y1="14.0" y2="14.0"/>
+            <text class="tick" x="52" y="18.0" text-anchor="end">1e0</text>
+            <line class="grid" x1="58.0" x2="58.0" y1="14" y2="256"/>
+            <text class="tick" x="58.0" y="272" text-anchor="middle">1</text>
+            <line class="grid" x1="171.2" x2="171.2" y1="14" y2="256"/>
+            <text class="tick" x="171.2" y="272" text-anchor="middle">2</text>
+            <line class="grid" x1="284.4" x2="284.4" y1="14" y2="256"/>
+            <text class="tick" x="284.4" y="272" text-anchor="middle">4</text>
+            <line class="grid" x1="397.6" x2="397.6" y1="14" y2="256"/>
+            <text class="tick" x="397.6" y="272" text-anchor="middle">8</text>
+            <line class="grid" x1="510.8" x2="510.8" y1="14" y2="256"/>
+            <text class="tick" x="510.8" y="272" text-anchor="middle">16</text>
+            <line class="grid" x1="624.0" x2="624.0" y1="14" y2="256"/>
+            <text class="tick" x="624.0" y="272" text-anchor="middle">32</text>
+            <line x1="476.9" x2="476.9" y1="14" y2="256" style="stroke:var(--warn);stroke-width:1.4;stroke-dasharray:4 3"/>
+            <text class="lab" x="471.9" y="26" text-anchor="end" style="fill:var(--warn)">cutoff 13</text>
+            <line x1="510.8" x2="510.8" y1="14" y2="256" style="stroke:var(--warn);stroke-width:1.4;stroke-dasharray:4 3"/>
+            <text class="lab" x="505.8" y="40" text-anchor="end" style="fill:var(--warn)">eco Nyquist 16</text>
+            <line x1="624.0" x2="624.0" y1="14" y2="256" style="stroke:var(--warn);stroke-width:1.4;stroke-dasharray:4 3"/>
+            <text class="lab" x="619.0" y="26" text-anchor="end" style="fill:var(--warn)">Nyquist 32</text>
+            <polyline class="curve" points="58.0,46.4 62.6,46.6 67.1,46.9 71.7,47.2 76.3,47.6 80.8,47.9 85.4,48.2 90.0,48.6 94.5,48.9 99.1,49.3 103.6,49.6 108.2,50.0 112.8,50.4 117.3,50.8 121.9,51.2 126.5,51.6 131.0,52.1 135.6,52.5 140.2,53.0 144.7,53.4 149.3,53.9 153.9,54.4 158.4,54.9 163.0,55.4 167.5,55.9 172.1,56.4 176.7,56.9 181.2,57.4 185.8,58.0 190.4,58.5 194.9,59.1 199.5,59.7 204.1,60.2 208.6,60.8 213.2,61.4 217.8,62.0 222.3,62.6 226.9,63.3 231.5,63.9 236.0,64.5 240.6,65.2 245.1,65.8 249.7,66.5 254.3,67.1 258.8,67.8 263.4,68.5 268.0,69.2 272.5,69.9 277.1,70.6 281.7,71.3 286.2,72.0 290.8,72.7 295.4,73.4 299.9,74.1 304.5,74.9 309.0,75.6 313.6,76.4 318.2,77.1 322.7,77.9 327.3,78.6 331.9,79.4 336.4,80.2 341.0,81.0 345.6,81.8 350.1,82.5 354.7,83.3 359.3,84.1 363.8,84.9 368.4,85.8 373.0,86.6 377.5,87.4 382.1,88.2 386.6,89.0 391.2,89.9 395.8,90.7 400.3,91.5 404.9,92.4 409.5,93.2 414.0,94.1 418.6,95.0 423.2,95.8 427.7,96.7 432.3,97.5 436.9,98.4 441.4,99.3 446.0,100.2 450.5,101.1 455.1,101.9 459.7,102.8 464.2,103.7 468.8,104.6 473.4,105.5 477.9,106.4 482.5,107.3 487.1,108.2 491.6,109.2 496.2,110.1 500.8,111.0 505.3,111.9 509.9,112.8 514.5,113.8 519.0,114.7 523.6,115.6 528.1,116.6 532.7,117.5 537.3,118.5 541.8,119.4 546.4,120.3 551.0,121.3 555.5,122.2 560.1,123.2 564.7,124.2 569.2,125.1 573.8,126.1 578.4,127.0 582.9,128.0 587.5,129.0 592.0,130.0 596.6,130.9 601.2,131.9 605.7,132.9 610.3,133.9 614.9,134.9 619.4,135.8 624.0,136.8" style="stroke:var(--muted);stroke-dasharray:6 5;stroke-width:1.8"/>
+            <polyline class="curve" points="58.0,46.5 62.6,46.7 67.1,47.0 71.7,47.4 76.3,47.7 80.8,48.0 85.4,48.3 90.0,48.7 94.5,49.0 99.1,49.4 103.6,49.8 108.2,50.2 112.8,50.6 117.3,51.0 121.9,51.4 126.5,51.9 131.0,52.3 135.6,52.8 140.2,53.2 144.7,53.7 149.3,54.2 153.9,54.7 158.4,55.2 163.0,55.7 167.5,56.2 172.1,56.7 176.7,57.3 181.2,57.8 185.8,58.4 190.4,59.0 194.9,59.6 199.5,60.2 204.1,60.8 208.6,61.4 213.2,62.0 217.8,62.7 222.3,63.3 226.9,64.0 231.5,64.6 236.0,65.3 240.6,66.0 245.1,66.7 249.7,67.4 254.3,68.1 258.8,68.8 263.4,69.6 268.0,70.3 272.5,71.1 277.1,71.9 281.7,72.6 286.2,73.4 290.8,74.2 295.4,75.0 299.9,75.9 304.5,76.7 309.0,77.5 313.6,78.4 318.2,79.3 322.7,80.2 327.3,81.0 331.9,82.0 336.4,82.9 341.0,83.8 345.6,84.8 350.1,85.7 354.7,86.7 359.3,87.7 363.8,88.7 368.4,89.7 373.0,90.8 377.5,91.8 382.1,92.9 386.6,94.0 391.2,95.1 395.8,96.3 400.3,97.4 404.9,98.6 409.5,99.8 414.0,101.0 418.6,102.3 423.2,103.6 427.7,104.9 432.3,106.2 436.9,107.6 441.4,109.0 446.0,110.5 450.5,111.9 455.1,113.4 459.7,115.0 464.2,116.6 468.8,118.2 473.4,119.9 477.9,121.6 482.5,123.4 487.1,125.2 491.6,127.1 496.2,129.1 500.8,131.1 505.3,133.2 509.9,135.3 514.5,137.6 519.0,139.8 523.6,142.2 528.1,144.7 532.7,147.3 537.3,149.9 541.8,152.7 546.4,155.5 551.0,158.5 555.5,161.6 560.1,164.8 564.7,168.1 569.2,171.6 573.8,175.3 578.4,179.1 582.9,183.0 587.5,187.2 592.0,191.5 596.6,196.0 601.2,200.7 605.7,205.6 610.3,210.8 614.9,216.2 619.4,221.9 624.0,227.8" style="stroke:var(--accent)"/>
+            <text class="lab" x="80.8" y="76.0" style="fill:var(--accent)">P(m), as used</text>
+            <text class="lab" x="80.8" y="39.9" style="fill:var(--muted)">m T(m/4)^2, no cutoff</text>
+            <text class="axl" x="341.0" y="294" text-anchor="middle">m = |k| / 2π, cycles per box (log)</text>
+            <text class="axl" transform="translate(12 135) rotate(-90)" text-anchor="middle">P(m) (log)</text>
+          </svg>
+          <p class="cap">P(m) evaluated from the constants in field.js with a short node script. Solid: as used. Dashed: the same without the Gaussian factor. Vertical lines mark the cutoff and the highest mode each lattice can hold. Between m = 3 and 8 the solid curve has an average log slope of −2.12, and the test requires it to lie between −2.4 and −1.3.</p>
+        </div>
+        <p>T is the BBKS cold-dark-matter transfer function (Bardeen, Bond, Kaiser and Szalay, 1986). Without the Gaussian factor the local slope of m·T² runs from about −1.2 at m = 2 to about −2.1 at m = 10, the range the code comment gives for the web's filaments. The Gaussian cutoff then steepens it (to about −3.3 at m = 10). The code's comment ties that cutoff to the truncated Zel'dovich approximation: small-scale power is removed so that shell-crossed sheets and filaments stay thin instead of smeared. After synthesis the field is rescaled so its rms is exactly 1 (<code>exactSigma</code>), so every seed has the same contrast.</p>
+        <p class="src">cosmoscape/src/field.js:1-35,58-81,95-125,130-149; fft.js:5-80; particles.js:22-27,49; tests/field.mjs:5-20,22-51; tests/fft.mjs</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 2</h4>
+        <h3>Zel'dovich: each particle is a lattice cell, carried along a straight line and drawn as the Gaussian it becomes</h3>
+        <p>The displacement is the gradient of a potential, ψ = −∇φ with ∇²φ = δ, so in Fourier space ψ(k) = i k δ(k) / k² and ∇·ψ = −δ. Each particle sits on a lattice point q (jittered by up to ±0.2 of a cell so no grid shows). The vertex shader computes the position every frame from a growth factor D. Nothing is integrated over time; the web at any moment is a closed-form function of D. The Hessian H, the derivative of ψ, is computed spectrally, so for the lattice field it is exact.</p>
+        <div class="formula">x(q, D) = q + D · ψ(q)           ψ(k) = i k δ(k) / k²
+F = I + D · H,  H_ij = ∂ψ_i/∂q_j = −k_i k_j δ(k) / k²   (tr H = −δ)
+ρ / ρ₀ = 1 / |det F|             first eigenvalue λ = −1/D: shell crossing</div>
+        <p>The look comes from drawing what mass conservation says. A particle is not a dot. It is the image of its lattice cell, a Gaussian whose covariance is h² (0.55² F² + 0.14² I), with h the lattice spacing (1/64 on the larger tier). Sprites stretch where matter streams out of voids and squeeze across axes that are collapsing. In the eigenframe of H, one collapsed axis is a sheet, two make a filament, three a knot. The shader never counts axes: sheets, filaments and knots appear because squeezed sprites have a small projected area, and flux per sprite is fixed, so brightness is flux over area (edge-on sheets bright, face-on faint, like column density), and a density-based luminance factor then multiplies that. Each factor |1 + Dλ| is softened to √((1 + Dλ)² + 0.08²), so a caustic is a bright ridge rather than a singularity. A colour ramp over log₁₀ of that density maps voids to near black, sheets to violet, filaments to blue then blue-white, and knots to amber.</p>
+        <div class="callout warn"><b>Physics versus art</b>Zel'dovich is real first-order Lagrangian perturbation theory, and the tests confirm the lattice field obeys it: ψ is curl-free, ∇·ψ = −δ and tr H = −δ, with test tolerances of 1e-4 to 1e-5, and a finite-difference Jacobian determinant of x(q) matches Π(1 + Dλ) with a relative rms error (of det − 1) of 0.0105 against a limit of 0.06. It leaves out most of what an N-body run does. There is no gravity after shell crossing, so particles keep flying straight through a sheet instead of being held by it, and sheets re-thicken instead of fragmenting. There are no halos, no virialisation, no mergers and no coupling between modes. There is no gas and no galaxy formation, only dark matter. There is no expansion history either: D is a number swept from 0.55 to 2.0 on a hand-shaped curve, and the box has no physical size. The colour ramp, the 0.55 and 0.14 sprite sizes and the 0.08 softening are art direction. Dark matter does not glow.</div>
+        <p class="src">cosmoscape/src/field.js:18-20,130-149; zeldovich.js:1-30; shaders.js:40-49,98-113,160-165,183-189; particles.js:5-10,29,55-72; tests/zeldovich.mjs:48-100</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 3</h4>
+        <h3>Neural and mycelial targets, matched one-to-one by k-d bisection and the Hilbert curve</h3>
+        <p>The scene morphs the same particles into two other shapes, so each shape is a point set with exactly as many points as there are particles. Both are built from tapered tubes and dense spots, then sampled with the point budget shared in proportion to tube length times thickness. The neural network has 44 neurons (minimum gap 0.12 of the box, measured on the periodic torus) and 6 hubs. Each neuron has an apical dendrite tree, four or five basal trees, and a spline axon that runs soma, hub, distant neuron, with collaterals and a terminal arbor. The mycelium grows from up to 24 colonies and 200 wanderers (both scaled down with the particle count) as persistent random walks bent by the morph swirl field. Each tip tries to fuse with the nearest hypha within 0.05 of the box (probability 0.7), which closes loops. For seed 1 at 262,144 points I counted 22,243 neural tubes and 54,962 mycelial tubes, with 3,872 loops.</p>
+        <p>Pairing points by sorted Hilbert-curve rank is cheap and gives a bijection, but a short stretch of the curve is a compact blob, so two unrelated shapes get paired almost at random. <code>matchBalanced</code> first cuts both sets at the median along the longest side of the current box, recursively, into halves with equal counts. The left half pairs with the left half and the right with the right, an iterated one-dimensional transport (the Knothe-Rosenblatt map). Only inside a leaf cell of at most 128 points does it pair by Hilbert rank (Skilling's algorithm, order 9). The pairing is computed against the web as it looks at D = 0.62 × 2.0 = 1.24.</p>
+        <p>What it guarantees: every target point is used exactly once, because both sides split at the same index so counts agree down to every leaf. A test asserts this for rank and balanced matching, and again on the full pipeline at the eco tier. What it does not guarantee: an optimal transport map, or paths that do not cross. I measured mean L1 distance per particle in box units (seed 1, balanced tier): random pairing 0.75, Hilbert rank alone 0.62 (neural) and 0.43 (mycelium), balanced bisection 0.24 and 0.19. The test only demands the balanced result be under 0.6 times random.</p>
+        <div class="callout warn"><b>Physics versus art</b>Optimal transport is a real idea, and this is a cheap approximation of it. The networks themselves are procedural drawings with biology-flavoured parameters: branching angles, taper, tropism and the heat value that sets brightness and colour are all chosen by eye. They are not reconstructions of real neurons or fungi.</div>
+        <p class="src">cosmoscape/src/hilbert.js:1-31; morph.js:10-98; structures.js:45-96,111-202,207-293; particles.js:30,82-105; tests/morph.mjs:8-50,65-103; tests/structures.mjs:12-31,62-101</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 4</h4>
+        <h3>A schedule that is a pure function of time, and a morph front that sweeps through the box</h3>
+        <p>The whole cycle is a table read by <code>stateAt(t)</code>: web 80 s, to neural 20 s, neural 40 s, to mycelium 20 s, mycelium 40 s, to web 20 s, which is 220 s. The function returns the segment, the progress, the structure pair being blended and the blend m. The growth factor rises during the web phase and is held while it dissolves. It is then reset at t = 120 s, half-way through the neural hold, where the web has zero weight, so nobody sees the jump. The tests check exactly one reset per cycle, blend weights that sum to 1, and no step in D larger than 1e-3 per 0.01 s sample while the web is visible. A visit starts 14 s in; a capture starts at 0.</p>
+        <div class="formula">D(t) = 0.55 + 1.45 · (1 − (1 − t / 80)^1.6)        0 ≤ t &lt; 80 s
+D = 2.0 until t = 120 s, then 0.55
+s = smoothstep(clamp(m · 1.55 − 0.55 · off))
+x = A + s · wrap(B − A) + 0.07 · 4s(1 − s) · swirl(x)</div>
+        <p>In a morph each particle has a delay <code>off</code>: the distance from its lattice position to a front origin 0.22 box units ahead of the camera as it was when the segment began, divided by 0.75, plus a small random jitter. The front therefore sweeps outward and neighbours leave together. A is the web position, B the matched target. <code>wrap</code> takes the shortest way round the periodic box. The swirl is eight waves whose polarisation is perpendicular to the wave vector, so it is divergence-free (a test checks this by finite differences) and streams curve without compressing, to first order. Mid-transit sprites are also stretched along their path and brightened, and pulses run along the neural and mycelial fibres. None of this is dynamics. It is an interpolation with decoration, not a simulation.</p>
+        <p class="src">cosmoscape/src/schedule.js:3-56; shaders.js:116-138,191-195; morph.js:100-150; main.js:41,60-72; tests/schedule.mjs:6-76</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 5</h4>
+        <h3>The cursor as a softened point mass that bends light</h3>
+        <p>The cursor drives a critically damped spring (ω = 9 rad/s), so the lens lags the hand a little. The lens strength eases in and out with time constants of about 0.4 s and 0.5 s. In the vertex shader the projected position of each sprite is a source position β measured from the lens centre, and the shader solves the lens equation for the image position θ:</p>
+        <div class="formula">β = θ − E² θ / (θ² + c²)
+E = 0.11 · frame height · smoothstep(strength),  c = max(0.45 E, 1 px)
+c = 0:  θ± = (β ± √(β² + 4E²)) / 2          β = 0  gives a ring of radius E</div>
+        <p>It starts from the closed-form point-mass root and runs five damped Newton iterations to include the core. The primary image lies outside the Einstein ring. The secondary lies inside it, on the far side, and is a second draw call of the same buffers. Each sprite's covariance is sheared by the local Jacobian: tangential stretch |θ|/β, radial stretch 1/|dβ/dθ|, flux times the product (clamped at 7, 4 and 12). The 5,200 background galaxies sit at infinity, are lensed in full, and turn into arcs where the distortion is strong. Web particles are lensed with a depth weight that ramps up between 0.8 and 1.2 times a depth set at 0.85 of the current focus distance, so matter in front of the mass is not lensed. Separately, matter near the cursor ray (a Gaussian of angular radius 0.2) and near the focus depth is leaned toward that ray by up to 57% of its offset.</p>
+        <div class="callout warn"><b>Physics versus art</b>Physical: the thin-lens equation, a deflection of the Plummer-softened form E²θ/(θ² + c²), the two-image structure, flux scaling with area, and the identity μ₊ − |μ₋| = 1 for c = 0 (tested). Approximate: each sprite stays an ellipse at the deflected centre, where real images are curved arcs, and one thin lens sits at a depth tied to the camera's focus rack. Tuned: E as 11% of the frame (not derived from any mass), the core 0.45E, the depth ramp, the clamps, an extra flat dimming of the inner image (0.15 for web, 0.18 for galaxies) on top of the magnification, and a faint Einstein-ring glow added in the output pass. The pull is a gesture: gravity bends light, it does not drag matter toward your line of sight.</div>
+        <p class="src">cosmoscape/src/lens.js:1-31; shaders.js:7-36,146-152,166-176,185,200-202,232-273,352-359; render.js:57,146-156; sim.js:8-22; tests/zeldovich.mjs:102-133</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 6</h4>
+        <h3>A drifting camera and a light-only renderer</h3>
+        <p>The camera is a straight drift of 0.0031 box units per second (0.68 box per 220 s cycle) plus sums of sines: an orbit of radius 0.05 ± 0.012 with period 131 s, small wander terms, slow yaw, pitch and roll, and a focus distance of 0.2 ± 0.07 that racks in and out. The world is periodic, so each particle is drawn at its nearest image to the camera and fades out between 0.34 and 0.5 box units away on each axis, which hides the box edge. The tests check a speed under 0.02 box/s, a turn rate under 0.06 rad/s, and that the pose does not repeat after one or two cycles.</p>
+        <p>Every particle is a point sprite. The vertex shader projects its 3D covariance to a 2D one (Σ_screen = J R Σ Rᵀ Jᵀ) and sets the point size to cover ±3.1σ. The fragment shader evaluates the rotated 2D Gaussian. Blending is additive with no depth test, so draw order does not matter. Depth of field is per sprite: a circle of confusion is turned into extra variance (0.09 · coc², aperture 0.016 of the frame height). Brightness is divided by the new area, so defocus spreads light without adding any. The scene renders into a half-float target (an 8-bit one if the extension is missing) at the tier's scale times 1.1 overscan. A bloom pyramid of 13-tap downsamples and tent upsamples follows, up to 6 levels with weights 0.55, 0.45, 0.28, 0.14, 0.07. Then comes the output pass: exposure, a vignette, the same ACES fit as the Plasma globe blended 65% with a version that tone-maps the brightest channel (so a knot stays amber and a filament blue), a saturation of 1.15, gamma 1/2.2 and dither.</p>
+        <div class="callout warn"><b>Physics versus art</b>Defocus as added variance and bloom as scattered bright light are physically motivated, but their strengths are tuned. Colour is art: dark matter emits nothing, so the ramp is a false-colour map of density. A faint cold-blue ambient term, the vignette, a "young web is brighter" gain of 1 + 1.6(1 − age)^1.5, and a dust layer (a random half of the particles redrawn as soft violet blobs) are all art direction. The 5,200 background galaxies are uniform random directions on the sphere. They do not cluster with the web.</div>
+        <p class="src">cosmoscape/src/camera.js:10-39; render.js:10-32,43,78-80,99-125,168-196; shaders.js:140-165,218-231,296-373; tests/schedule.mjs:78-109</p>
+      </div>
+
+      <div class="tech">
+        <h4>Technique 7</h4>
+        <h3>Fixed steps, quality tiers, battery behaviour, and tests that need no GPU</h3>
+        <p>The only stateful part of the scene is a clock and the cursor spring. It advances in fixed 1/60 s steps, at most 6 catch-up steps per frame, then the frame is drawn. Because the web is a closed-form function of time, nothing accumulates error, and a capture can jump up to 120 s ahead exactly. The particle count is fixed when the page loads: 48³ = 110,592 on eco, otherwise 64³ = 262,144 (the eco field is 32³, interpolated up to the lattice). A brightness constant is scaled by 110,592 / count so the tiers look equally bright. <code>setTier</code> changes only the render settings at run time, without rebuilding particles. The scene's own governor also lowers resolution by 0.1 per step, to a floor of 0.72, when the CPU cost stays high, and never raises it again.</p>
+        <div class="scroll"><table>
+          <thead><tr><th>Render tier</th><th>Particle pass scale</th><th>Max sprite (px at 900 high)</th><th>Dust share</th><th>Bloom levels</th><th>Galaxies</th></tr></thead>
+          <tbody>
+            <tr><td><code>eco</code></td><td>0.7</td><td>140</td><td>0</td><td>5</td><td>2,600</td></tr>
+            <tr><td><code>balanced</code></td><td>0.85</td><td>180</td><td>0.3</td><td>6</td><td>5,200</td></tr>
+            <tr><td><code>detail</code></td><td>1</td><td>240</td><td>0.75</td><td>6</td><td>5,200</td></tr>
+            <tr><td><code>native</code></td><td>1</td><td>280</td><td>1</td><td>6</td><td>5,200</td></tr>
+          </tbody>
+        </table></div>
+        <p>On battery, <code>native</code> drops to the <code>balanced</code> tier. Every profile also gets a 30 fps cap and 0.9 times the resolution, as in the shared policy. I did not measure any frame time on a real GPU, so this page makes no performance claim. The six node tests all pass (run here, and via <code>tools/test-new-scenes.mjs</code>, 25 of 25 files across the four new scenes). They check the FFT (round trip, Parseval, known transforms), the field statistics, the displacement identities, the Hilbert curve, the matchings, the schedule, the camera, the spring and the target structures. They never execute the GLSL. <code>zeldovich.js</code> and <code>lens.js</code> are JavaScript reference copies of what the shader computes: the tests check them, but the scene itself does not import them. Nothing tests pixels, colour, bloom or the tiers.</p>
+        <p class="src">cosmoscape/src/sim.js:7-22; main.js:35-38,80-93,101,133-135; render.js:10-15,56,221-225; particles.js:22-27,63-68; shared/render-policy.js:12-41; tests/*.mjs</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="further">
   <h2>Where you could take this next</h2>
   <p>Each scene stops at a clear approximation. Replacing one approximation with its real model is a good solo project.</p>
@@ -568,12 +1105,15 @@ footer { font-size: 0.92rem; color: var(--muted); border-top: 1px solid var(--li
     <li><b>Betta: swap the spring for a rod.</b> Model each fin ray as a Cosserat rod or chain of springs with bending stiffness, coupled by a membrane. Compare its trailing behaviour against the four-delay lag trick.</li>
     <li><b>Reef: photon-map the caustics.</b> The Hessian method assumes a single thin refraction. Trace photons through the real wave heightfield into a receiver texture and see where the analytic formula fails (steep waves and shallow floors).</li>
     <li><b>River: move the shoal to compute shaders.</b> The fish rules here are per-fish and branchy. A WebGPU compute version of separation, alignment and cohesion for 50,000 fish is a classic exercise, and shows which rules survive without branching.</li>
-    <li><b>All four: fit the tuning constants.</b> Take reference imagery and fit the absorption coefficients, exposures and the plasma finger exponent by gradient-free optimisation, to see how sensitive the look is to each knob.</li>
+    <li><b>Cosmic web: replace Zel'dovich with a particle-mesh run.</b> The scene evaluates a first-order model in closed form. A small particle-mesh N-body code on the same lattice would add gravity after shell crossing, so sheets hold and fragment and halos form. Compare its web at the same density variance with the closed-form one.</li>
+    <li><b>Slime mould: add flow.</b> The trail is a pheromone-like field, not mass. Couple tube conductance to a flow solve on the agent network, as in Tero et al.'s Physarum model, and see whether tubes still thicken and thin the way the current heuristic makes them.</li>
+    <li><b>Aurora fjord: make the water dispersive.</b> The wave equation here is non-dispersive and damped. Swapping it for a spectral ocean model would give deep-water dispersion, at the cost of a different cursor interaction.</li>
+    <li><b>All eight: fit the tuning constants.</b> Take reference imagery and fit the absorption coefficients, exposures and the plasma finger exponent by gradient-free optimisation, to see how sensitive the look is to each knob.</li>
   </ul>
 </section>
 
 <footer>
-  Scenes by <a href="https://github.com/chaseleantj/deskworlds">chaseleantj/deskworlds</a> (MIT); this page explains the copy in <a href="https://github.com/az9713/sonnet-5.5-builds">az9713/sonnet-5.5-builds</a>. Numbers and file:line references come from reading the source with automated research passes; the reef mesh header, plasma constants, Betta spring constants, reef and river absorption constants, river fog and quality presets were re-checked against the files directly. Values marked "derived" are arithmetic on code formulas, not printed by the code. I did not run the scenes for this page; screenshots are the original author's.
+  The first four scenes are by <a href="https://github.com/chaseleantj/deskworlds">chaseleantj/deskworlds</a> (MIT); this page explains the copy in <a href="https://github.com/az9713/sonnet-5.5-builds">az9713/sonnet-5.5-builds</a>. Slime mould, Pelagic, Aurora fjord and Cosmic web were written for this port, with the same scene contract. Numbers and file:line references come from reading the source with automated research passes; for the older four, the reef mesh header, plasma constants, Betta spring constants, reef and river absorption constants, river fog and quality presets were re-checked against the files directly. For the newer four, each section was drafted from the code and its node tests, the charts were generated by running scripts over the real constants, and I re-checked a sample of constants and tier tables against the files. Values marked "derived" are arithmetic on code formulas, not printed by the code. I did not measure frame rates on a real GPU. Screenshots of the older four are the original author's; the newer four are frames rendered with a software WebGL renderer, so a GPU will look sharper.
 </footer>
 
 </main>
