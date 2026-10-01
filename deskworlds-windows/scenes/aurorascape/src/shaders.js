@@ -588,9 +588,9 @@ void main(){
   float spread = 0.0016 + 0.7*length(slope)*0.35;
   vec3 refl = skyLookup(r, spread);
   // glitter: stars reflected off the micro-ripples, stretched upward
-  vec2 gj = vec2(tn(gl_FragCoord.xy*0.45 + vec2(uTime*0.9, 0.0)), tn(gl_FragCoord.xy*0.37 + vec2(3.0, uTime*1.3))) - 0.5;
+  vec2 gj = vec2(tn(gl_FragCoord.xy*vec2(0.09, 0.03) + vec2(uTime*0.5, 0.0)), tn(gl_FragCoord.xy*vec2(0.07, 0.05) + vec2(3.0, uTime*0.7))) - 0.5;
   vec3 rg = normalize(r + vec3(gj.x*0.010, gj.y*0.020, gj.x*0.004)*(0.5 + 0.5*length(slope)*8.0));
-  refl += stars(rg, 1.6)*0.9;
+  refl += stars(rg, 1.3)*0.55;
 
   vec3 body = vec3(0.00100, 0.00280, 0.00420) + uAmb*vec3(0.16, 0.42, 0.36)*0.20;
   // agitation and foam, lit by the aurora
@@ -909,10 +909,10 @@ void main(){
   vec3 H1 = normalize(V + Lg), H2 = normalize(V + Lm);
   float sh = mix(60.0, 380.0, clamp(wet, 0.0, 1.0));
   col += uAurG*pow(max(dot(N, H1), 0.0), sh)*(0.05 + 0.5*gloss)*0.45;
-  col += uAurM*pow(max(dot(N, H2), 0.0), sh*0.8)*(0.04 + 0.4*gloss)*0.35;
+  col += uAurM*pow(max(dot(N, H2), 0.0), sh*0.8)*(0.04 + 0.4*gloss)*0.2;
   // rim: green on one side, magenta on the other
   float rim = pow(1.0 - NV, 2.6)*(0.25 + 0.75*up);
-  col += rim*mix(uAurG*0.9, uAurM*1.5, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*0.3;
+  col += rim*mix(uAurG*0.9, uAurM*0.8, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*0.3;
   // the thin bright film draining off the skin
   col += film*(uAurG*0.12 + uAmb*0.8)*(0.3 + Fs);
 
@@ -981,15 +981,15 @@ void main(){
     float rim = smoothstep(0.5, 0.9, r)*(1.0 - smoothstep(0.9, 1.0, r));
     float spec = exp(-dot(vC - vec2(-0.35, 0.38), vC - vec2(-0.35, 0.38))*14.0);
     float att = exp(-vDepth*0.10);
-    col = (uAmb*8.0 + uAurG*0.14 + vec3(0.003, 0.004, 0.005))*(0.4 + rim*1.6) + spec*(uAurG*0.5 + uAmb*8.0 + 0.01);
-    k = (0.18 + rim*0.9)*a*att*0.5;
+    col = (uAmb*6.0 + uAurG*0.10 + vec3(0.003, 0.004, 0.005))*(0.3 + rim*1.6) + spec*(uAurG*0.4 + uAmb*6.0 + 0.01);
+    k = (0.10 + rim*0.9)*a*att*0.34;
   } else if (kind < 2.5){ // droplet: a tiny bright point
     col = (uAmb*12.0 + uAurG*0.25 + vec3(0.008, 0.01, 0.012));
     k = pow(1.0 - r, 2.0)*a*0.9;
   } else {                // surface foam bubble, glowing
     float rim = smoothstep(0.45, 0.9, r)*(1.0 - smoothstep(0.9, 1.0, r));
-    col = (uAmb*10.0 + uAurG*0.18 + vec3(0.004, 0.005, 0.006))*(0.5 + rim);
-    k = (0.25 + 0.75*rim)*a*0.7*pow(1.0 - r, 0.5);
+    col = (uAmb*7.0 + uAurG*0.12 + vec3(0.004, 0.005, 0.006))*(0.4 + rim);
+    k = (0.12 + 0.7*rim)*a*0.45*pow(1.0 - r, 0.5);
   }
   // premultiplied: mist covers what is behind it, glints (alpha 0) only add light
   float cover = kind < 0.5 ? clamp(k, 0.0, 1.0) : 0.0;

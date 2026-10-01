@@ -365,7 +365,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
         for (let b = 0; b < nb; b++) {
           const j = 2 + Math.floor(random() * 7);
           w.rig.at(j * w.rig.JD, w._pt);
-          if (w._pt[1] < -1.2) particles.bubble(w._pt[0] + rand(-0.5, 0.5), w._pt[1] - 0.8, w._pt[2] + rand(-0.5, 0.5), rand(0.18, 0.42), net.cx, net.cz);
+          if (w._pt[1] < -1.2) particles.bubble(w._pt[0] + rand(-0.5, 0.5), w._pt[1] - 0.8, w._pt[2] + rand(-0.5, 0.5), 0.09 + 0.34 * random() ** 2, net.cx, net.cz);
         }
       }
       if (u >= 1) { net.ringAge = 0; setMode(w, 'netBelow'); }
