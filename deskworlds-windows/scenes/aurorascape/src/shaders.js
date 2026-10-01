@@ -226,17 +226,20 @@ vec3 nightSky(vec3 rd, float starSpread){
 }
 `;
 
-// --- sky, land and haze -------------------------------------------------------------------------------
-export const SKY_FRAG = /* glsl */`
+// --- the land, baked ---------------------------------------------------------------------------------------
+// The camera never leaves its place and only sways a little, so the landscape (fjord walls, the head
+// of the fjord, far ranges, snow, haze, shore fog) is traced once per resolution into two images from
+// the rest pose, supersampled. It is lit only by the aurora, so the colour is linear in the aurora's
+// light: radiance = W * ambient + C. Every frame the sky pass reads these two images through the
+// small rotation of the swaying camera, which costs two fetches a pixel.
+export const LAND_FRAG = /* glsl */`
 ${COMMON}
 ${FJORD_GLSL}
-${STARS_GLSL}
-uniform sampler2D uAurora;
-uniform vec2 uRes;
-uniform vec3 uCam, uAmb;
-uniform int uBisect;
+uniform vec3 uCam;
+uniform int uBisect, uMode, uSS;
 varying vec3 vRay;
-varying vec2 vUv;
+const vec3 HAZE_C = vec3(0.0012, 0.0022, 0.0042);
+const vec3 FOG_C = vec3(0.0020, 0.0030, 0.0046);
 
 // wall surface x = c(z) + s*(W(z) + g(y, z)): leans back and is carved by noise
 float wallG(float y, float z, float s){
@@ -253,26 +256,23 @@ float crestHead(float x){
   float r = 1.0 - abs(2.0*tn(vec2(x*0.0021, 4.7)) - 1.0);
   return 520.0 + 1100.0*smoothstep(60.0, 1100.0, abs(x - fjC(HEAD_Z))) + 520.0*n + 260.0*r*r;
 }
-vec3 skyLight(vec3 n){
+// light received per unit of aurora ambient
+vec3 skyG(vec3 n){
   vec3 Lc = normalize(vec3(0.1, 0.65, -0.75));
   float upl = pow(max(n.y, 0.0), 1.5);
-  return uAmb*(0.07 + 0.75*upl) + uAmb*0.30*vec3(0.8, 1.0, 0.9)*max(dot(n, Lc), 0.0)*3.2;
+  return vec3(0.07 + 0.75*upl) + 0.30*vec3(0.8, 1.0, 0.9)*max(dot(n, Lc), 0.0)*3.2;
 }
-vec3 rockShade(vec3 p, vec3 n, float t, vec2 w){
+vec3 rockWeights(vec3 p, vec3 n, float t, vec2 w){
   float ne = tfbm3(w*0.05);
   float ne2 = mix(0.5, tn(w*0.4), 1.0/(1.0 + t/200.0));
   float pch = tfbm(w*0.007 + 3.0);
-  float gul = tn(vec2(w.x*0.022, w.y*0.0045)) * 0.6 + 0.4*tn(vec2(w.x*0.07, w.y*0.012));   // vertical gullies
+  float gul = tn(vec2(w.x*0.022, w.y*0.0045))*0.6 + 0.4*tn(vec2(w.x*0.07, w.y*0.012));   // vertical gullies
   // snow settles on ledges and in gullies, and covers the high ground
   float snow = smoothstep(0.66, 0.80, pch + 0.0013*p.y + 0.18*n.y + 0.5*(gul - 0.5) + 0.2*(ne - 0.5));
   vec3 rock = vec3(0.022, 0.024, 0.030)*(0.55 + 0.9*ne)*(0.8 + 0.4*ne2);
   vec3 snowc = vec3(0.50, 0.62, 0.76)*(0.7 + 0.45*ne2);
-  vec3 alb = mix(rock, snowc, snow);
-  vec3 L = skyLight(n);
-  return alb*L*(1.0 + 0.5*snow)*(0.55 + 0.9*gul);
+  return mix(rock, snowc, snow)*skyG(n)*(1.0 + 0.5*snow)*(0.55 + 0.9*gul);
 }
-vec3 hazeColor(){ return uAmb*0.16 + vec3(0.0012, 0.0022, 0.0042); }
-
 // distant ranges: silhouettes in angle, as ridged noise in the lateral position
 float rangeTop(float x, float k){
   float n = tfbm(vec2(x*0.00042 + k*11.0, k*5.0));
@@ -280,14 +280,10 @@ float rangeTop(float x, float k){
   return 520.0 + 1750.0*n*n + 520.0*r*r;
 }
 
-void main(){
-  vec3 ro = uCam, rd = normalize(vRay);
-  vec2 suv = gl_FragCoord.xy/uRes;
-  vec3 sky = nightSky(rd, 1.0);
-  vec3 au = texture2D(uAurora, suv).rgb;
-  vec3 glow = textureLod(uAurora, suv, 4.0).rgb*0.09 + textureLod(uAurora, suv, 6.0).rgb*0.16;
-  vec3 col = sky + au + glow;
-
+// one ray: W, C (radiance = W*ambient + C), coverage, water
+void trace(vec3 rd, out vec3 W, out vec3 C, out float cov, out float water){
+  vec3 ro = uCam;
+  W = vec3(0.0); C = vec3(0.0); cov = 0.0; water = 0.0;
   float tPlane = rd.y < -1e-4 ? -ro.y/rd.y : 1e9;
   float tHead = rd.z < -1e-4 ? (HEAD_Z - ro.z)/rd.z : 1e9;
   float tLimit = min(tPlane, tHead);
@@ -295,9 +291,11 @@ void main(){
   float tHit = -1.0;
   vec3 hp = vec3(0.0), hn = vec3(0.0, 1.0, 0.0);
   bool wall = false;
+  // rays so steep that they clear every crest before reaching a wall need no search
+  bool skip = rd.y > 0.0 && rd.y*180.0 > 1600.0*abs(rd.x) + 1e-4;
 
   // side wall: bracket the crossing with growing steps, then bisect and finish with a secant step
-  if (rd.x*s > 1e-5){
+  if (!skip && rd.x*s > 1e-5){
     float tmax = min(tLimit, 14000.0);
     float t0 = 0.0, t1 = 12.0, f0 = -fjW(ro.z), f1 = 0.0; bool found = false;
     for (int i = 0; i < 16; i++){
@@ -313,7 +311,7 @@ void main(){
       }
     }
     if (found){
-      for (int i = 0; i < 12; i++){
+      for (int i = 0; i < 14; i++){
         if (i >= uBisect) break;
         float tm = 0.5*(t0 + t1);
         vec3 p = ro + rd*tm;
@@ -328,7 +326,7 @@ void main(){
         float gy = (wallG(p.y + e, p.z, s) - wallG(max(p.y - e, 0.0), p.z, s))/(p.y + e - max(p.y - e, 0.0));
         float gz = (wallG(p.y, p.z + e, s) - wallG(p.y, p.z - e, s))/(2.0*e);
         float wz = (fjW(p.z + e) - fjW(p.z - e))/(2.0*e) + (fjC(p.z + e) - fjC(p.z - e))/(2.0*e)*s;
-        hn = normalize(vec3(-s, s*gy, s*(gz + wz)*0.9 + 0.0));
+        hn = normalize(vec3(-s, s*gy, s*(gz + wz)*0.9));
         float dl = 1.0/(1.0 + tt/160.0);
         hn = normalize(hn + 0.9*dl*(vec3(tn(p.yz*0.08), tn(p.xz*0.08 + 5.0), tn(p.xy*0.08 + 9.0)) - 0.5));
       }
@@ -337,30 +335,27 @@ void main(){
   // the head of the fjord
   if (tHead < 1e8 && (tHit < 0.0 || tHead < tHit) && tHead <= tPlane){
     vec3 p = ro + rd*tHead;
-    if (p.y < crestHead(p.x) && p.y > -2.0){
+    float cr = crestHead(p.x);
+    if (p.y < cr && p.y > -2.0){
       tHit = tHead; hp = p; wall = false;
       float nx = tfbm3(p.xy*0.01) - 0.5, ny = tfbm3(p.xy*0.013 + 8.0) - 0.5;
-      float cr = crestHead(p.x);
       hn = normalize(vec3(nx*1.6, 0.2 + ny*0.8 + 1.4*smoothstep(0.45, 0.0, (cr - p.y)/cr), 1.0));
     }
   }
-  bool water = false;
   if (tHit < 0.0 && rd.y < -1e-4){
-    water = true;
     vec3 p = ro + rd*tPlane;
-    if (p.z < HEAD_Z + 1.0) water = false;
+    water = p.z < HEAD_Z + 1.0 ? 0.0 : 1.0;
+    return;
   }
-  float alpha = 1.0;
-  if (water) alpha = 0.0;
-  else if (tHit > 0.0){
-    vec3 land = rockShade(hp, hn, tHit, wall ? vec2(hp.z*0.8 + hp.x*0.2, hp.y) : vec2(hp.x, hp.y));
-    // aerial perspective and the low fog that sits on the water along the shore
-    float haze = 1.0 - exp(-tHit/16000.0);
-    float fogn = 0.6 + 0.8*tfbm3(hp.xz*0.0035 + vec2(uTime*0.004, 0.0));
-    float lowFog = exp(-max(hp.y, 0.0)/20.0)*(1.0 - exp(-tHit/520.0))*fogn*0.5;
-    land = mix(land, hazeColor(), clamp(haze, 0.0, 0.85));
-    land = mix(land, uAmb*0.30 + vec3(0.0020, 0.0030, 0.0046), clamp(lowFog, 0.0, 0.85));
-    col = land;
+  if (tHit > 0.0){
+    W = rockWeights(hp, hn, tHit, wall ? vec2(hp.z*0.8 + hp.x*0.2, hp.y) : vec2(hp.x, hp.y));
+    // aerial perspective and the low fog that lies along the shore
+    float haze = clamp(1.0 - exp(-tHit/16000.0), 0.0, 0.85);
+    float fogn = 0.6 + 0.8*tfbm3(hp.xz*0.0035);
+    float lowFog = clamp(exp(-max(hp.y, 0.0)/20.0)*(1.0 - exp(-tHit/520.0))*fogn*0.5, 0.0, 0.85);
+    W = mix(W, vec3(0.16), haze); C = mix(C, HAZE_C, haze);
+    W = mix(W, vec3(0.30), lowFog); C = mix(C, FOG_C, lowFog);
+    cov = 1.0;
   } else if (rd.y > 0.0){
     // beyond the near walls: far ranges, each a silhouette at a distance
     float rxz = length(rd.xz);
@@ -377,15 +372,60 @@ void main(){
         float snow = smoothstep(480.0 + 120.0*ne, 1000.0, h);
         float edge = smoothstep(0.0, 0.22, (H - h)/H);
         vec3 alb = mix(vec3(0.030, 0.033, 0.040), vec3(0.62, 0.70, 0.80), snow*(0.5 + 0.7*ne));
-        vec3 land = alb*uAmb*(1.6 + 1.2*(1.0 - edge) + 1.4*ne);
-        float haze = 1.0 - exp(-range/(9000.0 + 6000.0*float(k)));
-        land = mix(land, hazeColor()*(1.0 + 0.3*float(k)), clamp(haze*1.15, 0.0, 0.95));
-        col = land;
+        W = alb*(1.6 + 1.2*(1.0 - edge) + 1.4*ne);
+        float haze = clamp((1.0 - exp(-range/(9000.0 + 6000.0*float(k))))*1.15, 0.0, 0.95);
+        float hk = 1.0 + 0.3*float(k);
+        W = mix(W, vec3(0.16*hk), haze); C = mix(C, HAZE_C*hk, haze);
+        cov = 1.0;
         break;
       }
     }
   }
-  gl_FragColor = vec4(col, alpha);
+}
+
+void main(){
+  vec3 rd0 = vRay;
+  vec3 dx = dFdx(rd0), dy = dFdy(rd0);
+  vec3 sumW = vec3(0.0), sumC = vec3(0.0); float sumCov = 0.0, sumWater = 0.0;
+  float n = float(uSS*uSS);
+  for (int j = 0; j < 4; j++){
+    if (j >= uSS) break;
+    for (int i = 0; i < 4; i++){
+      if (i >= uSS) break;
+      vec2 o = (vec2(float(i), float(j)) + 0.5)/float(uSS) - 0.5;
+      vec3 rd = normalize(rd0 + dx*o.x + dy*o.y);
+      vec3 W, C; float cov, water;
+      trace(rd, W, C, cov, water);
+      sumW += W*cov; sumC += C*cov; sumCov += cov; sumWater += water;
+    }
+  }
+  if (uMode == 0) gl_FragColor = vec4(sumW/n, sumCov/n);
+  else gl_FragColor = vec4(sumC/n, sumWater/n);
+}
+`;
+
+// --- sky: stars, Milky Way, aurora, and the baked land ------------------------------------------------------------
+export const SKY_FRAG = /* glsl */`
+${COMMON}
+${STARS_GLSL}
+uniform sampler2D uAurora, uLandW, uLandC;
+uniform mat4 uBakeVP;
+uniform vec2 uRes;
+uniform vec3 uAmb;
+varying vec3 vRay;
+varying vec2 vUv;
+void main(){
+  vec3 rd = normalize(vRay);
+  vec2 suv = gl_FragCoord.xy/uRes;
+  vec3 col = nightSky(rd, 1.0);
+  col += texture2D(uAurora, suv).rgb;
+  col += textureLod(uAurora, suv, 4.0).rgb*0.09 + textureLod(uAurora, suv, 6.0).rgb*0.16;
+  // the land, from the rest-pose images, through the camera's small rotation
+  vec4 c = uBakeVP*vec4(rd, 0.0);
+  vec2 buv = clamp(c.xy/max(c.w, 1e-4)*0.5 + 0.5, 0.0005, 0.9995);
+  vec4 W = texture2D(uLandW, buv), C = texture2D(uLandC, buv);
+  col = col*(1.0 - W.a) + W.rgb*uAmb + C.rgb;
+  gl_FragColor = vec4(col, C.a > 0.5 ? 0.0 : 1.0);
 }
 `;
 

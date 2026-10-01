@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  POST_VERT, RAY_VERT, AURORA_MAP_FRAG, AURORA_FRAG, SKY_FRAG, WATER_FRAG, WHALE_VERT, WHALE_FRAG, PART_VERT, PART_FRAG,
+  POST_VERT, RAY_VERT, AURORA_MAP_FRAG, AURORA_FRAG, LAND_FRAG, SKY_FRAG, WATER_FRAG, WHALE_VERT, WHALE_FRAG, PART_VERT, PART_FRAG,
   DOWN_FRAG, UP_FRAG, OUTPUT_FRAG, BLUR_FRAG, simShader, MAP,
 } from './shaders.js';
 import { buildWhaleGeometry } from './whale-shape.js';
@@ -15,10 +15,10 @@ const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 // What each quality buys. The aurora march steps, the plan-map and march resolutions, the water
 // simulation size, the star density and the reflection taps all scale; eco is built to be cheap.
 export const TIERS = {
-  eco: { steps: 16, auroraScale: 0.5, map: [320, 184], simN: 192, starCell: 0.030, bisect: 6, taps: 1, msaa: 0, levels: 5 },
-  balanced: { steps: 24, auroraScale: 0.6, map: [512, 288], simN: 256, starCell: 0.022, bisect: 8, taps: 2, msaa: 4, levels: 6 },
-  detail: { steps: 32, auroraScale: 0.75, map: [640, 360], simN: 384, starCell: 0.018, bisect: 10, taps: 3, msaa: 4, levels: 6 },
-  native: { steps: 40, auroraScale: 1.0, map: [768, 432], simN: 512, starCell: 0.015, bisect: 12, taps: 4, msaa: 4, levels: 6 },
+  eco: { steps: 16, auroraScale: 0.5, map: [320, 184], simN: 192, starCell: 0.030, bisect: 8, ss: 2, taps: 1, msaa: 0, levels: 5, landMax: 1920 },
+  balanced: { steps: 24, auroraScale: 0.6, map: [512, 288], simN: 256, starCell: 0.022, bisect: 10, ss: 2, taps: 2, msaa: 4, levels: 6, landMax: 2560 },
+  detail: { steps: 32, auroraScale: 0.75, map: [640, 360], simN: 384, starCell: 0.018, bisect: 12, ss: 3, taps: 3, msaa: 4, levels: 6, landMax: 3072 },
+  native: { steps: 40, auroraScale: 1.0, map: [768, 432], simN: 512, starCell: 0.015, bisect: 12, ss: 3, taps: 4, msaa: 4, levels: 6, landMax: 3072 },
 };
 export const tierName = (q) => (Object.hasOwn(TIERS, q) ? q : 'balanced');
 
@@ -62,6 +62,8 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   const auroraRaw = new THREE.WebGLRenderTarget(64, 64, rtOpts());
   const auroraRT = new THREE.WebGLRenderTarget(64, 64, rtOpts({ generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter }));
   const skyRT = new THREE.WebGLRenderTarget(64, 64, rtOpts());
+  const landW = new THREE.WebGLRenderTarget(64, 64, rtOpts({ wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping }));
+  const landC = new THREE.WebGLRenderTarget(64, 64, rtOpts({ wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping }));
   const hdr = new THREE.WebGLRenderTarget(64, 64, rtOpts({ depthBuffer: true, samples: tier.msaa }));
   const N = tier.simN;
   const simRTs = [0, 1].map(() => new THREE.WebGLRenderTarget(N, N, rtOpts({ wrapS: THREE.ClampToEdgeWrapping, wrapT: THREE.ClampToEdgeWrapping })));
@@ -93,7 +95,9 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   const mapPass = pass(POST_VERT, AURORA_MAP_FRAG, { uAct: { value: 0.3 }, uExpand: { value: 0 } });
   const aurPass = pass(RAY_VERT, AURORA_FRAG, { uTexKm: { value: (MAP.x1 - MAP.x0) / tier.map[0] }, uSteps: { value: tier.steps }, uGain: { value: 1 }, uAct: { value: 0.3 } });
   const blurPass = pass(POST_VERT, BLUR_FRAG, { uSrc: { value: auroraRaw.texture }, uTexel: { value: new THREE.Vector2() } });
-  const skyPass = pass(RAY_VERT, SKY_FRAG, { uBisect: { value: tier.bisect } });
+  const bakeInv = new THREE.Matrix4(), bakeCam = new V3();
+  const landPass = pass(RAY_VERT, LAND_FRAG, { uInvVP: { value: bakeInv }, uCam: { value: bakeCam }, uBisect: { value: tier.bisect }, uMode: { value: 0 }, uSS: { value: tier.ss } });
+  const skyPass = pass(RAY_VERT, SKY_FRAG, { uLandW: { value: landW.texture }, uLandC: { value: landC.texture }, uBakeVP: { value: new THREE.Matrix4() } });
   const waterPass = pass(RAY_VERT, WATER_FRAG, { uTaps: { value: tier.taps } });
   const simPass = pass(POST_VERT, simShader(N), {
     uState: { value: simRTs[0].texture }, uTexel: { value: new THREE.Vector2(1 / N, 1 / N) }, uCount: { value: 0 },
@@ -217,6 +221,38 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   simStep({ count: 0, data: world.disturbances.data, foam: world.disturbances.foam });
   simStep({ count: 0, data: world.disturbances.data, foam: world.disturbances.foam });
 
+  // The land is traced once, from the rest pose with a margin around the frame, and re-traced when the
+  // size or the free development camera changes.
+  let landDirty = true;
+  const bakeCamera = new THREE.PerspectiveCamera();
+  bakeCamera.rotation.order = 'YXZ';
+  const LAND_MARGIN = 1.22;
+  function bakeLand() {
+    landDirty = false;
+    const w = size.x, h = size.y;
+    const aspect = w / h;
+    const bw = Math.min(tier.landMax, Math.ceil(w * LAND_MARGIN)), bh = Math.ceil(bw / aspect);
+    if (landW.width !== bw || landW.height !== bh) { landW.setSize(bw, bh); landC.setSize(bw, bh); }
+    const margin = debugCam ? 1.0 : LAND_MARGIN;
+    bakeCamera.aspect = aspect;
+    bakeCamera.fov = 2 * Math.atan(margin * Math.tan(vfov * Math.PI / 360)) * 180 / Math.PI;
+    bakeCamera.updateProjectionMatrix();
+    if (debugCam) { bakeCamera.position.set(debugCam[0], debugCam[1], debugCam[2]); bakeCamera.lookAt(debugCam[3], debugCam[4], debugCam[5]); }
+    else { bakeCamera.position.set(CAMERA.x, CAMERA.y, CAMERA.z); bakeCamera.rotation.set(PITCH, 0, 0); }
+    bakeCamera.updateMatrixWorld(true);
+    bakeInv.multiplyMatrices(bakeCamera.matrixWorld, bakeCamera.projectionMatrixInverse);
+    bakeCam.copy(bakeCamera.position);
+    const rot = skyPass.u.uBakeVP.value.copy(bakeCamera.matrixWorldInverse);
+    rot.elements[12] = 0; rot.elements[13] = 0; rot.elements[14] = 0;
+    rot.premultiply(bakeCamera.projectionMatrix);
+    for (const mode of [0, 1]) {
+      landPass.u.uMode.value = mode;
+      renderer.setRenderTarget(mode === 0 ? landW : landC);
+      renderer.render(landPass.scene, screenCamera);
+    }
+    skyPass.u.uLandW.value = landW.texture; skyPass.u.uLandC.value = landC.texture;
+  }
+
   const ambient = [0, 0, 0];
   let frame = 0;
   function syncAurora(time) {
@@ -245,6 +281,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     partGeometry.instanceCount = count;
     posAttr.needsUpdate = true; parAttr.needsUpdate = true;
 
+    if (landDirty) bakeLand();
     // 1. the plan map of the curtains, then the view-ray march (the sky seen from the ground)
     renderer.setRenderTarget(mapRT); renderer.render(mapPass.scene, screenCamera);
     renderer.setRenderTarget(auroraRaw); renderer.render(aurPass.scene, screenCamera);
@@ -291,18 +328,19 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
       downs[k].setSize(lw, lh); ups[k].setSize(lw, lh);
     }
     frameCamera(cssWidth / cssHeight, h);
+    landDirty = true;
     output.u.uRes.value.set(w, h);
     poseCamera(world.time);
   }
 
   function dispose() {
     const geometries = new Set(), materials = new Set();
-    for (const root of [mapPass.scene, aurPass.scene, blurPass.scene, skyPass.scene, waterPass.scene, simPass.scene, down.scene, up.scene, output.scene, mirrorScene, whaleScene, partScene]) {
+    for (const root of [mapPass.scene, aurPass.scene, blurPass.scene, landPass.scene, skyPass.scene, waterPass.scene, simPass.scene, down.scene, up.scene, output.scene, mirrorScene, whaleScene, partScene]) {
       root.traverse((o) => { if (o.geometry) geometries.add(o.geometry); if (o.material) materials.add(o.material); });
     }
     geometries.forEach((g) => g.dispose());
     materials.forEach((m) => m.dispose());
-    for (const rt of [mapRT, auroraRaw, auroraRT, skyRT, hdr, ...simRTs, ...downs, ...ups]) rt.dispose();
+    for (const rt of [mapRT, auroraRaw, auroraRT, skyRT, landW, landC, hdr, ...simRTs, ...downs, ...ups]) rt.dispose();
     noise.dispose();
     renderer.dispose();
   }
@@ -313,8 +351,9 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     hide,
     setDebug(v) { for (const m of whaleMaterials) m.uniforms.uDbg.value = v; },
     setAuroraSteps(n) { aurPass.u.uSteps.value = n; },
+    setLandSamples(n) { landPass.u.uSS.value = Math.max(1, Math.min(4, n | 0)); landDirty = true; },
     // Development stills only: a free camera, [px, py, pz, tx, ty, tz, fov?].
-    setDebugCamera(v) { debugCam = v; },
+    setDebugCamera(v) { debugCam = v; landDirty = true; },
     get vfov() { return vfov; },
   };
 }
