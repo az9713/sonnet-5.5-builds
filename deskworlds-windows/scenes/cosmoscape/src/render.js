@@ -28,7 +28,7 @@ const LOOK_DEFAULT = {
   minSigma: 0.65, aperture: 0.016,   // circle of confusion at unit relative defocus, as a share of the frame height
   lensE: 0.11,         // Einstein radius as a share of the frame height at full strength
   exposure: 1.0,
-  spread: 0.55, swirl: 0.07, streak: 0.07,
+  spread: 0.55, swirl: 0.07, streak: 0.055,
 };
 
 export function createRenderer(canvas, data, tierName = 'balanced', overrides = {}) {

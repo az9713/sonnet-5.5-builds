@@ -110,17 +110,19 @@ for (const seed of [1, 2, 3]) {
 
 // The cursor stirs the water by itself: a wake while moving, a drip ring while resting.
 {
-  const world = make(31, { whales: 1 });
+  const world = make(31, { whales: 1, netAt: 1e9 });
   world.whales[0].x = 100; world.whales[0].z = -140;
-  let moving = 0, resting = 0;
-  for (let i = 0; i < 120; i++) { world.setCursor(-10 + i * 0.2, -60, 0.3); world.step(FIXED_STEP); moving += world.disturbances.count; }
-  world.setCursor(0, -60, 0); world.step(FIXED_STEP);
-  const w2 = make(31, { whales: 1 }); w2.whales[0].x = 100; w2.whales[0].z = -140;
-  for (let i = 0; i < 120; i++) { w2.step(FIXED_STEP); }
-  let none = 0; for (let i = 0; i < 120; i++) { w2.step(FIXED_STEP); none += w2.disturbances.count; }
-  assert.ok(moving > none, 'a moving cursor adds disturbances');
-  let drips = 0; for (let i = 0; i < 240; i++) { world.setCursor(0, -60, 0); world.step(FIXED_STEP); const d = world.disturbances; for (let k = 0; k < d.count; k++) if (d.data[k * 4 + 3] >= 0.0099 && Math.hypot(d.data[k * 4] - 0, d.data[k * 4 + 1] + 60) < 0.01) drips++; }
-  assert.ok(drips >= 2, `a resting cursor drips rings (${drips})`);
+  const near = (x, z) => { const d = world.disturbances; let n = 0; for (let k = 0; k < d.count; k++) if (Math.hypot(d.data[k * 4] - x, d.data[k * 4 + 1] - z) < 0.01 && d.data[k * 4 + 2] > 1.4) n++; return n; };
+  let wake = 0, amp = 0;
+  for (let i = 0; i < 120; i++) { const x = -10 + i * 0.2; world.setCursor(x, -60, 0.3); world.step(FIXED_STEP); wake += near(x, -60); }
+  assert.ok(wake >= 100, `a moving cursor leaves a wake (${wake} of 120 steps)`);
+  let drips = 0;
+  for (let i = 0; i < 300; i++) { world.setCursor(14, -60, 0); world.step(FIXED_STEP); const d = world.disturbances; for (let k = 0; k < d.count; k++) if (Math.hypot(d.data[k * 4] - 14, d.data[k * 4 + 1] + 60) < 0.01) { drips++; amp = Math.max(amp, d.data[k * 4 + 3]); } }
+  assert.ok(drips >= 3 && drips <= 8, `a resting cursor drips a ring about every second (${drips})`);
+  assert.ok(amp > 0.005 && amp < 0.03, 'rings are gentle');
+  world.setCursor(null);
+  let after = 0; for (let i = 0; i < 120; i++) { world.step(FIXED_STEP); after += near(14, -60); }
+  assert.equal(after, 0, 'lifting the cursor stops the ripples');
 }
 
 // The bubble net: approach deep, spiral up releasing bubbles, swing below the ring, lunge through it with the mouth open.

@@ -143,7 +143,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   partGeometry.instanceCount = 0;
   const partMaterial = new THREE.ShaderMaterial({
     uniforms: { ...shared }, vertexShader: PART_VERT, fragmentShader: PART_FRAG, transparent: true, depthWrite: false, depthTest: true,
-    blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    ...blend, side: THREE.DoubleSide,
   });
   const partMesh = new THREE.Mesh(partGeometry, partMaterial);
   partMesh.frustumCulled = false;

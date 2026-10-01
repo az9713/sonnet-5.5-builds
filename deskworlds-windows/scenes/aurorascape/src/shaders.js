@@ -260,17 +260,17 @@ vec3 skyLight(vec3 n){
 }
 vec3 rockShade(vec3 p, vec3 n, float t, vec2 w){
   float ne = tfbm3(w*0.05);
-  float ne2 = tn(w*0.4);
+  float ne2 = mix(0.5, tn(w*0.4), 1.0/(1.0 + t/200.0));
   float pch = tfbm(w*0.007 + 3.0);
   // snow settles on ledges and in gullies, and covers the high ground
-  float snow = smoothstep(0.60, 0.72, pch + 0.0016*p.y + 0.30*n.y + 0.2*(ne - 0.5));
-  vec3 rock = vec3(0.030, 0.032, 0.038)*(0.55 + 0.9*ne)*(0.8 + 0.4*ne2);
-  vec3 snowc = vec3(0.60, 0.70, 0.80)*(0.7 + 0.45*ne2);
+  float snow = smoothstep(0.70, 0.80, pch + 0.0013*p.y + 0.16*n.y + 0.2*(ne - 0.5));
+  vec3 rock = vec3(0.022, 0.024, 0.030)*(0.55 + 0.9*ne)*(0.8 + 0.4*ne2);
+  vec3 snowc = vec3(0.50, 0.62, 0.76)*(0.7 + 0.45*ne2);
   vec3 alb = mix(rock, snowc, snow);
   vec3 L = skyLight(n);
   return alb*L*(1.0 + 0.5*snow);
 }
-vec3 hazeColor(){ return uAmb*0.16 + vec3(0.0016, 0.0030, 0.0050); }
+vec3 hazeColor(){ return uAmb*0.16 + vec3(0.0012, 0.0022, 0.0042); }
 
 // distant ranges: silhouettes in angle, as ridged noise in the lateral position
 float rangeTop(float x, float k){
@@ -295,16 +295,21 @@ void main(){
   vec3 hp = vec3(0.0), hn = vec3(0.0, 1.0, 0.0);
   bool wall = false;
 
-  // side wall: bracket the crossing with growing steps, then bisect
+  // side wall: bracket the crossing with growing steps, then bisect and finish with a secant step
   if (rd.x*s > 1e-5){
     float tmax = min(tLimit, 14000.0);
-    float t0 = 0.0, t1 = 12.0; bool found = false;
+    float t0 = 0.0, t1 = 12.0, f0 = -fjW(ro.z), f1 = 0.0; bool found = false;
     for (int i = 0; i < 16; i++){
       vec3 p = ro + rd*t1;
-      float f = s*(p.x - fjC(p.z)) - fjW(p.z) - wallG(max(p.y, 0.0), p.z, s);
-      if (f > 0.0){ found = true; break; }
-      t0 = t1; t1 = t1*1.55;
-      if (t1 > tmax){ t1 = tmax; vec3 q = ro + rd*t1; float fq = s*(q.x - fjC(q.z)) - fjW(q.z) - wallG(max(q.y, 0.0), q.z, s); if (fq > 0.0) found = true; break; }
+      f1 = s*(p.x - fjC(p.z)) - fjW(p.z) - wallG(max(p.y, 0.0), p.z, s);
+      if (f1 > 0.0){ found = true; break; }
+      t0 = t1; f0 = f1; t1 = t1*1.55;
+      if (t1 > tmax){
+        t1 = tmax; vec3 q = ro + rd*t1;
+        f1 = s*(q.x - fjC(q.z)) - fjW(q.z) - wallG(max(q.y, 0.0), q.z, s);
+        if (f1 > 0.0) found = true;
+        break;
+      }
     }
     if (found){
       for (int i = 0; i < 12; i++){
@@ -312,17 +317,19 @@ void main(){
         float tm = 0.5*(t0 + t1);
         vec3 p = ro + rd*tm;
         float f = s*(p.x - fjC(p.z)) - fjW(p.z) - wallG(max(p.y, 0.0), p.z, s);
-        if (f > 0.0) t1 = tm; else t0 = tm;
+        if (f > 0.0){ t1 = tm; f1 = f; } else { t0 = tm; f0 = f; }
       }
-      vec3 p = ro + rd*t1;
-      if (p.y < crest(p.z, s) && p.y > -2.0 && t1 <= tLimit + 1.0){
-        tHit = t1; hp = p; wall = true;
+      float tt = t0 + (t1 - t0)*clamp(-f0/max(f1 - f0, 1e-4), 0.0, 1.0);
+      vec3 p = ro + rd*tt;
+      if (p.y < crest(p.z, s) && p.y > -2.0 && tt <= tLimit + 1.0){
+        tHit = tt; hp = p; wall = true;
         float e = 3.0;
         float gy = (wallG(p.y + e, p.z, s) - wallG(max(p.y - e, 0.0), p.z, s))/(p.y + e - max(p.y - e, 0.0));
         float gz = (wallG(p.y, p.z + e, s) - wallG(p.y, p.z - e, s))/(2.0*e);
         float wz = (fjW(p.z + e) - fjW(p.z - e))/(2.0*e) + (fjC(p.z + e) - fjC(p.z - e))/(2.0*e)*s;
         hn = normalize(vec3(-s, s*gy, s*(gz + wz)*0.9 + 0.0));
-        hn = normalize(hn + 0.9*(vec3(tn(p.yz*0.08), tn(p.xz*0.08 + 5.0), tn(p.xy*0.08 + 9.0)) - 0.5));
+        float dl = 1.0/(1.0 + tt/160.0);
+        hn = normalize(hn + 0.9*dl*(vec3(tn(p.yz*0.08), tn(p.xz*0.08 + 5.0), tn(p.xy*0.08 + 9.0)) - 0.5));
       }
     }
   }
@@ -351,7 +358,7 @@ void main(){
     float fogn = 0.6 + 0.8*tfbm3(hp.xz*0.0035 + vec2(uTime*0.004, 0.0));
     float lowFog = exp(-max(hp.y, 0.0)/20.0)*(1.0 - exp(-tHit/520.0))*fogn*0.5;
     land = mix(land, hazeColor(), clamp(haze, 0.0, 0.85));
-    land = mix(land, uAmb*0.30 + vec3(0.0030, 0.0046, 0.0060), clamp(lowFog, 0.0, 0.85));
+    land = mix(land, uAmb*0.30 + vec3(0.0020, 0.0030, 0.0046), clamp(lowFog, 0.0, 0.85));
     col = land;
   } else if (rd.y > 0.0){
     // beyond the near walls: far ranges, each a silhouette at a distance
@@ -528,7 +535,7 @@ void main(){
     foam = c0.b*inside; velo = c0.g*inside;
   }
   float far = 1.0/(1.0 + dist/170.0);
-  vec2 slope = slopeSim*2.2*(0.35 + 0.65*far) + swell(xz, uTime)*(0.5 + 0.5*far) + microRipples(xz, uTime)*0.012*exp(-dist/130.0);
+  vec2 slope = slopeSim*2.2*(0.35 + 0.65*far) + swell(xz, uTime)*(0.5 + 0.5*far) + microRipples(xz, uTime)*0.007*exp(-dist/130.0);
   vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
 
   vec3 V = -rd;
@@ -554,7 +561,7 @@ void main(){
   // the low fog that lies on the water
   float fogn = 0.55 + 0.9*tfbm3(xz*0.006 + vec2(uTime*0.006, 0.0));
   float fog = (1.0 - exp(-dist/520.0))*fogn*0.30;
-  col = mix(col, uAmb*0.30 + vec3(0.0030, 0.0046, 0.0060), clamp(fog, 0.0, 0.7));
+  col = mix(col, uAmb*0.30 + vec3(0.0020, 0.0030, 0.0046), clamp(fog, 0.0, 0.7));
   gl_FragColor = vec4(col, 0.0);
 }
 `;
@@ -825,7 +832,7 @@ void main(){
     vec3 grad = sign(det)*(dhx*r1 + dhy*r2);
     N = normalize(abs(det)*N - grad*0.045);
   }
-  vec3 skinWhite = vec3(0.42, 0.45, 0.50);
+  vec3 skinWhite = vec3(0.30, 0.33, 0.38);
   albedo = mix(albedo, skinWhite, white);
   albedo = mix(albedo, vec3(0.50, 0.52, 0.5), clamp(scar*(1.0 - white*0.4), 0.0, 1.0));
   albedo = mix(albedo, vec3(0.38, 0.37, 0.33), barn);
@@ -833,7 +840,7 @@ void main(){
   // ---- wet film ----
   float wet = max(vWet, step(0.0, d));
   float streak = tn(vec2(vWorld.x*3.0 + vWorld.z*2.3, vWorld.y*0.6 + uTime*0.8*vWet*0.0 + uTime*0.0)*vec2(1.0, 1.0) + vec2(0.0, -uTime*0.9*vWet));
-  float film = vWet*(0.45 + 0.9*streak)*(1.0 - step(0.0, d));
+  float film = vWet*smoothstep(0.38, 0.85, streak)*(1.0 - step(0.0, d))*(0.4 + 0.6*smoothstep(-0.2, 0.6, N.y));
   albedo *= 1.0 - 0.38*wet;
 
   // ---- light: the aurora is the only lamp ----
@@ -856,7 +863,7 @@ void main(){
   float rim = pow(1.0 - NV, 2.6)*(0.25 + 0.75*up);
   col += rim*mix(uAurG*0.9, uAurM*1.5, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*0.3;
   // the thin bright film draining off the skin
-  col += film*(uAurG*0.25 + uAmb*1.5)*(0.3 + Fs);
+  col += film*(uAurG*0.12 + uAmb*0.8)*(0.3 + Fs);
 
   // ---- the waterline ----
   float dB = clamp(d, 0.0, 40.0);
@@ -934,6 +941,8 @@ void main(){
     col = (uAmb*10.0 + uAurG*0.18 + vec3(0.004, 0.005, 0.006))*(0.5 + rim);
     k = (0.25 + 0.75*rim)*a*0.7*pow(1.0 - r, 0.5);
   }
-  gl_FragColor = vec4(col*k, 1.0);
+  // premultiplied: mist covers what is behind it, glints (alpha 0) only add light
+  float cover = kind < 0.5 ? clamp(k, 0.0, 1.0) : 0.0;
+  gl_FragColor = vec4(col*k, cover);
 }
 `;
