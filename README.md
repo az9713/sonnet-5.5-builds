@@ -24,6 +24,14 @@ Each world is a live 3D scene, rendered in real time with Three.js and WebGL2, t
 
 Images are the original author's screenshots from [chaseleantj/deskworlds](https://github.com/chaseleantj/deskworlds). The live pages run the same scene code as the Windows wallpaper. In the browser, Space pauses, F goes fullscreen, and there is a Quality menu (Eco 20 fps, Balanced 30 fps, Detail 60 fps).
 
+## How the worlds work
+
+**[Read the live page](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)**: the rendering and simulation layers all four worlds share, then the specific technique behind each one (Riverbed, Coral reef, Betta, Plasma globe), with charts and the real numbers from the code.
+
+[![Preview of the "How the worlds work" page. Click to open the live page.](deskworlds-windows/docs/images/how-the-worlds-work-preview.jpg)](https://az9713.github.io/sonnet-5.5-builds/docs/how-the-worlds-work.html)
+
+GitHub does not allow embedded pages or scripts in a README, so the preview above is an image. Click it to open the live, scrollable page. The source is [`deskworlds-windows/docs/how-the-worlds-work.html`](https://github.com/az9713/sonnet-5.5-builds/blob/claude/15-builds-recreation-review-5bw4pw/deskworlds-windows/docs/how-the-worlds-work.html).
+
 ## Also in this repo
 
 - [`x_urls_decoded.tsv`](x_urls_decoded.tsv): the X post URLs for the 15 builds, decoded from a video's redirect links.
