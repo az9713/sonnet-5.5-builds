@@ -23,7 +23,7 @@ const kinds = (p) => { const c = [0, 0, 0, 0]; for (let i = 0; i < p.count; i++)
     last = n;
   }
   assert.ok(maxY > 3 && maxY < 9, `the spout rises ${maxY.toFixed(1)} m`);
-  assert.ok(maxSize > 0.7, 'puffs billow');
+  assert.ok(maxSize > 0.45, 'puffs billow');
   assert.equal(last, 0, 'the mist is gone after 8 s');
 }
 

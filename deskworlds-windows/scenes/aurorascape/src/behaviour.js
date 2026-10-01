@@ -210,8 +210,8 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
         speedT = 1.2; beat = 0.2;
         const lift = sstep(0.0, 1.0, t) * (1 - sstep(2.4, 3.4, t));
         depthT = -1.2 + 0.7 * lift + 0.15 * sstep(2.6, 4.2, t) * (1 - sstep(5.0, 6.5, t));
-        archT = 0.65 * sstep(1.8, 3.6, t) * (1 - sstep(5.6, 7.4, t));
-        rollT = 0.55 * Math.sin(clamp((t - 1.6) / 5.6, 0, 1) * Math.PI) * (w.id % 2 ? -1 : 1);
+        archT = 0.9 * sstep(1.8, 3.6, t) * (1 - sstep(5.6, 7.4, t));
+        rollT = 0.95 * Math.sin(clamp((t - 1.6) / 5.6, 0, 1) * Math.PI) * (w.id % 2 ? -1 : 1);
         headToward(w, w.goalX, w.goalZ);
         w.pitchBias = 0.14 * lift;
         if (!w.blown && t > w.blowAt) {
@@ -442,15 +442,15 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       if (Math.abs(vy) < 1e-4 || depth > reach + 2.5 || depth < -(r + 2)) continue;
       // inside the surface layer a vertical motion pushes water; deeper, a broad swell
       const g = depth < reach ? 1 : Math.exp(-(((depth - reach) / 1.6) ** 2));
-      let amt = clamp(vy * DT * 0.08 * g, -0.0015, 0.0015);
-      let foam = Math.abs(vy) > 1.8 ? clamp(Math.abs(vy) * 0.03, 0, 0.35) * g : 0;
-      if (i >= 21 && Math.abs(vy) > 4.4 && depth < reach) { slap = Math.max(slap, Math.abs(vy)); foam = 0.6; amt = clamp(vy * DT * 0.2, -0.004, 0.004); }
+      let amt = clamp(vy * DT * 0.05 * g, -0.001, 0.001);
+      let foam = Math.abs(vy) > 1.8 ? clamp(Math.abs(vy) * 0.0012, 0, 0.008) * g : 0;
+      if (i >= 21 && Math.abs(vy) > 4.4 && depth < reach) { slap = Math.max(slap, Math.abs(vy)); foam = 0.04; amt = clamp(vy * DT * 0.2, -0.004, 0.004); }
       // a collar of foam where the body cuts the surface
-      if (depth < r && depth > -r * 0.6 && w.speed > 0.3) foam = Math.max(foam, 0.05);
+      if (depth < r * 0.55 && depth > -r * 0.4 && w.speed > 0.3) foam = Math.max(foam, 0.0007);
       if (Math.abs(amt) > 2e-5 || foam > 0) addDisturbance(x, z, -(r * 0.9 + 1.0), amt, foam);
     }
     // the bow wave and the wake of a swimmer at the surface
-    if (w.speed > 0.5 && P[1] > -2.4) addDisturbance(P[0], P[2], -2.2 * sc, 0.0003 * Math.min(w.speed, 3), 0.05);
+    if (w.speed > 0.5 && P[1] > -2.4) addDisturbance(P[0], P[2], -2.2 * sc, 0.0002 * Math.min(w.speed, 3), 0.0008);
     if (slap > 0 && time - w.lastSlap > 0.3) {
       w.lastSlap = time; particles.splash(P[(NJ - 1) * 3], P[(NJ - 1) * 3 + 2], clamp(slap / 8, 0.15, 1), 0.2);
       addDisturbance(P[(NJ - 1) * 3], P[(NJ - 1) * 3 + 2], 2.2, 0.012 * Math.sign(rig.jointVY[NJ - 1] || 1), 0.8);

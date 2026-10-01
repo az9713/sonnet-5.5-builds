@@ -119,4 +119,19 @@ const spacing = (s, i) => Math.hypot(s.x[i] - s.x[i - 1], s.y[i] - s.y[i - 1]);
   for (let i = 0; i < sl.slugs.length; i++) for (let j = i + 1; j < sl.slugs.length; j++) closest = Math.min(closest, Math.hypot(sl.slugs[i].x[0] - sl.slugs[j].x[0], sl.slugs[i].y[0] - sl.slugs[j].y[0]));
   assert.ok(closest > 0.15, `Slugs start apart (${closest.toFixed(2)})`);
 }
+// Several slugs gathering at one light do not pile on top of each other.
+{
+  const sl = make(14, 4);
+  const wide = { minX: -1, maxX: 3, minY: -1, maxY: 2 };
+  const light = { x: 0.9, y: 0.5, presence: 1 };
+  sl.relocate({ minX: 0.5, maxX: 1.3, minY: 0.3, maxY: 0.7 }, () => 0);
+  let sepMin = Infinity;
+  for (let k = 0; k < 40 * 60; k++) {
+    sl.step(DT, { bounds: wide, light, field: null });
+    if (k > 20 * 60) for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) sepMin = Math.min(sepMin, Math.hypot(sl.slugs[i].x[0] - sl.slugs[j].x[0], sl.slugs[i].y[0] - sl.slugs[j].y[0]));
+  }
+  const near = sl.slugs.filter(s => Math.hypot(s.x[0] - light.x, s.y[0] - light.y) < 0.3).length;
+  assert.ok(near >= 3, `They gather around the light (${near} of 4 within 0.3)`);
+  assert.ok(sepMin > 0.025, `Heads keep apart (closest ${sepMin.toFixed(3)})`);
+}
 console.log('ok slugs: bounded spring-damped chain, body lag in turns, phototaxis, network avoidance, deterministic, finite');

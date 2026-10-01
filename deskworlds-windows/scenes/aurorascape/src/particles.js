@@ -36,7 +36,7 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
     // The blow: a spout lasts about half a second. A narrow fast core of mist climbs three to five
     // metres, then billows and wafts away on the wind.
     spout(px, py, pz, power = 1, heightScale = 1) {
-      emitters.push({ x: px, y: py, z: pz, left: Math.round(56 + 16 * power), total: Math.round(56 + 16 * power), power, height: heightScale });
+      emitters.push({ x: px, y: py, z: pz, left: Math.round(130 + 30 * power), total: Math.round(130 + 30 * power), power, height: heightScale });
       for (let j = 0; j < 36; j++) {   // droplets thrown out of the spout
         const i = add(DROP), a = random() * TAU, sp = rand(0.4, 2.2);
         x[i] = px; y[i] = py + 0.1; z[i] = pz; vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = rand(4, 11);
@@ -77,16 +77,19 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
       time += dt;
       for (let e = emitters.length - 1; e >= 0; e--) {
         const em = emitters[e];
-        const per = em.total / 36;   // spawn over 30 steps
+        const per = em.total / 30;   // spawn over 30 steps
         let n = Math.min(em.left, Math.floor(per) + (random() < per % 1 ? 1 : 0));
         while (n-- > 0) {
           const i = add(MIST), u = 1 - em.left / em.total;
           em.left--;
-          x[i] = em.x + rand(-0.1, 0.1); y[i] = em.y + rand(0, 0.2); z[i] = em.z + rand(-0.1, 0.1);
-          const up = (10.5 + 5.0 * random()) * em.height * (0.6 + 0.4 * em.power);
-          const a = random() * TAU, sp = rand(0.05, 1.4) * (0.4 + 1.6 * u);
-          vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = up * (1 - 0.35 * u);
-          s0[i] = rand(0.25, 0.5); s1[i] = rand(1.6, 3.6) * (0.8 + 0.4 * em.power); life[i] = rand(3.0, 7.0); peak[i] = rand(0.2, 0.44);
+          // a feathery column: many small puffs thrown up a narrow jet, a bright core in the first half second
+          const core = u < 0.4;
+          x[i] = em.x + rand(-0.08, 0.08); y[i] = em.y + rand(0, 0.15); z[i] = em.z + rand(-0.08, 0.08);
+          const up = (9 + 3.5 * random()) * em.height * (0.6 + 0.4 * em.power) * (1 - 0.25 * u);
+          const a = random() * TAU, sp = rand(0.05, 0.5) * (0.5 + 2.2 * u);
+          vx[i] = Math.cos(a) * sp; vz[i] = Math.sin(a) * sp; vy[i] = up;
+          s0[i] = core ? rand(0.1, 0.2) : rand(0.14, 0.28); s1[i] = core ? rand(0.4, 0.8) : rand(0.6, 1.4) * (0.8 + 0.4 * em.power);
+          life[i] = core ? rand(1.4, 2.6) : rand(2.2, 5.2); peak[i] = core ? rand(0.18, 0.34) : rand(0.07, 0.2);
         }
         if (em.left <= 0) emitters.splice(e, 1);
       }
@@ -104,9 +107,10 @@ export function createParticles({ capacity = 2600, random = Math.random } = {}) 
           i--; continue;
         }
         if (k === MIST) {
-          vx[i] = vx[i] * dragM + wind[0] * 0.5 * dt + Math.sin(time * 0.9 + seed[i] * 3) * 0.25 * dt;
-          vz[i] = vz[i] * dragM + wind[2] * 0.5 * dt + Math.cos(time * 0.7 + seed[i] * 5) * 0.25 * dt;
-          vy[i] = vy[i] * Math.exp(-1.7 * dt) + 0.1 * dt;
+          const turb = 0.6 + 1.4 * Math.min(age[i], 2) / 2;
+          vx[i] = vx[i] * dragM + wind[0] * 0.5 * dt + Math.sin(time * (2.1 + seed[i] % 1.7) + seed[i] * 3) * turb * dt;
+          vz[i] = vz[i] * dragM + wind[2] * 0.5 * dt + Math.cos(time * (1.7 + seed[i] % 1.3) + seed[i] * 5) * turb * dt;
+          vy[i] = vy[i] * Math.exp(-1.8 * dt) + 0.12 * dt;
         } else if (k === DROP) {
           vy[i] -= 9.8 * dt;
         } else if (k === BUBBLE) {

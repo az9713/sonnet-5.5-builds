@@ -3,7 +3,7 @@
 // (distance along the body, height, lateral offset) and fin parameters; the vertex shader
 // places every point from the live spine each frame.
 export const BODY_LEN = 12.6;     // m, nose to the end of the peduncle at scale 1
-export const FLUKE_HALF = 1.95;   // m, half span
+export const FLUKE_HALF = 2.3;   // m, half span
 export const FLIPPER_LEN = 4.2;   // m, a third of the body
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -14,18 +14,20 @@ export function radial(t) {
   const cap = Math.pow(Math.sqrt(Math.max(0, 1 - (1 - clamp(t / 0.11, 0, 1)) ** 2)), 0.85);
   const grow = sstep(0, 0.32, t);
   const rad = 0.52 + 0.48 * Math.pow(grow, 0.75);
-  const taper = Math.pow(1 - sstep(0.38, 1.0, t), 0.9);
-  return cap * rad * (0.16 + 0.84 * taper);
+  const taper = Math.pow(1 - sstep(0.36, 1.0, t), 1.2);
+  return cap * rad * (0.11 + 0.89 * taper);
 }
-export const halfWidth = (t) => 1.62 * radial(t) * (1 + 0.20 * (1 - sstep(0.02, 0.26, t)));
-export const topAt = (t) => 1.12 * radial(t) * (0.7 + 0.3 * sstep(0, 0.22, t));
+export const halfWidth = (t) => 1.62 * radial(t) * (1 + 0.32 * (1 - sstep(0.03, 0.30, t)));
+export const topAt = (t) => 1.12 * radial(t) * (0.62 + 0.38 * sstep(0, 0.24, t));
 export const bottomAt = (t) => -1.30 * radial(t) * (1 + 0.12 * (1 - sstep(0, 0.2, t)));
 // The dorsal fin hump and the knuckled ridge behind it, a function of the position along the
 // body and the lateral offset z; added to the upper half only.
 export function dorsal(t, z) {
-  const fin = 0.46 * Math.exp(-(((t - 0.665) / 0.032) ** 2));
-  const ridge = 0.10 * sstep(0.56, 0.72, t) * (1 - sstep(0.9, 1.0, t)) * (0.75 + 0.25 * Math.cos(t * 150));
-  return (fin + ridge) * Math.exp(-((z / 0.34) ** 2));
+  // a low hump under a tall falcate fin: steep in front, raked back
+  const hump = 0.26 * Math.exp(-(((t - 0.63) / 0.09) ** 2)) * Math.exp(-((z / 0.7) ** 2));
+  const fin = 0.78 * Math.exp(-(((t - 0.655) / (t < 0.655 ? 0.016 : 0.04)) ** 2)) * Math.exp(-((z / 0.26) ** 2));
+  const ridge = 0.10 * sstep(0.62, 0.74, t) * (1 - sstep(0.9, 1.0, t)) * (0.75 + 0.25 * Math.cos(t * 150)) * Math.exp(-((z / 0.34) ** 2));
+  return hump + fin + ridge;
 }
 
 const P = 2.6;

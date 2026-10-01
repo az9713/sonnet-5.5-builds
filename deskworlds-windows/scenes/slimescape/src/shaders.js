@@ -346,11 +346,11 @@ void main() {
     float g1 = vn(qg * 150.0), g2 = vn((qg - disp * 0.6) * 330.0 + 7.3);
     float grainv = 0.62 * g1 + 0.38 * g2 - 0.5;
     // --- colour: lemon fronts, amber trunks, pale hot cores on the wave crest
-    vec3 thinC = vec3(1.0, 0.91, 0.42), midC = vec3(1.0, 0.76, 0.20), thickC = vec3(0.92, 0.52, 0.07);
+    vec3 thinC = vec3(1.0, 0.88, 0.32), midC = vec3(1.0, 0.72, 0.15), thickC = vec3(0.92, 0.47, 0.05);
     vec3 alb = mix(mix(thinC, midC, smoothstep(0.08, 0.5, ab)), thickC, smoothstep(0.5, 1.0, ab));
-    alb = mix(alb, vec3(1.0, 0.96, 0.72), 0.5 * wv * (1.0 - 0.6 * ts));
+    alb = mix(alb, vec3(1.0, 0.95, 0.66), 0.36 * wv * (1.0 - 0.6 * ts));
     float trans = 1.25 - 0.38 * ab;                              // thin parts transmit more light
-    vec3 emis = alb * (0.22 + 0.55 * uTune.w * wv) * trans * (1.0 + uTune.z * grainv * 2.0);
+    vec3 emis = alb * (0.17 + 0.44 * uTune.w * wv) * trans * (1.0 + uTune.z * grainv * 2.0);
     // --- the surface: a soft tube cross-section lit by the key, wet specular, cool rim
     vec2 bumpN = g * uTune.y + (vec2(vn(qg * 160.0 + 3.0), vn(qg * 160.0 + 21.0)) - 0.5) * 0.10 * smoothstep(0.1, 0.5, ab);
     vec3 N = normalize(vec3(-bumpN, 1.0));
@@ -363,7 +363,7 @@ void main() {
     vec3 rimCol = vec3(0.22, 0.55, 0.78);
     vec3 H2 = normalize(vec3(0.5, -0.45, 0.75) + vec3(0.0, 0.0, 1.0));
     float spec2 = pow(max(dot(N, H2), 0.0), 40.0) * 0.5;
-    vec3 body = alb * (keyCol * dif2 * (0.35 + 0.65 * lightMul) + vec3(0.10, 0.12, 0.08)) * 0.40;
+    vec3 body = alb * (keyCol * dif2 * (0.35 + 0.65 * lightMul) + vec3(0.10, 0.12, 0.08)) * 0.32;
     vec3 slime = emis + body + vec3(1.0, 0.92, 0.74) * spec * (0.4 + lightMul) * 0.7 + rimCol * rim * (0.35 + 0.5 * wv) * 0.22 + vec3(0.5, 0.75, 0.9) * spec2 * 0.12;
     // soft translucent edges: the plate shows through thin parts
     col = mix(plate * (1.0 - 0.35 * cover), slime, cover * mix(0.92, 0.985, ts));
@@ -674,6 +674,8 @@ void main() {
   float vig = 1.0 - uOut.w * smoothstep(0.30, 1.05, r * 1.08);
   hdr *= vig * vig * 0.5 + 0.5 * vig;
   vec3 mapped = aces(hdr);
+  // the filmic curve greys saturated yellows toward cream; give some of the chroma back
+  mapped = mix(vec3(dot(mapped, vec3(0.2126, 0.7152, 0.0722))), mapped, 1.22);
   vec3 srgb = pow(max(mapped, 0.0), vec3(1.0 / 2.2));
   srgb += (hash(gl_FragCoord.xy + uFrame) + hash(gl_FragCoord.xy * 1.7 - uFrame) - 1.0) / 255.0;
   gl_FragColor = vec4(srgb, 1.0);

@@ -9,7 +9,7 @@ export const SLUG = Object.freeze({
   speed: 0.045,            // cruising speed, plate units per second
   maxTurn: 1.0,            // rad/s the head can turn
   lightRange: 0.6,         // slugs notice the cursor light within this distance
-  lightStop: 0.05,         // and settle this close to it
+  lightStop: 0.08,         // and settle this close to it
   look: 0.075,             // avoidance look-ahead distance
   avoid: 0.30,             // density (0..1) that slugs refuse to cross
   trailPoints: 150, trailSpacing: 0.011, trailLife: 34,
@@ -38,7 +38,7 @@ export function createSlugs({ random, count = 4, bounds, segments = SLUG.segment
       x: new Float32Array(segments), y: new Float32Array(segments), vx: new Float32Array(segments), vy: new Float32Array(segments),
       r: new Float32Array(segments), wave: new Float32Array(segments), gap: SLUG.gap * (0.9 + random() * 0.2),
       trailX: new Float32Array(SLUG.trailPoints), trailY: new Float32Array(SLUG.trailPoints), trailT: new Float32Array(SLUG.trailPoints),
-      stop: SLUG.lightStop * (0.7 + random() * 1.8), trailHead: 0, trailCount: 0, lastTX: x, lastTY: y, moved: 0, near: 0, avoiding: 0,
+      stop: SLUG.lightStop * (0.8 + random() * 1.4), trailHead: 0, trailCount: 0, lastTX: x, lastTY: y, moved: 0, near: 0, avoiding: 0,
     };
     for (let i = 0; i < segments; i++) { s.x[i] = x - Math.cos(heading) * s.gap * i; s.y[i] = y - Math.sin(heading) * s.gap * i; }
     slugs.push(s);
@@ -70,11 +70,11 @@ export function createSlugs({ random, count = 4, bounds, segments = SLUG.segment
       if (o === s) continue;
       for (let i = 0; i < o.n; i += 2) {
         const dx = hx - o.x[i], dy = hy - o.y[i], d = Math.hypot(dx, dy);
-        if (d < 0.09 && d > 1e-6) {
-          const w = smooth(0.09, 0.03, d);
+        if (d < 0.12 && d > 1e-6) {
+          const w = smooth(0.12, 0.035, d);
           const err = wrapAngle(Math.atan2(dy, dx) - s.heading);
-          want += err * 1.8 * w * (Math.abs(err) < 2.4 ? 1 : 0.4);
-          slow *= 1 - 0.3 * w;
+          want += err * 2.6 * w * (Math.abs(err) < 2.4 ? 1 : 0.4);
+          slow *= 1 - 0.45 * w;
         }
       }
     }

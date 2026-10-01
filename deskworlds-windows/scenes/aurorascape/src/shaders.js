@@ -591,7 +591,7 @@ void main(){
     foam = c0.b*inside; velo = c0.g*inside; hSim = c0.r*inside;
   }
   float far = 1.0/(1.0 + dist/170.0);
-  vec2 slope = slopeSim*3.0*(0.35 + 0.65*far) + swell(xz, uTime)*(0.5 + 0.5*far) + microRipples(xz, uTime)*0.007*exp(-dist/130.0);
+  vec2 slope = slopeSim*1.7*(0.35 + 0.65*far) + swell(xz, uTime)*(0.5 + 0.5*far) + microRipples(xz, uTime)*0.007*exp(-dist/130.0);
   vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
 
   vec3 V = -rd;
@@ -612,13 +612,13 @@ void main(){
   vec3 body = vec3(0.00100, 0.00280, 0.00420) + uAmb*vec3(0.16, 0.42, 0.36)*0.20;
   // agitation and foam, lit by the aurora
   float fn = 0.55 + 0.9*tn(xz*1.7 + uTime*vec2(0.3, -0.2));
-  float foamAmt = clamp(foam*fn + smoothstep(0.006, 0.03, abs(velo))*0.12, 0.0, 1.0);
-  vec3 foamCol = (uAmb*6.5 + vec3(0.0035, 0.0048, 0.0055))*foamAmt;
+  float foamAmt = clamp(foam*fn + smoothstep(0.006, 0.03, abs(velo))*0.03, 0.0, 1.0);
+  vec3 foamCol = (uAmb*2.6 + vec3(0.0025, 0.0035, 0.0040))*foamAmt;
   vec3 col = body*(1.0 - F) + refl*F*(1.0 - 0.8*foamAmt) + foamCol;
   // wave crests catch the glow of the sky: rings read on dark water
-  float rip = clamp(length(slopeSim)*24.0, 0.0, 1.0);
+  float rip = clamp(length(slopeSim)*14.0, 0.0, 1.0);
   col += (uAmb*1.8 + vec3(0.0004, 0.0007, 0.0010))*rip*rip*(0.4 + 0.6*F);
-  float crestL = pow(clamp(hSim*9.0, 0.0, 1.0), 2.0);
+  float crestL = pow(clamp(hSim*5.0, 0.0, 1.0), 2.0);
   col += (uAmb*1.2 + vec3(0.0003, 0.0005, 0.0007))*crestL*(0.4 + 0.6*F);
 
   // the low fog that lies on the water
@@ -698,7 +698,7 @@ void bodyPoint(vec3 rest, vec3 nr, out vec3 pos, out vec3 N){
 // ---- flippers: parameters u (root to tip), v (leading to trailing edge), side (top / underside)
 float flipChord(float u){ return 0.30*(1.0 - u) + 0.62*sin(PI*pow(u, 0.8))*(1.0 - 0.25*u) + 0.04; }
 void flipperFrame(float sg, out vec3 dirA, out vec3 ch, out vec3 n0){
-  dirA = normalize(vec3(-0.30, -0.70, 0.60*sg));
+  dirA = normalize(vec3(-0.25, -0.42, 0.85*sg));
   ch = normalize(vec3(1.0, 0.0, 0.0) - dirA*dirA.x);
   n0 = cross(dirA, ch);
   if (n0.y < 0.0) n0 = -n0;
@@ -741,10 +741,10 @@ vec3 flukeOff(float u, float v, float side){
   float c = 1.30*(1.0 - 0.80*pow(au, 1.6)) + 0.03;
   float xl = -0.50 + 1.10*pow(au, 1.45) + 0.32*pow(au, 3.0);
   float notch = 0.34*exp(-pow(u/0.085, 2.0));
-  float serr = 0.05*pow(abs(sin(au*PI*9.0)), 1.4)*smoothstep(0.14, 0.3, au)*(1.0 - smoothstep(0.86, 1.0, au))*smoothstep(0.65, 1.0, v);
+  float serr = 0.12*pow(abs(sin(au*PI*11.0)), 1.1)*smoothstep(0.14, 0.3, au)*(1.0 - smoothstep(0.86, 1.0, au))*smoothstep(0.65, 1.0, v);
   float x = xl + (c - notch)*v + serr;
   float th = side*0.075*(1.0 - 0.75*au)*(0.3 + 0.7*pow(sin(PI*clamp(v, 0.0, 1.0)), 0.6));
-  vec3 off = vec3(-x, th + 0.10*au*au, u*${(1.95).toFixed(2)});
+  vec3 off = vec3(-x, th + 0.10*au*au, u*${(2.3).toFixed(2)});
   vec3 lag = lagFor(0, au);
   off += vec3(lag.x*0.6, lag.y, lag.z*0.9)*pow(au, 1.15)*(0.55 + 0.45*v);
   return off*uScale;
@@ -829,9 +829,10 @@ void main(){
   if (vPart < 0.5){
     float t = vRest.x/12.6;
     float jag = tfbm3(vec2(vRest.x*0.45 + uSeed*7.0, vRest.z*1.3)) - 0.5;
-    float bellyM = smoothstep(-0.12, -0.55, vRestN.y + 0.55*jag)*smoothstep(0.03, 0.16, t)*(1.0 - smoothstep(0.46, 0.74, t + 0.28*jag));
+    float jag2 = tfbm3(vec2(vRest.x*1.1 + uSeed*5.0, vRest.z*2.4)) - 0.5;
+    float bellyM = smoothstep(-0.5, -0.85, vRestN.y + 0.4*jag)*smoothstep(0.03, 0.12, t)*(1.0 - smoothstep(0.18, 0.40, t + 0.45*jag2));
     float flank = smoothstep(0.64, 0.8, tfbm3(vec2(vRest.x*0.28 + uSeed*3.0, vRest.y*0.8 + vRest.z*0.5)))*(1.0 - smoothstep(0.1, -0.3, vRestN.y))*smoothstep(0.35, 0.6, t);
-    white = clamp(bellyM + 0.55*flank, 0.0, 1.0);
+    white = clamp(bellyM + 0.25*flank, 0.0, 1.0);
     // ventral pleats: long grooves from the chin toward the navel
     float groove = 0.5 + 0.5*cos(vRest.z*PI/0.14);
     float pl = smoothstep(-0.35, -0.8, vRestN.y)*smoothstep(0.02, 0.1, t)*(1.0 - smoothstep(0.38, 0.55, t));
@@ -857,15 +858,17 @@ void main(){
     // mottling
     albedo *= 0.75 + 0.8*tfbm3(vRest.xz*1.7 + vRest.y);
     // the mouth line and the open mouth
-    float mouth = smoothstep(0.1, 0.0, abs(vRest.y + 0.2 + 0.05*vRest.x))*(1.0 - smoothstep(2.5, 4.4, vRest.x))*smoothstep(0.1, 0.4, vRest.x);
-    albedo *= 1.0 - 0.7*mouth;
+    float mline = vRest.y + 0.40 - 0.10*vRest.x;           // the jaw line climbs toward the eye
+    float mouth = smoothstep(0.09, 0.0, abs(mline))*(1.0 - smoothstep(3.0, 4.8, vRest.x))*smoothstep(0.05, 0.3, vRest.x);
+    albedo *= 1.0 - 0.9*mouth;
+    bump -= mouth*1.2;
     float open = uGape*smoothstep(0.35, -0.2, vRest.y + 0.2)*(1.0 - smoothstep(3.0, 4.6, vRest.x))*step(0.0, -vRestN.y + 0.55);
     albedo = mix(albedo, vec3(0.18, 0.05, 0.06), clamp(open*1.2, 0.0, 0.85));
   } else if (vPart < 1.5){
     float au = abs(vRest.x), v = vRest.y, side = vRest.z;
     float n = tfbm(vec2(vRest.x*2.1 + uSeed*5.0, v*3.0 + uSeed));
     float under = side < 0.0 ? 1.0 : 0.0;
-    white = under*smoothstep(0.38, 0.62, n + 0.2*(1.0 - au*0.5) - 0.25*v);
+    white = under*smoothstep(0.1, 0.35, n + 0.45 - 0.5*au*au - 0.25*v);   // mostly white, dark toward the tips and the trailing edge
     float tr = smoothstep(0.78, 1.0, v)*0.5;
     scar = smoothstep(0.95, 0.985, 1.0 - abs(2.0*tfbm3(vec2(vRest.x*3.0, v*6.0) + uSeed) - 1.0))*0.45;
     albedo *= 0.8 + 0.6*tfbm3(vec2(vRest.x*4.0, v*4.0));
@@ -895,7 +898,7 @@ void main(){
     vec3 grad = sign(det)*(dhx*r1 + dhy*r2);
     N = normalize(abs(det)*N - grad*0.045);
   }
-  vec3 skinWhite = vec3(0.30, 0.33, 0.38);
+  vec3 skinWhite = vec3(0.24, 0.26, 0.30);
   albedo = mix(albedo, skinWhite, white);
   albedo = mix(albedo, vec3(0.50, 0.52, 0.5), clamp(scar*(1.0 - white*0.4), 0.0, 1.0));
   albedo = mix(albedo, vec3(0.38, 0.37, 0.33), barn);
@@ -911,41 +914,39 @@ void main(){
   float film = vWet*0.7*mix(0.45, smoothstep(0.35, 0.85, streak), flank)*(1.0 - step(0.0, d))*(0.4 + 0.6*smoothstep(-0.2, 0.6, N.y));
   albedo *= 1.0 - 0.38*wet;
 
-  // ---- light: the aurora is the only lamp ----
+  // ---- light: the aurora is the only lamp. The skin is near black: light shows as a thin rim and as
+  // streaks of specular where the wet film breaks up, not as a fill. ----
   vec3 Lg = normalize(vec3(0.10, 0.60, -0.80)), Lm = normalize(vec3(-0.45, 0.35, -0.82));
   float up = 0.5 + 0.5*N.y;
-  vec3 irr = uAmb*(0.7 + 2.0*up) + uAurG*0.07*max(dot(N, Lg), 0.0) + uAurM*0.06*max(dot(N, Lm), 0.0);
-  irr += uAmb*0.8*max(-N.y, 0.0);                 // the mirror below throws the sky back up
+  vec3 irr = uAmb*(0.45 + 1.1*up) + uAurG*0.04*max(dot(N, Lg), 0.0) + uAurM*0.025*max(dot(N, Lm), 0.0);
+  irr += uAmb*(0.35 + 1.4*white)*max(-N.y, 0.0);   // the mirror below throws light up onto undersides, most onto the white ones
   vec3 col = albedo*irr;
   float NV = clamp(dot(N, V), 0.0, 1.0);
-  // wet specular: a sharp sky reflection (Schlick) and the two aurora lamps as highlights
   vec3 Rv = reflect(-V, N);
-  float Fs = 0.03 + 0.97*pow(1.0 - NV, 5.0);
-  float gloss = 0.25 + 0.75*wet + film;
-  col += envSky(Rv)*Fs*gloss*0.95;
+  float Fs = 0.02 + 0.98*pow(1.0 - NV, 5.0);
+  float gloss = 0.35 + 0.65*wet;
+  float breakup = 0.3 + 1.0*smoothstep(0.25, 0.8, tn(vec2(vRest.x*1.3 + vRest.z*0.6, vRest.y*3.0 + uTime*0.15*vWet)));
+  col += envSky(Rv)*Fs*Fs*gloss*0.35*breakup;
   vec3 H1 = normalize(V + Lg), H2 = normalize(V + Lm);
-  float sh = mix(60.0, 380.0, clamp(wet, 0.0, 1.0));
-  col += uAurG*pow(max(dot(N, H1), 0.0), sh)*(0.05 + 0.5*gloss)*0.9;
-  col += uAurM*pow(max(dot(N, H2), 0.0), sh*0.8)*(0.04 + 0.4*gloss)*0.55;
-  // rim: green on one side, magenta on the other
-  float rim = pow(1.0 - NV, 2.6)*(0.25 + 0.75*up);
-  col += rim*mix(uAurG*1.1, uAurM*1.7, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*0.75;
+  float sh = mix(90.0, 420.0, clamp(wet, 0.0, 1.0));
+  col += uAurG*pow(max(dot(N, H1), 0.0), sh)*(0.04 + 0.5*gloss)*0.8*breakup;
+  col += uAurM*pow(max(dot(N, H2), 0.0), sh*0.8)*(0.03 + 0.4*gloss)*0.45*breakup;
+  // a thin rim: green on one side, magenta on the other
+  float rim = pow(1.0 - NV, 5.0)*(0.15 + 0.85*up);
+  col += rim*mix(uAurG*1.0, uAurM*1.1, smoothstep(-0.7, 0.8, N.x + 0.2*sin(vRest.x*0.4)))*0.32;
   // the thin bright film draining off the skin
-  col += film*(uAurG*0.16 + uAmb*1.1)*(0.3 + Fs);
+  col += film*(uAurG*0.05 + uAmb*0.3)*(0.2 + Fs);
 
   // ---- the waterline ----
   float dB = clamp(d, 0.0, 40.0);
-  vec3 deep = vec3(0.0010, 0.0030, 0.0046) + uAmb*vec3(0.12, 0.30, 0.26)*0.2;
-  vec3 trans = exp(-dB*vec3(0.34, 0.17, 0.12));
-  col = col*trans*(1.0 - 0.6*(1.0 - exp(-dB*0.5))) + deep*(1.0 - exp(-dB*0.5))*0.6;
-  float meniscus = exp(-pow(d/0.11, 2.0));
-  col += meniscus*(uAurG*0.30 + uAmb*1.8);
-  float alpha = mix(1.0, exp(-dB*0.26)*0.72, smoothstep(0.0, 0.4, d));
+  col *= exp(-dB*vec3(0.55, 0.32, 0.26));                // submerged parts darken with depth, they do not glow
+  float meniscus = exp(-pow(d/0.05, 2.0));
+  col += meniscus*(uAurG*0.02 + uAmb*0.10);
+  float alpha = mix(1.0, exp(-dB*0.8)*0.75, smoothstep(0.0, 0.25, d));
   if (uMirror > 0.5){
-    // the reflected whale: only what is above the water, faint and dim
-    float refl = 0.85*smoothstep(-0.3, 0.25, origY - wh);
-    alpha = refl;
-    col *= 0.9;
+    float refl = 0.5*smoothstep(-0.3, 0.25, origY - wh);   // the reflected whale: only what is above the water
+    alpha = refl*0.7;
+    col *= 0.6;
   }
   gl_FragColor = vec4(col*alpha, alpha);
 }
@@ -986,16 +987,17 @@ void main(){
   float kind = vP.y, a = vP.x;
   vec3 col = vec3(0.0);
   float k = 0.0;
-  if (kind < 0.5){        // mist: a ragged, lumpy puff, lit from the aurora side (above and behind)
-    vec2 q = vC*1.9 + vP.z*3.0 + vec2(uTime*0.09, -uTime*0.06);
+  if (kind < 0.5){        // mist: feathery wisps of fine spray, lit by the aurora; a bright core while young
+    vec2 q = vec2(vC.x*2.4, vC.y*1.3) + vP.z*3.0 + vec2(uTime*0.12, -uTime*0.35);
     float n = tfbm3(q)*0.5 + 0.3*tn(q*3.3 + 5.0) + 0.2*tn(q*7.1 + 1.0);
-    float age = vP.w;                                    // 0 young .. 1 old: wisps break up as the puff thins
-    float d = r*(0.85 + 0.5*age) + (0.5 - n)*(0.7 + 0.5*age);
-    float body = smoothstep(1.0, 0.1, d);
+    float age = vP.w;                                    // 0 young .. 1 old: the puff thins and breaks into wisps
+    float d = r*(0.8 + 0.7*age) + (0.5 - n)*(0.9 + 0.7*age);
+    float body = smoothstep(1.0, 0.0, d);
     body = body*body;
     float lit = 0.35 + 0.65*smoothstep(-0.9, 0.9, vC.y + 0.35 + (n - 0.5)*0.8);
-    col = (uAmb*5.0 + uAurG*0.14 + uAurM*0.06 + vec3(0.006, 0.009, 0.011))*lit*(0.7 + 0.6*n);
-    k = body*a*1.25;
+    float core = 1.0 + 1.6*(1.0 - smoothstep(0.0, 0.3, age));
+    col = (uAmb*4.2 + uAurG*0.12 + uAurM*0.05 + vec3(0.006, 0.009, 0.011))*lit*(0.7 + 0.6*n)*core;
+    k = body*a*1.3;
   } else if (kind < 1.5){ // bubble: a glinting rim and a bright speck
     float rim = smoothstep(0.5, 0.9, r)*(1.0 - smoothstep(0.9, 1.0, r));
     float spec = exp(-dot(vC - vec2(-0.35, 0.38), vC - vec2(-0.35, 0.38))*14.0);
