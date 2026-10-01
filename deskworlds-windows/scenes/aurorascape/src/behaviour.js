@@ -98,12 +98,6 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   for (const w of ws) for (let k = 0; k < 4; k++) w.rig.step(FIXED_STEP, { x: w.x, y: w.y, z: w.z, yaw: w.yaw, pitch: 0, roll: 0, speed: w.speed, beat: 0.3 });
 
   function pickWaypoint(w) {
-    if (w.hero) {   // the near whale crosses the frame, flank to the camera, and turns at the far side
-      const side = w.x > 0 ? -1 : 1;
-      w.goalX = side * rand(11, 15);
-      w.goalZ = w.z > -41.5 ? -rand(44, 47) : -rand(38, 40);   // swing out and back so each U-turn bends away from the camera
-      return;
-    }
     let best = null, bestScore = -1e9;
     for (let k = 0; k < 10; k++) {
       const gz = w.zNear + (w.zFar - w.zNear) * Math.pow(random(), 1.2), reach = Math.min(BOUNDS.maxX - 20, w.view * -gz);
@@ -207,7 +201,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       case 'travel': {
         const d = headToward(w, w.goalX, w.goalZ);
         speedT = 1.5 + 0.5 * nz; depthT = (-0.55 + 0.08 * nz) * sc0; archT = 0.22; beat = (w.hero ? 0.5 : 0.3) + 0.1 * nz;
-        if (d < (w.hero ? 4 : 14)) pickWaypoint(w);
+        if (d < 14) pickWaypoint(w);
         if (w.modeT > w.travelFor) setMode(w, 'breath');
         break;
       }
