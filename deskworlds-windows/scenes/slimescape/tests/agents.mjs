@@ -32,7 +32,7 @@ const hash = sim => { let h = 0; for (const v of sim.agents) h = (Math.imul(h, 3
   for (const v of sim.trail) { assert.ok(Number.isFinite(v)); min = Math.min(min, v); max = Math.max(max, v); total += v; }
   assert.ok(min >= 0, 'Trail is never negative');
   // Deposit per agent per step is at most deposit * (1 + food boost) * (1 + 3 * reinforce); with decay d the standing total stays below that / (1 - d)
-  const cap = sim.count * MODEL.deposit * (1 + MODEL.foodBoost) * (1 + 3 * MODEL.reinforce) / (1 - MODEL.decay);
+  const cap = sim.count * MODEL.deposit * (1 + MODEL.foodBoost) * (1 + MODEL.reinforceCap * MODEL.reinforce) / (1 - MODEL.decay);
   assert.ok(total < cap, `Trail mass is bounded by deposit / (1 - decay) (${total.toFixed(0)} < ${cap.toFixed(0)})`);
   assert.ok(total > sim.count * 2, 'Agents do leave a trail');
 }
@@ -90,7 +90,7 @@ const hash = sim => { let h = 0; for (const v of sim.agents) h = (Math.imul(h, 3
   const m = { ...MODEL };
   assert.equal(reinforcement(m, 0), 1);
   let last = 1;
-  for (let t = 0; t < 400; t += 5) { const r = reinforcement(m, t); assert.ok(Number.isFinite(r) && r >= last - 1e-12 && r <= 1 + 3 * m.reinforce + 1e-9); last = r; }
-  assert.equal(reinforcement(m, 1e9), 1 + 3 * m.reinforce, 'The cap holds, so no tube can run away');
+  for (let t = 0; t < 400; t += 5) { const r = reinforcement(m, t); assert.ok(Number.isFinite(r) && r >= last - 1e-12 && r <= 1 + m.reinforceCap * m.reinforce + 1e-9); last = r; }
+  assert.equal(reinforcement(m, 1e9), 1 + m.reinforceCap * m.reinforce, 'The cap holds, so no tube can run away');
 }
 console.log('ok agents: sense/turn/move/deposit rule is deterministic, bounded, ridge-following, food-seeking and photophobic');

@@ -224,9 +224,9 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       case 'dive': {
         // the terminal dive: a deep arch, the nose pitched steeply down, the flukes lifted clear
         const t = w.modeT;
-        speedT = 2.2; beat = 0.55; archT = 0.95 * sstep(0, 1.8, t);
+        speedT = 1.9; beat = 0.35; archT = 0.95 * sstep(0, 1.6, t);
         depthT = -9;
-        w.pitchBias = -0.5 * sstep(0.3, 2.4, t);
+        w.pitchBias = -1.1 * sstep(0.2, 2.2, t);
         if (w.y < -5.2 || t > 14) setMode(w, 'submerged');
         break;
       }
@@ -437,7 +437,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
       if (Math.abs(vy) < 1e-4 || depth > reach + 2.5 || depth < -(r + 2)) continue;
       // inside the surface layer a vertical motion pushes water; deeper, a broad swell
       const g = depth < reach ? 1 : Math.exp(-(((depth - reach) / 1.6) ** 2));
-      let amt = clamp(vy * 0.0016 * r / 1.2 * g, -0.018, 0.018);
+      let amt = clamp(vy * 0.0032 * r / 1.2 * g, -0.03, 0.03);
       let foam = Math.abs(vy) > 1.8 ? clamp(Math.abs(vy) * 0.03, 0, 0.35) * g : 0;
       if (i >= 21 && Math.abs(vy) > 4.4 && depth < reach) { slap = Math.max(slap, Math.abs(vy)); amt = clamp(vy * 0.0035, -0.04, 0.04); foam = 0.6; }
       if (Math.abs(amt) > 2e-5 || foam > 0) addDisturbance(x, z, r * 0.9 + 1.0, amt, foam);
@@ -515,11 +515,11 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
     // The cursor's own marks: a wake along its path, and a slow drip ring while it rests.
     if (cursor.active) {
       if (cursor.travel > 0.02) {
-        const a = clamp(cursor.travel * 0.0035, 0.0007, 0.011);
+        const a = clamp(cursor.travel * 0.010, 0.002, 0.03);
         addDisturbance(cursor.x, cursor.z, 1.7, a, clamp(a * 10, 0, 0.22));
         cursor.travel = 0;
       }
-      if (time - cursor.drip > 1.35 && time - cursor.movedAt > 0.25) { cursor.drip = time; addDisturbance(cursor.x, cursor.z, 1.5, 0.010, 0.1); }
+      if (time - cursor.drip > 1.35 && time - cursor.movedAt > 0.25) { cursor.drip = time; addDisturbance(cursor.x, cursor.z, 1.6, 0.045, 0.12); }
     }
   }
 

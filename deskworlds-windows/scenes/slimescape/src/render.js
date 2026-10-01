@@ -65,7 +65,7 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
     const own = (kind, o) => { owned[kind].push(o); s.owned.push([kind, o]); return o; };
     s.agents = [0, 1].map(() => own('targets', target(N, N, FLOAT, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter })));
     s.trail = [0, 1].map(() => own('targets', target(mw, mh, THREE.HalfFloatType, { wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping })));
-    s.soft = own('targets', target(Math.ceil(mw / 8), Math.ceil(mh / 8), FLOAT, { wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping }));
+    s.soft = own('targets', target(Math.ceil(mw / 8), Math.ceil(mh / 8), THREE.HalfFloatType, { wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping }));
     s.probe = own('targets', target(PROBE.w, PROBE.h, THREE.UnsignedByteType));
     const world2 = new THREE.Vector2(WORLD_W, 1);
     s.agentMat = own('materials', material({
@@ -88,7 +88,7 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
     s.splatMat = own('materials', material({
       vertexShader: SPLAT_VERT, fragmentShader: SPLAT_FRAG, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
       blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneFactor,
-      uniforms: { uAgents: { value: null }, uTrail: { value: null }, uWorld: { value: world2 }, uDeposit: { value: new THREE.Vector3(model.deposit * depositScale, model.foodBoost, model.reinforce) }, uReinforce: { value: new THREE.Vector2(model.reinforceScale, 0) } },
+      uniforms: { uAgents: { value: null }, uTrail: { value: null }, uWorld: { value: world2 }, uDeposit: { value: new THREE.Vector3(model.deposit * depositScale, model.foodBoost, model.reinforce) }, uReinforce: { value: new THREE.Vector2(model.reinforceScale, model.reinforceCap) } },
     }));
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) { pos[i * 3] = ((i % N) + 0.5) / N; pos[i * 3 + 1] = (Math.floor(i / N) + 0.5) / N; }
@@ -354,11 +354,11 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
   function stats() {
     // Debug only (capture): trail statistics read back from the coarse map.
     const s = sim, n = s.soft.width * s.soft.height * 4;
-    const buf = floatOK ? new Float32Array(n) : new Uint16Array(n);
+    const buf = new Uint16Array(n);
     renderer.readRenderTargetPixels(s.soft, 0, 0, s.soft.width, s.soft.height, buf);
-    let sum = 0, max = 0, food = 0, covered = 0;
-    for (let i = 0; i < n; i += 4) { const r = floatOK ? buf[i] : half(buf[i]); sum += r; max = Math.max(max, r); food = Math.max(food, floatOK ? buf[i + 1] : half(buf[i + 1])); if (r > tune.ks * 0.25) covered++; }
-    return { meanTrail: sum / (n / 4), maxTrail: max, maxFood: food, covered: covered / (n / 4) };
+    let sum = 0, max = 0, food = 0, covered = 0, bad = 0;
+    for (let i = 0; i < n; i += 4) { const r = half(buf[i]); if (!Number.isFinite(r)) { bad++; continue; } sum += r; max = Math.max(max, r); food = Math.max(food, half(buf[i + 1])); if (r > tune.ks * 0.25) covered++; }
+    return { meanTrail: sum / (n / 4), maxTrail: max, maxFood: food, covered: covered / (n / 4), nonFinite: bad };
   }
   function dispose() {
     disposeSim();

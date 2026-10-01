@@ -26,6 +26,7 @@ export const MODEL = Object.freeze({
   foodBoost: 2.5,       // agents on food deposit this much more
   reinforce: 2.5,       // agents on moderate trail deposit more (tube reinforcement): trunks thicken, side branches fade
   reinforceScale: 30,   // trail value at which the reinforcement reaches 1
+  reinforceCap: 3,      // and the most it can reach, in those units
 });
 
 // Scale the plate-unit constants to a grid of `cellsPerUnit` cells per plate height.
@@ -72,7 +73,7 @@ export function foodAt(foods, x, y, scale = 1) {
 
 // Agents on trail lay more (tube reinforcement), up to a cap, so busy tubes thicken and quiet ones fade.
 export function reinforcement(m, trail) {
-  return 1 + m.reinforce * Math.min(3, trail / m.reinforceScale);
+  return 1 + m.reinforce * Math.min(m.reinforceCap, trail / m.reinforceScale);
 }
 
 export function createAgentSim({ width, height, count, random, model = MODEL, cellsPerUnit = height, foods = [], light = null }) {
@@ -129,7 +130,7 @@ export function createAgentSim({ width, height, count, random, model = MODEL, ce
       if (lost > m.lostMax) {
         // Re-seed on a random agent that is itself on the colony and out of the light.
         const j = Math.floor(random() * count) * 4;
-        if (agents[j + 3] < m.lostMax * 0.3 && lightAt(agents[j], agents[j + 1]) < 0.1) {
+        if (agents[j + 3] < m.lostMax * 0.3 && lightAt(agents[j], agents[j + 1]) < 0.1 && sample(food, agents[j], agents[j + 1]) < 0.12) {
           x = wrapX(agents[j] + (random() - 0.5) * 0.02 * cellsPerUnit); y = wrapY(agents[j + 1] + (random() - 0.5) * 0.02 * cellsPerUnit);
           th = random() * TAU; lost = 0;
         }

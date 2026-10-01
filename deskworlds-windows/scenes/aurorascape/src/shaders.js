@@ -536,7 +536,7 @@ void main(){
     foam = c0.b*inside; velo = c0.g*inside;
   }
   float far = 1.0/(1.0 + dist/170.0);
-  vec2 slope = slopeSim*2.2*(0.35 + 0.65*far) + swell(xz, uTime)*(0.5 + 0.5*far) + microRipples(xz, uTime)*0.007*exp(-dist/130.0);
+  vec2 slope = slopeSim*3.6*(0.35 + 0.65*far) + swell(xz, uTime)*(0.5 + 0.5*far) + microRipples(xz, uTime)*0.007*exp(-dist/130.0);
   vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
 
   vec3 V = -rd;
@@ -558,6 +558,9 @@ void main(){
   float foamAmt = clamp(foam*fn + smoothstep(0.006, 0.03, abs(velo))*0.12, 0.0, 1.0);
   vec3 foamCol = (uAmb*6.5 + vec3(0.0035, 0.0048, 0.0055))*foamAmt;
   vec3 col = body*(1.0 - F) + refl*F*(1.0 - 0.8*foamAmt) + foamCol;
+  // wave crests catch the glow of the sky: rings read on dark water
+  float rip = clamp(length(slopeSim)*45.0, 0.0, 1.0);
+  col += (uAmb*10.0 + vec3(0.0012, 0.0022, 0.0030))*rip*rip*(0.4 + 0.6*F);
 
   // the low fog that lies on the water
   float fogn = 0.55 + 0.9*tfbm3(xz*0.006 + vec2(uTime*0.006, 0.0));

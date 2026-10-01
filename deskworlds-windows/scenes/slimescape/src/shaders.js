@@ -52,7 +52,7 @@ void main() {
     // Lost agents are re-seeded next to a random agent that is itself on the colony and out of the light.
     vec2 ruv = vec2(rnd(s), rnd(s));
     vec4 b = texture2D(uAgents, ruv);
-    if (b.w < uWeights.w * 0.3 && lightAt(b.xy) < 0.1) {
+    if (b.w < uWeights.w * 0.3 && lightAt(b.xy) < 0.1 && texture2D(uTrail, b.xy / uWorld).g < 0.12) {
       p = mod(b.xy + (vec2(rnd(s), rnd(s)) - 0.5) * 0.02, uWorld);
       th = rnd(s) * 6.2831853; lost = 0.0;
     }
@@ -74,7 +74,7 @@ void main() {
   vec4 a = texture2D(uAgents, position.xy);
   vec2 uv = a.xy / uWorld;
   vec4 here = texture2D(uTrail, uv);
-  vDep = uDeposit.x * (1.0 + uDeposit.y * min(here.g, 1.0)) * (1.0 + uDeposit.z * min(3.0, here.r / uReinforce.x));
+  vDep = uDeposit.x * (1.0 + uDeposit.y * min(here.g, 1.0)) * (1.0 + uDeposit.z * min(uReinforce.y, here.r / uReinforce.x));
   gl_Position = vec4(uv * 2.0 - 1.0, 0.0, 1.0);
   vDep = min(vDep, 40.0);
   gl_PointSize = 2.0;
@@ -243,7 +243,7 @@ void main() {
     float ridge = 1.0 - abs(2.0 * vn(vec2(p.x * 3.3 + float(k) * 9.0, p.y * 170.0)) - 1.0);
     scr += pow(ridge, 48.0) * smoothstep(0.70, 0.90, vn(p * 2.4 + float(k) * 13.0));
   }
-  plate += vec3(1.0, 0.9, 0.7) * scr * 0.028 * lightMul;
+  plate += vec3(1.0, 0.9, 0.7) * scr * 0.016 * lightMul;
   // bubbles and beads
   vec4 b1 = bubbles(Q, 9.0, 3.0, 0.14, L2), b2 = bubbles(Q, 21.0, 11.0, 0.12, L2), b3 = bubbles(Q, 47.0, 23.0, 0.08, L2);
   vec4 bb = b1 + b2 * 0.9 + b3 * 0.7;
@@ -339,13 +339,13 @@ void main() {
     float dif2 = clamp(ndl * 0.75 + 0.25, 0.0, 1.5);
     vec3 keyCol = vec3(1.0, 0.80, 0.52) * 1.15;
     float wet = 0.55 + 0.45 * vn(Q * 33.0 + time * 0.05);
-    float spec = pow(max(dot(N, Hh), 0.0), 75.0) * 2.2 * wet + pow(max(dot(N, Hh), 0.0), 14.0) * 0.18;
+    float spec = pow(max(dot(N, Hh), 0.0), 48.0) * 1.1 * wet + pow(max(dot(N, Hh), 0.0), 12.0) * 0.10;
     float rim = pow(1.0 - clamp(N.z, 0.0, 1.0), 2.0);
     vec3 rimCol = vec3(0.22, 0.55, 0.78);
     vec3 H2 = normalize(vec3(0.5, -0.45, 0.75) + vec3(0.0, 0.0, 1.0));
     float spec2 = pow(max(dot(N, H2), 0.0), 40.0) * 0.5;
     vec3 body = alb * (keyCol * dif2 * (0.35 + 0.65 * lightMul) + vec3(0.10, 0.12, 0.08)) * 0.40;
-    vec3 slime = emis + body + vec3(1.0, 0.92, 0.74) * spec * (0.4 + lightMul) * 0.7 + rimCol * rim * (0.35 + 0.5 * wv) * 0.38 + vec3(0.5, 0.75, 0.9) * spec2 * 0.25;
+    vec3 slime = emis + body + vec3(1.0, 0.92, 0.74) * spec * (0.4 + lightMul) * 0.7 + rimCol * rim * (0.35 + 0.5 * wv) * 0.30 + vec3(0.5, 0.75, 0.9) * spec2 * 0.12;
     // soft translucent edges: the plate shows through thin parts
     col = mix(plate * (1.0 - 0.35 * cover), slime, cover * mix(0.92, 0.985, ts));
     // light scattered in the thin sheet around the veins
@@ -453,7 +453,7 @@ void main() {
   vec2 dc = vQ - uCursor.xy;
   float lightMul = (0.35 + 0.65 * exp(-dot(vQ - uLamp.xy, vQ - uLamp.xy) / 0.7)) * uLamp.z + 1.5 * uCursor.z * exp(-dot(dc, dc) / (uCursor.w * uCursor.w));
   float sheen = 0.5 + 0.5 * vn(vQ * 90.0);
-  vec3 c = vec3(1.0, 0.80, 0.45) * a * (0.006 + 0.035 * lightMul * sheen);
+  vec3 c = vec3(1.0, 0.80, 0.45) * a * (0.003 + 0.02 * lightMul * sheen);
   gl_FragColor = vec4(c, 0.0);
 }
 `;
