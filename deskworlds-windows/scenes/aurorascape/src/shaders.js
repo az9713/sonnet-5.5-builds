@@ -796,7 +796,7 @@ void main(){
     barn = bm*(1.0 - smoothstep(0.1, 0.2, bd))*step(0.3, hash21(bi + 2.0));
     // scars: thin pale wandering lines
     float sr = 1.0 - abs(2.0*tfbm3(vec2(vRest.x*0.9 + uSeed*9.0, vRest.z*2.2 + vRest.y*1.7)) - 1.0);
-    scar = smoothstep(0.94, 0.985, sr)*0.22;
+    scar = smoothstep(0.955, 0.99, sr)*0.18*smoothstep(0.5, 0.7, tfbm3(vRest.xz*0.5 + uSeed*11.0));
     // mottling
     albedo *= 0.75 + 0.8*tfbm3(vRest.xz*1.7 + vRest.y);
     // the mouth line and the open mouth
@@ -848,8 +848,10 @@ void main(){
   if (uDbg > 2.5 && uDbg < 3.5) { gl_FragColor = vec4(vec3(vWet), 1.0); return; }
   // ---- wet film ----
   float wet = max(vWet, step(0.0, d));
-  float streak = tn(vec2(vWorld.x*3.0 + vWorld.z*2.3, vWorld.y*0.6 + uTime*0.8*vWet*0.0 + uTime*0.0)*vec2(1.0, 1.0) + vec2(0.0, -uTime*0.9*vWet));
-  float film = vWet*smoothstep(0.38, 0.85, streak)*(1.0 - step(0.0, d))*(0.4 + 0.6*smoothstep(-0.2, 0.6, N.y));
+  // water runs down the flanks in streams; on the back it lies as a smooth sheet
+  float flank = 1.0 - smoothstep(0.35, 0.85, abs(N.y));
+  float streak = tn(vec2(vWorld.x*2.1 + vWorld.z*1.7 + vRest.z*2.0, vWorld.y*0.5 + uTime*0.7*vWet) + vec2(0.0, 3.0));
+  float film = vWet*mix(0.45, smoothstep(0.35, 0.85, streak), flank)*(1.0 - step(0.0, d))*(0.4 + 0.6*smoothstep(-0.2, 0.6, N.y));
   albedo *= 1.0 - 0.38*wet;
 
   // ---- light: the aurora is the only lamp ----
