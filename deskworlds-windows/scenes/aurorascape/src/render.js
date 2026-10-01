@@ -166,6 +166,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
   // A slow drift of the viewpoint, as if a small boat rode the swell.
   let debugCam = null;
   const hide = {};
+  let auroraScale = 1;
   function poseCamera(time) {
     if (debugCam) {
       camera.position.set(debugCam[0], debugCam[1], debugCam[2]);
@@ -218,8 +219,9 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     simCur = next;
     shared.uSim.value = simRTs[simCur].texture;
   }
-  simStep({ count: 0, data: world.disturbances.data, foam: world.disturbances.foam });
-  simStep({ count: 0, data: world.disturbances.data, foam: world.disturbances.foam });
+  const noDisturbances = { count: 0, data: world.disturbances.data, foam: world.disturbances.foam };
+  simStep(noDisturbances);
+  simStep(noDisturbances);
 
   // The land is traced once, from the rest pose with a margin around the frame, and re-traced when the
   // size or the free development camera changes.
@@ -264,7 +266,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     au.m.set(1.0, 0.16, 0.55).multiplyScalar((0.12 + 0.9 * s.act) * lvl * 0.5);
     mapPass.u.uAct.value = s.act; mapPass.u.uExpand.value = s.expand;
     aurPass.u.uAct.value = s.act;
-    aurPass.u.uGain.value = lvl * 1.0;
+    aurPass.u.uGain.value = lvl * auroraScale;
   }
 
   function render() {
@@ -274,9 +276,10 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     shared.uFrame.value = frame;
     syncAurora(time);
     poseCamera(time);
-    world.whales.forEach((w, i) => {
-      for (const m of [whaleMaterials[i * 2], whaleMaterials[i * 2 + 1]]) { m.uniforms.uGape.value = w.gape; m.uniforms.uPleat.value = 0.5 + 0.5 * Math.sin(time * 0.6 + i); }
-    });
+    for (let i = 0; i < world.whales.length; i++) {
+      const gape = world.whales[i].gape, pleat = 0.5 + 0.5 * Math.sin(time * 0.6 + i);
+      for (let m = i * 2; m < i * 2 + 2; m++) { whaleMaterials[m].uniforms.uGape.value = gape; whaleMaterials[m].uniforms.uPleat.value = pleat; }
+    }
     const count = P.fill();
     partGeometry.instanceCount = count;
     posAttr.needsUpdate = true; parAttr.needsUpdate = true;
@@ -351,6 +354,7 @@ export function createRenderer(canvas, world, { quality = 'balanced' } = {}) {
     hide,
     setDebug(v) { for (const m of whaleMaterials) m.uniforms.uDbg.value = v; },
     setAuroraSteps(n) { aurPass.u.uSteps.value = n; },
+    setAuroraScale(v) { auroraScale = v; },
     setLandSamples(n) { landPass.u.uSS.value = Math.max(1, Math.min(4, n | 0)); landDirty = true; },
     // Development stills only: a free camera, [px, py, pz, tx, ty, tz, fov?].
     setDebugCamera(v) { debugCam = v; landDirty = true; },

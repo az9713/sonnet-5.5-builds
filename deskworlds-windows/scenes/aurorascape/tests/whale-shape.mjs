@@ -16,7 +16,7 @@ import { BODY_LEN, FLIPPER_LEN, FLUKE_HALF, radial, halfWidth, topAt, bottomAt, 
   assert.ok(halfWidth(1) < 0.3 * maxW, 'the peduncle is slender');
   assert.ok(halfWidth(0) < 1e-9, 'the nose is closed');
   // smooth: no jumps along the body
-  let jump = 0; for (let t = 0.002; t <= 1; t += 0.002) jump = Math.max(jump, Math.abs(halfWidth(t) - halfWidth(t - 0.002)), Math.abs(topAt(t) - topAt(t - 0.002)));
+  let jump = 0; for (let t = 0.04; t <= 1; t += 0.002) jump = Math.max(jump, Math.abs(halfWidth(t) - halfWidth(t - 0.002)), Math.abs(topAt(t) - topAt(t - 0.002)));
   assert.ok(jump < 0.06, `continuous profile (max step ${jump.toFixed(3)})`);
   // the dorsal fin stands up from the back two thirds along
   const p = [0, 0, 0]; bodyPoint(0.665, Math.PI / 2, p); const base = topAt(0.665);

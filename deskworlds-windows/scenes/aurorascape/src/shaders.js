@@ -171,7 +171,7 @@ uniform float uTime, uStarCell, uPixAng;
 const vec3 POLE = vec3(0.0, 0.9336, -0.3584);
 const vec3 CE1 = vec3(0.0, -0.3584, -0.9336);
 const vec3 CE2 = vec3(-1.0, 0.0, 0.0);
-const vec3 MW_POLE = vec3(0.6246, -0.3903, -0.6764);
+const vec3 MW_POLE = vec3(0.6192, -0.2299, -0.7508);
 // celestial coordinates of a direction: x = ra*cos(dec), y = dec; the sky turns slowly about the pole
 vec3 celestial(vec3 rd, out vec2 ch){
   float dec = asin(clamp(dot(rd, POLE), -1.0, 1.0));
@@ -203,7 +203,7 @@ vec3 stars(vec3 rd, float spread){
 vec3 milkyWay(vec3 rd){
   vec2 ch; vec3 c = celestial(rd, ch);
   float lat = dot(c, MW_POLE);
-  float band = exp(-pow(lat/0.20, 2.0));
+  float band = exp(-pow(lat/0.26, 2.0));
   if (band < 0.01) return vec3(0.0);
   vec3 u1 = normalize(cross(MW_POLE, vec3(0.0, 0.0, 1.0))), u2 = cross(MW_POLE, u1);
   float lon = atan(dot(c, u2), dot(c, u1));
@@ -214,7 +214,7 @@ vec3 milkyWay(vec3 rd){
   float core = 0.6 + 0.8*exp(-pow((lon - 0.4)/0.9, 2.0));
   float I = band*(0.2 + 1.2*cloud)*(0.6 + 0.8*fine)*core*(1.0 - 0.8*lane);
   vec3 tint = mix(vec3(0.44, 0.54, 0.95), vec3(1.0, 0.80, 0.58), exp(-pow((lon - 0.4)/0.7, 2.0))*exp(-pow(lat/0.12, 2.0)));
-  return tint*I*0.0095;
+  return tint*I*0.04;
 }
 vec3 nightSky(vec3 rd, float starSpread){
   float el = asin(clamp(rd.y, -1.0, 1.0));
@@ -891,7 +891,7 @@ void main(){
   // water runs down the flanks in streams; on the back it lies as a smooth sheet
   float flank = 1.0 - smoothstep(0.35, 0.85, abs(N.y));
   float streak = tn(vec2(vWorld.x*2.1 + vWorld.z*1.7 + vRest.z*2.0, vWorld.y*0.5 + uTime*0.7*vWet) + vec2(0.0, 3.0));
-  float film = vWet*mix(0.45, smoothstep(0.35, 0.85, streak), flank)*(1.0 - step(0.0, d))*(0.4 + 0.6*smoothstep(-0.2, 0.6, N.y));
+  float film = vWet*0.7*mix(0.45, smoothstep(0.35, 0.85, streak), flank)*(1.0 - step(0.0, d))*(0.4 + 0.6*smoothstep(-0.2, 0.6, N.y));
   albedo *= 1.0 - 0.38*wet;
 
   // ---- light: the aurora is the only lamp ----

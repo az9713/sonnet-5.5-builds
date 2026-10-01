@@ -55,6 +55,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   // Disturbances for the wave simulation, refilled every step: x, z, radius, amount | foam
   const dist = new Float32Array(MAXD * 4), distFoam = new Float32Array(MAXD);
   let distCount = 0;
+  const distView = { data: dist, foam: distFoam, count: 0 };
   const log = [];
   const stats = { blows: 0, dives: 0, lunges: 0, nets: 0, invalid: 0, flees: 0, curious: 0 };
   const cursor = { active: false, x: 0, z: 0, speed: 0, movedAt: -1e9, fast: 0, drip: 0, travel: 0, havePrev: false };
@@ -557,7 +558,7 @@ export function createWorld({ random = Math.random, visualRandom = random, whale
   return {
     whales: ws, particles, cursor, net, stats, log, summary,
     get time() { return time; },
-    get disturbances() { return { data: dist, foam: distFoam, count: distCount }; },
+    get disturbances() { distView.count = distCount; return distView; },
     step, setCursor,
     addDisturbance,
     // The cursor's own marks on the water (the caller supplies where and how hard).

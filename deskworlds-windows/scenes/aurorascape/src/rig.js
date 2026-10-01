@@ -18,6 +18,7 @@ const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const approach = (x, target, rate, dt) => x + (target - x) * (1 - Math.exp(-rate * dt));
 const HN = 64;                        // history length (s * 60) for the delayed fin lag
+const FIN_W = [5.2, 4.3, 4.3], FIN_Z = [0.38, 0.42, 0.42], MAXL = [1.1, 0.55, 0.55];
 
 export function createRig({ scale = 1, phase = 0 } = {}) {
   const JD = BODY_LEN * scale / (NJ - 1);
@@ -30,13 +31,15 @@ export function createRig({ scale = 1, phase = 0 } = {}) {
   const lag = new Float32Array(36);
   const spring = [0, 1, 2].map(() => ({ x: [0, 0, 0], v: [0, 0, 0] }));
   const hist = [0, 1, 2].map(() => new Float32Array(HN * 3));
+  const tg = new Float64Array(9);
   let hi = 0, hn = 0;
+  const F0 = [0, 0, -1], U0v = [0, 1, 0], S0v = [1, 0, 0];
   const rig = {
     scale, JD, P, T, U, kTurn, kPitch, wet, lag,
     tailPhase: phase, tailFreq: 0.3, tailAmp: 0.012, arch: 0,
     // pose set by the behaviour each step
     pos: [0, -1, 0], yaw: Math.PI / 2, pitch: 0, roll: 0,
-    F: [0, 0, -1], Up: [0, 1, 0], S: [1, 0, 0],
+    F: F0, Up: U0v, S: S0v,
     vel: [0, 0, 0], acc: [0, 0, 0], tailVelUp: 0,
     _prevPos: null, _prevVel: [0, 0, 0], _prevTail: null, _prevY: new Float32Array(NJ),
     jointVY: new Float32Array(NJ),
@@ -45,13 +48,13 @@ export function createRig({ scale = 1, phase = 0 } = {}) {
 
   function basis() {
     const cy = Math.cos(rig.yaw), sy = Math.sin(rig.yaw), cp = Math.cos(rig.pitch), sp = Math.sin(rig.pitch);
-    const F = [cp * cy, sp, -cp * sy];
-    const U0 = [-sp * cy, cp, sp * sy];
-    const S0 = [F[1] * U0[2] - F[2] * U0[1], F[2] * U0[0] - F[0] * U0[2], F[0] * U0[1] - F[1] * U0[0]];
+    const F = rig.F, Uv = rig.Up, Sv = rig.S;
+    F[0] = cp * cy; F[1] = sp; F[2] = -cp * sy;
+    const u0x = -sp * cy, u0y = cp, u0z = sp * sy;
+    const s0x = F[1] * u0z - F[2] * u0y, s0y = F[2] * u0x - F[0] * u0z, s0z = F[0] * u0y - F[1] * u0x;
     const cr = Math.cos(rig.roll), sr = Math.sin(rig.roll);
-    const Uv = [U0[0] * cr + S0[0] * sr, U0[1] * cr + S0[1] * sr, U0[2] * cr + S0[2] * sr];
-    const Sv = [F[1] * Uv[2] - F[2] * Uv[1], F[2] * Uv[0] - F[0] * Uv[2], F[0] * Uv[1] - F[1] * Uv[0]];
-    rig.F = F; rig.Up = Uv; rig.S = Sv;
+    Uv[0] = u0x * cr + s0x * sr; Uv[1] = u0y * cr + s0y * sr; Uv[2] = u0z * cr + s0z * sr;
+    Sv[0] = F[1] * Uv[2] - F[2] * Uv[1]; Sv[1] = F[2] * Uv[0] - F[0] * Uv[2]; Sv[2] = F[0] * Uv[1] - F[1] * Uv[0];
   }
 
   // `c` carries what the behaviour wants this step.
@@ -140,19 +143,15 @@ export function createRig({ scale = 1, phase = 0 } = {}) {
     const accF = rig.acc[0] * F[0] + rig.acc[1] * F[1] + rig.acc[2] * F[2];
     const accU = rig.acc[0] * Up[0] + rig.acc[1] * Up[1] + rig.acc[2] * Up[2];
     const accS = rig.acc[0] * S[0] + rig.acc[1] * S[1] + rig.acc[2] * S[2];
-    const tg = [
-      [-accF * 0.3, -clamp(rig.tailVelUp, -3, 3) * 0.30 - accU * 0.2, -yawRate * 0.9 - accS * 0.3],
-      [-accF * 0.22, -accU * 0.16 + pitchRate * 0.4, -yawRate * 0.45 - accS * 0.22],
-      [-accF * 0.22, -accU * 0.16 + pitchRate * 0.4, -yawRate * 0.45 - accS * 0.22],
-    ];
-    const W = [5.2, 4.3, 4.3], Z = [0.38, 0.42, 0.42], MAXL = [1.1, 0.55, 0.55];
+    tg[0] = -accF * 0.3; tg[1] = -clamp(rig.tailVelUp, -3, 3) * 0.30 - accU * 0.2; tg[2] = -yawRate * 0.9 - accS * 0.3;
+    tg[3] = tg[6] = -accF * 0.22; tg[4] = tg[7] = -accU * 0.16 + pitchRate * 0.4; tg[5] = tg[8] = -yawRate * 0.45 - accS * 0.22;
     for (let f = 0; f < 3; f++) {
-      const sp = spring[f], tv = tg[f];
-      let n = Math.hypot(tv[0], tv[1], tv[2]);
+      const sp = spring[f], o = f * 3;
+      const n = Math.hypot(tg[o], tg[o + 1], tg[o + 2]);
       const sc = n > MAXL[f] ? MAXL[f] / n : 1;
       for (let k = 0; k < 3; k++) {
-        const target = tv[k] * sc;
-        sp.v[k] += (W[f] * W[f] * (target - sp.x[k]) - 2 * Z[f] * W[f] * sp.v[k]) * dt;
+        const target = tg[o + k] * sc;
+        sp.v[k] += (FIN_W[f] * FIN_W[f] * (target - sp.x[k]) - 2 * FIN_Z[f] * FIN_W[f] * sp.v[k]) * dt;
         sp.x[k] += sp.v[k] * dt;
         hist[f][hi * 3 + k] = sp.x[k];
       }
