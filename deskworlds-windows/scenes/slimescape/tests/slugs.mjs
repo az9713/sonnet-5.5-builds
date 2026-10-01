@@ -5,7 +5,6 @@ import { randomGenerator } from '../../shared/random.js';
 const DT = 1 / 60;
 const bounds = { minX: 0.25, maxX: 1.55, minY: 0.12, maxY: 0.88 };
 const make = (seed, count = 4) => createSlugs({ random: randomGenerator(seed), count, bounds: { ...bounds } });
-const headingOf = s => Math.atan2(s.y[0] - s.y[1], s.x[0] - s.x[1]);
 const spacing = (s, i) => Math.hypot(s.x[i] - s.x[i - 1], s.y[i] - s.y[i - 1]);
 
 // Chain kinematics: over two minutes of wandering, spacing stays bounded, nothing is NaN, bodies stay on the plate.
@@ -105,5 +104,19 @@ const spacing = (s, i) => Math.hypot(s.x[i] - s.x[i - 1], s.y[i] - s.y[i - 1]);
   assert.ok(n > 5, 'A slug leaves a trail');
   for (let i = 0; i < n; i++) assert.ok(out[i * 3 + 2] > 0 && out[i * 3 + 2] <= 1);
   for (let i = 1; i < n; i++) assert.ok(out[i * 3 + 2] >= out[(i - 1) * 3 + 2] - 1e-6, 'Fades are ordered oldest to newest');
+}
+// Relocation: slugs start on bare agar, apart from each other, as straight untangled chains.
+{
+  const sl = make(12, 4);
+  const field = (x, y) => (x > 0.6 && x < 1.2) ? 1 : 0;       // a dense band down the middle
+  sl.relocate(bounds, field);
+  for (const s of sl.slugs) {
+    for (let i = 0; i < s.n; i++) assert.ok(field(s.x[i], s.y[i]) < 0.5 || i > 0, 'The head is on bare plate');
+    for (let i = 1; i < s.n; i++) assert.ok(Math.abs(spacing(s, i) - s.gap) < 1e-5, 'Chain starts at rest spacing');
+    assert.ok([...s.x, ...s.y].every(Number.isFinite));
+  }
+  let closest = Infinity;
+  for (let i = 0; i < sl.slugs.length; i++) for (let j = i + 1; j < sl.slugs.length; j++) closest = Math.min(closest, Math.hypot(sl.slugs[i].x[0] - sl.slugs[j].x[0], sl.slugs[i].y[0] - sl.slugs[j].y[0]));
+  assert.ok(closest > 0.15, `Slugs start apart (${closest.toFixed(2)})`);
 }
 console.log('ok slugs: bounded spring-damped chain, body lag in turns, phototaxis, network avoidance, deterministic, finite');

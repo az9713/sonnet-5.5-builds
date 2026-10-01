@@ -143,6 +143,7 @@ async function start() {
 
   // The colony starts already established, and a few slugs have already left trails.
   gpu.warmup(world, capture && params.has('warm') ? Math.max(0, Number(params.get('warm')) || 0) : undefined);
+  world.slugs.relocate(view.bounds(0.09), world.env.field);
   for (let i = 0; i < 60 * 14; i++) { world.step(FIXED_STEP); if (i % 20 === 0) view.update(world.time); }
   // Capture mode advances the actual simulation, then renders the actual WebGL scene.
   const advance = seconds => { for (let i = 0; i < Math.round(seconds / FIXED_STEP); i++) tick(); };

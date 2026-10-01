@@ -226,7 +226,7 @@ void main() {
   pool *= uLamp.z;
   vec2 dc = Q - uCursor.xy;
   float cpool = uCursor.z * exp(-dot(dc, dc) / (uCursor.w * uCursor.w));
-  float lightMul = pool + 1.5 * cpool;
+  float lightMul = pool + 2.4 * cpool;
 
   // ----- the agar
   float big = fbm(Q * 3.2 + 4.0);
@@ -340,7 +340,7 @@ void main() {
     vec2 tang = v0 - nn * dot(nn, v0) * certainty;
     vec2 disp = tang * uTune2.x * sin(ph + 1.5708) * (1.25 - 0.55 * ts);
     vec2 qg = Q - disp;
-    float g1 = vn(qg * 215.0), g2 = vn((qg - disp * 0.6) * 460.0 + 7.3);
+    float g1 = vn(qg * 150.0), g2 = vn((qg - disp * 0.6) * 330.0 + 7.3);
     float grainv = 0.62 * g1 + 0.38 * g2 - 0.5;
     // --- colour: lemon fronts, amber trunks, pale hot cores on the wave crest
     vec3 thinC = vec3(1.0, 0.86, 0.26), midC = vec3(0.98, 0.64, 0.10), thickC = vec3(0.86, 0.38, 0.03);
@@ -422,7 +422,7 @@ void main() {
   vec2 dc = vQ - uCursor.xy;
   float cpool = uCursor.z * exp(-dot(dc, dc) / (uCursor.w * uCursor.w));
   vec2 dp = (vQ - uLamp.xy) * vec2(1.0, 1.15);
-  float lightMul = (0.32 + 0.68 * exp(-dot(dp, dp) / 0.62)) * uLamp.z + 1.5 * cpool;
+  float lightMul = (0.32 + 0.68 * exp(-dot(dp, dp) / 0.62)) * uLamp.z + 2.4 * cpool;
   float thick = clamp((f - T) / 1.1, 0.0, 1.0);
   float g1 = vn(vQ * 300.0 + vec2(uTime * 0.2, 0.0)) * 0.6 + vn(vQ * 640.0) * 0.4;
   // pale translucent gold: a clear sheath, a denser amber core, brighter and more opaque toward the head
@@ -467,7 +467,7 @@ void main() {
   float across = 1.0 - vSide * vSide;
   float a = vFade * across * across;
   vec2 dc = vQ - uCursor.xy;
-  float lightMul = (0.35 + 0.65 * exp(-dot(vQ - uLamp.xy, vQ - uLamp.xy) / 0.7)) * uLamp.z + 1.5 * uCursor.z * exp(-dot(dc, dc) / (uCursor.w * uCursor.w));
+  float lightMul = (0.35 + 0.65 * exp(-dot(vQ - uLamp.xy, vQ - uLamp.xy) / 0.7)) * uLamp.z + 2.4 * uCursor.z * exp(-dot(dc, dc) / (uCursor.w * uCursor.w));
   float sheen = 0.5 + 0.5 * vn(vQ * 90.0);
   vec3 c = vec3(1.0, 0.80, 0.45) * a * (0.003 + 0.02 * lightMul * sheen);
   gl_FragColor = vec4(c, 0.0);

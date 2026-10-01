@@ -148,7 +148,7 @@ void main(){
           float xp = q.x + m.g;
           // Vertical rays: noise across the curtain, constant up the field line. Rays narrower than a
           // pixel's footprint on the curtain fade out instead of aliasing into speckle.
-          float fp = max(t*uPixAng*1.6, dt*abs(rd.x)*0.42);   // pixel footprint, or the sideways run between marching steps
+          float fp = max(t*uPixAng*1.6, dt*(abs(rd.x) + 0.3*abs(rd.z))*0.22);   // pixel footprint, or the sideways run between marching steps (the warp shears x with z)
           float a1 = 1.0 - smoothstep(0.25, 0.8, fp/4.0), a2 = 1.0 - smoothstep(0.25, 0.8, fp/1.7), a3 = 1.0 - smoothstep(0.25, 0.8, fp/15.0);
           float s1 = n1(xp/4.0 + uTime*0.06), s2 = n1(xp/1.7 - uTime*0.17 + 7.0), s3 = n1(xp/15.0 + uTime*0.025 + 3.0);
           float rays = (1.0 + (0.20 + 1.35*pow(s1, 1.7) - 1.0)*a1*(0.5 + 0.5*m.a))*(1.0 + (0.5 + 0.9*s2 - 1.0)*a2*0.7)*(1.0 + (0.55 + 0.9*s3 - 1.0)*a3);

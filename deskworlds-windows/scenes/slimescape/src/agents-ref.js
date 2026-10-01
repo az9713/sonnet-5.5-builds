@@ -20,7 +20,7 @@ export const MODEL = Object.freeze({
   decay: 0.915,         // trail kept per step
   diffuse: 0.6,         // blend toward the 3x3 blur per step
   foodWeight: 100, // chemoattractant counts this much against trail when sensing
-  lightWeight: 220,     // Physarum is photophobic: light counts as strongly negative trail
+  lightWeight: 160,     // Physarum is photophobic: light counts as strongly negative trail
   lostThreshold: 0.8,   // agents on less trail than this count as lost
   lostMax: 60,         // after this many lost steps an agent is re-seeded on the colony
   foodImmune: 0.25, // where the attractant is stronger than this an agent is never counted as lost

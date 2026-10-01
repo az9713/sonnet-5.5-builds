@@ -170,6 +170,28 @@ export function createSlugs({ random, count = 4, bounds, segments = SLUG.segment
   return {
     slugs,
     get time() { return time; },
+    // Put the slugs down on bare agar (where field(x, y) is low), apart from each other, with the body trailing straight behind.
+    relocate(bounds, field) {
+      const taken = [];
+      for (const s of slugs) {
+        let best = null, bestScore = Infinity;
+        for (let tries = 0; tries < 60; tries++) {
+          const x = bounds.minX + random() * (bounds.maxX - bounds.minX), y = bounds.minY + random() * (bounds.maxY - bounds.minY);
+          const heading = random() * TAU;
+          // the whole body must sit on bare plate: sample along it
+          let dens = 0;
+          for (let i = 0; i < s.n; i += 3) dens = Math.max(dens, field(x - Math.cos(heading) * s.gap * i, y - Math.sin(heading) * s.gap * i));
+          const near = taken.reduce((m, p) => Math.min(m, Math.hypot(p.x - x, p.y - y)), 9);
+          const score = dens + (near < 0.3 ? 1 : 0);
+          if (score < bestScore) { bestScore = score; best = { x, y, heading }; }
+          if (score < 0.03) break;
+        }
+        taken.push(best);
+        s.heading = best.heading; s.turn = 0;
+        for (let i = 0; i < s.n; i++) { s.x[i] = best.x - Math.cos(best.heading) * s.gap * i; s.y[i] = best.y - Math.sin(best.heading) * s.gap * i; s.vx[i] = s.vy[i] = 0; }
+        s.trailCount = 0; s.trailHead = 0; s.lastTX = s.x[s.n - 1]; s.lastTY = s.y[s.n - 1];
+      }
+    },
     step(dt, env) {
       time += dt;
       for (const s of slugs) stepSlug(s, dt, env);
