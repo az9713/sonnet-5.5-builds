@@ -11,7 +11,7 @@ export const SLUG = Object.freeze({
   lightRange: 0.6,         // slugs notice the cursor light within this distance
   lightStop: 0.05,         // and settle this close to it
   look: 0.075,             // avoidance look-ahead distance
-  avoid: 0.18,             // density (0..1) that slugs refuse to cross
+  avoid: 0.30,             // density (0..1) that slugs refuse to cross
   trailPoints: 150, trailSpacing: 0.011, trailLife: 34,
   lag: 15, zeta: 0.55,     // follower spring (rad/s) and damping ratio; the tail is a little softer
   stiffness: 0.28,         // how much of the previous segment's direction a follower keeps (bending resistance)

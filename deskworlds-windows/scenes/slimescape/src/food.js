@@ -10,7 +10,7 @@ export const FLAKE = Object.freeze({
 
 // Scent: faint unseen sources of chemoattractant that come and go, so a plasmodium that is never fed still
 // forages: it keeps sending fronts toward wherever the plate happens to smell good, and re-routes afterwards.
-export const SCENT = Object.freeze({ max: 2, everyMin: 12, everyMax: 26, lifeMin: 22, lifeMax: 34, peak: 0.5, ramp: 4, fade: 7, sigma: 0.14, margin: 0.12 });
+export const SCENT = Object.freeze({ max: 2, everyMin: 12, everyMax: 26, lifeMin: 22, lifeMax: 34, peak: 0.4, ramp: 4, fade: 7, sigma: 0.14, margin: 0.12 });
 
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 

@@ -17,7 +17,7 @@ export const SIM_QUALITY = Object.freeze({
   native: { map: [1536, 864], agents: 512, warmup: 1200, dofTaps: 24, bloom: 6, specks: 90, dof: 0.0105 },
 });
 const REF_DENSITY = 160000 / WORLD_W, REF_PPU = 1024 / WORLD_W;     // the balanced profile is what the constants were tuned at
-export const TUNE = { ks: 150, bump: 5.0, grain: 0.35, wave: 1.0, flow: 0.02, glow: 0.55, shadow: 0.5, exposure: 1.05, bloom: 0.34, fringe: 0.0013, vignette: 0.62, photoRadius: 0.18, cursorRadius: 0.2 };
+export const TUNE = { ks: 60, bump: 5.0, grain: 0.35, wave: 1.0, flow: 0.02, glow: 0.55, shadow: 0.5, exposure: 1.05, bloom: 0.34, fringe: 0.0013, vignette: 0.62, photoRadius: 0.18, cursorRadius: 0.2 };
 
 const V4 = THREE.Vector4;
 const half = h => { const s = (h & 0x8000) >> 15, e = (h & 0x7c00) >> 10, f = h & 0x03ff; return (s ? -1 : 1) * (e === 0 ? 6.103515625e-5 * (f / 1024) : e === 31 ? Infinity : 2 ** (e - 15) * (1 + f / 1024)); };
@@ -74,7 +74,7 @@ export function createRenderer(canvas, { random, world, quality = 'balanced', ov
         uAgents: { value: null }, uTrail: { value: null }, uWorld: { value: world2 }, uFrame: { value: 0 },
         uSense: { value: new V4(model.sensorAngle, model.sensorDist, model.turnAngle, model.step) },
         uWeights: { value: new V4(model.foodWeight, model.lightWeight, model.lostThreshold, model.lostMax) },
-        uCursor: { value: cursorSim }, uMore: { value: new THREE.Vector3(model.wobble, N, model.foodImmune) }, uMore2: { value: new THREE.Vector2(model.foodStay, model.cloneJitter) },
+        uCursor: { value: cursorSim }, uMore: { value: new THREE.Vector3(model.wobble, N, model.foodImmune) }, uMore2: { value: new THREE.Vector2(model.foodStay, model.cloneJitter) }, uForager: { value: model.foragers },
       },
     }));
     s.diffuseMat = own('materials', material({

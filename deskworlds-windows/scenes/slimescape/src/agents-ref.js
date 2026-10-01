@@ -19,18 +19,18 @@ export const MODEL = Object.freeze({
   deposit: 1,           // trail laid per agent per step
   decay: 0.915,         // trail kept per step
   diffuse: 0.6,         // blend toward the 3x3 blur per step
-  foodWeight: 150,      // chemoattractant counts this much against trail when sensing
+  foodWeight: 100, // chemoattractant counts this much against trail when sensing
   lightWeight: 220,     // Physarum is photophobic: light counts as strongly negative trail
   lostThreshold: 0.8,   // agents on less trail than this count as lost
   lostMax: 60,         // after this many lost steps an agent is re-seeded on the colony
-  foodImmune: 0.12,     // where the attractant is stronger than this an agent is never counted as lost
-  foodStay: 0.12,       // agents on food still tire of it (lost counter grows this fast) and return to the colony
-  cloneJitter: 0.02,    // a re-seeded agent lands this far (plate units) from the agent it copies: fronts and hair grow from here
-  foragers: 4,          // one agent in this many is a forager: only foragers smell food and linger on it; the rest keep the mesh
+  foodImmune: 0.25, // where the attractant is stronger than this an agent is never counted as lost
+  foodStay: 0.12, // agents on food still tire of it (lost counter grows this fast) and return to the colony
+  cloneJitter: 0.05, // a re-seeded agent lands this far (plate units) from the agent it copies: fronts and hair grow from here
+  foragers: 3, // one agent in this many is a forager: only foragers smell food and linger on it; the rest keep the mesh
   foodBoost: 2.5,       // agents on food deposit this much more
-  reinforce: 2.5,       // agents on moderate trail deposit more (tube reinforcement): trunks thicken, side branches fade
-  reinforceScale: 30,   // trail value at which the reinforcement reaches 1
-  reinforceCap: 3,      // and the most it can reach, in those units
+  reinforce: 1.5, // agents on moderate trail deposit more (tube reinforcement): trunks thicken, side branches fade
+  reinforceScale: 20, // trail value at which the reinforcement reaches 1
+  reinforceCap: 2, // and the most it can reach, in those units
 });
 
 // Scale the plate-unit constants to a grid of `cellsPerUnit` cells per plate height.

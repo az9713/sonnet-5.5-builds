@@ -21,22 +21,27 @@ uniform vec4 uWeights;        // food weight, light weight, lost threshold, lost
 uniform vec4 uCursor;         // x, y, radius, strength (0 = off)
 uniform vec3 uMore;           // wobble, agents per row, food immunity
 uniform vec2 uMore2;          // lost counter growth while on food, re-seed jitter
+uniform float uForager;
 varying vec2 vUv;
 
 uint hashU(uint x) { x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16; return x; }
 float rnd(inout uint s) { s = hashU(s); return float(s >> 8) * (1.0 / 16777216.0); }
 vec2 dirv(float a) { return vec2(cos(a), sin(a)); }
 float lightAt(vec2 p) { vec2 d = p - uCursor.xy; return uCursor.w * exp(-dot(d, d) / (uCursor.z * uCursor.z)); }
-float sense(vec2 p) {
+float sense(vec2 p, float foodW) {
   vec4 t = texture2D(uTrail, p / uWorld);
-  return t.r + uWeights.x * t.g - uWeights.y * lightAt(p);
+  return t.r + foodW * t.g - uWeights.y * lightAt(p);
 }
 void main() {
   vec4 a = texture2D(uAgents, vUv);
   vec2 p = a.xy; float th = a.z; float lost = a.w;
   uint s = hashU(uint(gl_FragCoord.x) + uint(gl_FragCoord.y) * uint(uMore.y) + uint(uFrame) * 747796405u + 2891336453u);
   float SA = uSense.x, SO = uSense.y, RA = uSense.z, SS = uSense.w;
-  float C = sense(p + dirv(th) * SO), L = sense(p + dirv(th + SA) * SO), R = sense(p + dirv(th - SA) * SO);
+  // one agent in uForager is a forager: only foragers smell the food and linger on it
+  uint id = uint(gl_FragCoord.x) + uint(gl_FragCoord.y) * uint(uMore.y);
+  bool forager = uForager > 0.5 && (id % uint(uForager)) == 0u;
+  float fw = forager ? uWeights.x : 0.0;
+  float C = sense(p + dirv(th) * SO, fw), L = sense(p + dirv(th + SA) * SO, fw), R = sense(p + dirv(th - SA) * SO, fw);
   float r1 = rnd(s), r2 = rnd(s);
   if (C > L && C > R) { }
   else if (C < L && C < R) th += (r1 < 0.5 ? -RA : RA);
@@ -47,7 +52,7 @@ void main() {
   p = mod(p, uWorld);
   vec4 here = texture2D(uTrail, p / uWorld);
   float lit = lightAt(p);
-  if (here.g > uMore.z) lost += uMore2.x; else if (here.r > uWeights.z) lost = max(lost - 3.0, 0.0); else lost += 1.0;
+  if (forager && here.g > uMore.z) lost += uMore2.x; else if (here.r > uWeights.z) lost = max(lost - 3.0, 0.0); else lost += 1.0;
   lost += lit * 6.0;
   if (lost > uWeights.w) {
     // Lost agents are re-seeded next to a random agent that is itself on the colony and out of the light.

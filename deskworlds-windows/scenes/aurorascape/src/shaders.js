@@ -102,7 +102,7 @@ void main(){
   }
   hard = rho > 1e-4 ? hard/rho : 0.5;
   ray = rho > 1e-4 ? ray/rho : 0.0;
-  rho = pow(rho, 1.18)*1.12;
+  rho = pow(rho, 1.3)*1.35;
   gl_FragColor = vec4(rho, w1.x + w2.x + w3.x, hard, ray);
 }
 `;
@@ -142,7 +142,7 @@ void main(){
       vec2 q = rd.xz*t;
       vec2 uv = (q - vec2(${MAP.x0.toFixed(1)}, ${MAP.z0.toFixed(1)}))/vec2(${(MAP.x1 - MAP.x0).toFixed(1)}, ${(MAP.z1 - MAP.z0).toFixed(1)});
       if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0){
-        float lod = clamp(log2(max(dt*rxz*1.4/uTexKm, 1.0)), 0.0, 6.0);
+        float lod = clamp(log2(max(dt*rxz*2.2/uTexKm, 1.0)), 0.0, 6.0);
         vec4 m = textureLod(uMap, uv, lod);
         if (m.r > 0.004){
           float xp = q.x + m.g;
@@ -610,7 +610,7 @@ void main(){
   vec3 col = body*(1.0 - F) + refl*F*(1.0 - 0.8*foamAmt) + foamCol;
   // wave crests catch the glow of the sky: rings read on dark water
   float rip = clamp(length(slopeSim)*24.0, 0.0, 1.0);
-  col += (uAmb*3.0 + vec3(0.0006, 0.0010, 0.0014))*rip*rip*(0.4 + 0.6*F);
+  col += (uAmb*1.8 + vec3(0.0004, 0.0007, 0.0010))*rip*rip*(0.4 + 0.6*F);
   float crestL = pow(clamp(hSim*9.0, 0.0, 1.0), 2.0);
   col += (uAmb*1.2 + vec3(0.0003, 0.0005, 0.0007))*crestL*(0.4 + 0.6*F);
 

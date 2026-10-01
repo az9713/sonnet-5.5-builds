@@ -63,12 +63,20 @@ const hash = sim => { let h = 0; for (const v of sim.agents) h = (Math.imul(h, 3
     for (let i = 0; i < sim.count; i++) { sim.agents[i * 4] = (0.55 + rand() * 0.5) * CPU; sim.agents[i * 4 + 1] = rand() * H; sim.agents[i * 4 + 3] = 0; }
     return sim;
   };
-  const meanDist = sim => { let t = 0; for (let i = 0; i < sim.count; i++) t += Math.hypot(sim.agents[i * 4] / CPU - food[0].x, sim.agents[i * 4 + 1] / CPU - food[0].y); return t / sim.count; };
+  const meanDist = (sim, forager) => {
+    let t = 0, n = 0;
+    for (let i = 0; i < sim.count; i++) if ((i % MODEL.foragers === 0) === forager) { t += Math.hypot(sim.agents[i * 4] / CPU - food[0].x, sim.agents[i * 4 + 1] / CPU - food[0].y); n++; }
+    return t / n;
+  };
   const fed = colony(food), control = colony([]);
-  const start = meanDist(fed);
+  const start = meanDist(fed, true);
   run(fed, 60); run(control, 60);
-  const a = meanDist(fed), c = meanDist(control);
-  assert.ok(a < start * 0.85 && a < c * 0.88, `Agents move toward food: ${start.toFixed(2)} -> ${a.toFixed(2)} (without food ${c.toFixed(2)})`);
+  const a = meanDist(fed, true), c = meanDist(control, true);
+  assert.ok(a < start * 0.85 && a < c * 0.88, `Foragers move toward food: ${start.toFixed(2)} -> ${a.toFixed(2)} (without food ${c.toFixed(2)})`);
+  // The rest of the colony does not smell food directly (it is only recruited along the foragers' trails),
+  // so it is drawn in much less than the foragers are and the mesh is not drained into the flake.
+  const gainForagers = c - a, gainRest = meanDist(control, false) - meanDist(fed, false);
+  assert.ok(gainRest < gainForagers, `Foragers are drawn in more than the rest (${gainForagers.toFixed(2)} vs ${gainRest.toFixed(2)})`);
   assert.ok(foodAt(food, 1.15, 0.5) > foodAt(food, 0.3, 0.5), 'The attractant is strongest at the flake');
 }
 
